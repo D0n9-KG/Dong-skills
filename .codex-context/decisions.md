@@ -13,6 +13,9 @@
 - CE-inspired additions are adopted selectively: strategy anchor, structured solution memory, persona review panel, session-history metadata scan, and product evidence capture.
 - `codex-solution-memory` owns full `docs/solutions/` documents and `CONCEPTS.md`; `codex-learning-memory` remains limited to compact instincts.
 - Session history tooling must report metadata/keyword counts first and avoid raw transcript output.
+- Automatic recovery output includes `.codex-context/solution-index.md` as active context.
+- `STRATEGY.md`, `CONCEPTS.md`, and full `docs/solutions/` bodies remain on-demand recovery inputs.
+- Bootstrap asset parity drift is a health/release failure, not a warning.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.

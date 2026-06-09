@@ -6,12 +6,14 @@
 - Session recovery is section-aware, but very large individual handoff sections can still be clipped; keep handoff sections concise.
 - `.codex-context/archive/` must stay on-demand; do not add it to recovery order.
 - Full `docs/solutions/` bodies and session histories must stay on-demand; active recovery should use `solution-index.md` and targeted reads.
+- Automatic recovery now injects a compact `solution-index.md` excerpt; keep that file short enough to remain useful after compaction.
 
 ## Technical Risks
 - Project-level hook trust is still per repository; users may need to approve hooks through `/hooks`.
 - `PreCompact` can request blocking and refresh state, but it should not be treated as a hard guarantee against every automatic compaction edge case.
 - Hook Git status checks must not require a GitHub remote for non-GitHub or local-only repositories.
 - Installer/bootstrap now copy split hook libraries; asset parity must stay fresh.
+- Bootstrap asset parity drift is now release-blocking through `project-ops-health.mjs`; future helper/script changes must sync root and asset copies together.
 - Scan scripts are heuristic only and must not drive automatic refactors without review.
 - `solutions.mjs` validates a compact frontmatter contract, not semantic truth; stale or misleading solution docs still require human/agent review against current code.
 - `session-history.mjs` searches local agent history metadata and keyword counts only; it does not guarantee complete recovery of prior work.

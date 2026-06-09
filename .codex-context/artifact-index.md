@@ -12,6 +12,13 @@
 - `licenses/COMPOUND-ENGINEERING-LICENSE`: CE MIT attribution.
 
 ## Modified
+- `.codex/scripts/lib/recovery.mjs`: now emits the full AGENTS recovery order, includes `solution-index.md`, keeps `STRATEGY.md` / `CONCEPTS.md` / `docs/solutions/` on-demand, and injects a compact solution-index excerpt.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`: synced bootstrap copy of the recovery changes.
+- `scripts/project-ops-health.mjs`: bootstrap asset parity drift is now a health-check failure, not a warning.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`: synced bootstrap copy of the health-check change.
+- `.agents/skills/codex-verification-loop/SKILL.md`: tells Codex to append new verification evidence so `state-prune` keeps the newest entries.
+- `.agents/skills/codex-docs-stewardship/SKILL.md`: adds the same verification-order hygiene rule.
+- `tests/project-ops.test.mjs`: added regression checks for installed bootstrap hook recovery output, solution-index recovery context, and asset parity failure.
 - `.codex/hooks/project-ops.mjs`: added `solution-*` and `session-history` CLI dispatch.
 - `scripts/install-windows.ps1` and onboarding `bootstrap-project-ops.ps1`: copy `solutions.mjs` and `session-history.mjs`.
 - `scripts/project-ops-health.mjs`: requires `solution-index.md` and checks new helper script parity.
@@ -26,6 +33,7 @@
 ## Read / Inspected
 - Existing hook, install/bootstrap scripts, release/health scripts, tests, README, AGENTS snippet, skill docs, and state files.
 - CE source at temporary clone commit `b625049`: `ce-compound`, `ce-compound-refresh`, `ce-code-review`, `ce-doc-review`, `ce-sessions`, `ce-strategy`, `ce-demo-reel`, plugin README, and related references.
+- Recovery constraints across AGENTS snippet, project governance skill, hook recovery module, onboarding asset tree, health/release scripts, docs scan, architecture scan, solution status, and learning status.
 
 ## Raw Outputs
 - Command outputs are summarized in `verification.md`; runtime observations remain uncommitted under `.codex-context/raw/` if ever generated.

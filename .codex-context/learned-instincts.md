@@ -21,3 +21,4 @@ Keep this file as a compact index. Store individual instincts under `.codex-cont
 
 ## Maintenance Log
 - 2026-06-09: Learning status checked after governance optimization; no raw observations or candidate instincts were pending.
+- 2026-06-10: Observed that `state-prune` keeps later `Commands Run` entries as newer; absorbed the rule into `codex-verification-loop` and `codex-docs-stewardship` instead of creating a separate instinct.

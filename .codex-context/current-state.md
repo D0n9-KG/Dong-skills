@@ -1,25 +1,25 @@
 # Current State
 
 ## Objective
-Enhance Dong Skills with Compound Engineering inspired strategy, solution memory, review panel, session-history, and evidence-capture workflows.
+Align Dong Skills cross-session and post-compaction recovery constraints, then check for nearby governance omissions.
 
 ## Latest User Instruction
-Borrow useful ideas from everyinc/compound-engineering-plugin and strengthen Dong Skills.
+After confirming recovery-file constraints, fix the missing hook recovery order and check whether other parts are missing.
 
 ## Current Phase
 delivery
 
 ## Active Assumptions
 - Project-level hooks remain the default; global hooks stay out of scope.
-- CE-inspired additions should be Codex-native and project-level, not a wholesale CE clone.
-- Slack, image generation, Rails/Xcode-specific, and fully autonomous CE components remain out of scope.
-- Structured solution memory is separate from short learned instincts.
+- Post-compaction active recovery should include `.codex-context/solution-index.md`.
+- `STRATEGY.md`, `CONCEPTS.md`, and full `docs/solutions/` bodies stay on-demand, not always-loaded context.
+- Bootstrap asset drift should fail health/release checks because it affects new projects.
 
 ## Blockers
 - None.
 
 ## Next Action
-Report verified pushed state to the user.
+Push the amended checkpoint, verify remote, and report verified state.
 
 ## Last Updated
-2026-06-09 23:48 +08:00
+2026-06-10 01:18 +08:00

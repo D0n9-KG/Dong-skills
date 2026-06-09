@@ -62,6 +62,7 @@ node .codex/hooks/project-ops.mjs solution-status --update-index
 ## State File Hygiene
 
 - Keep `.codex-context/current-state.md`, `plan-progress.md`, and `handoff-summary.md` compact.
+- Append new verification evidence to the end of `.codex-context/verification.md`; `state-prune` treats later command entries as newer.
 - Move long logs to `.codex-context/raw/` when they are runtime-only.
 - Archive old verification evidence with:
 

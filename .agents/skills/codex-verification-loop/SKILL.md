@@ -21,7 +21,7 @@ Use project evidence, not guesses:
 
 ## Minimum Record
 
-Update `.codex-context/verification.md`:
+Append new entries to the end of `.codex-context/verification.md` under `Commands Run` and `Product Evidence`. `state-prune` keeps the newest entries by file order, so prepending fresh evidence can cause it to be archived by mistake.
 
 ```markdown
 ## Commands Run

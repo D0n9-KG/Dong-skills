@@ -24,7 +24,7 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - `scripts/state-prune.mjs`: archives old verification history into `.codex-context/archive/`.
 - `scripts/solutions.mjs`: validates and summarizes `docs/solutions/` and updates `solution-index.md`.
 - `scripts/session-history.mjs`: scans prior session metadata and keyword counts without printing raw transcripts.
-- `scripts/project-ops-health.mjs`: project install and asset parity check.
+- `scripts/project-ops-health.mjs`: project install check and release-blocking asset parity check.
 - `scripts/release-check.mjs`: syntax, PowerShell parse, tests, privacy, and runtime-artifact release check.
 - `.agents/skills/codex-architecture-governance/`: architecture governance skill and scan script.
 - `.agents/skills/codex-docs-stewardship/`: docs/state stewardship skill and scan script.
@@ -72,6 +72,7 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 
 ## Architecture Watchpoints
 - Asset parity must stay explicit; otherwise new-project bootstrap can silently install stale hook dependencies.
+- Recovery output must stay aligned with `AGENTS.project-ops.snippet.md`; `solution-index.md` belongs in active recovery, while `STRATEGY.md`, `CONCEPTS.md`, and full `docs/solutions/` remain on-demand.
 - Context budget must distinguish active recovery files from on-demand archive files.
 - Adding skills should not bloat always-loaded routing docs; route through concise descriptions and on-demand references.
 - `docs/solutions/` can become noisy if every small fix is documented; only verified non-trivial learnings belong there, and duplicates should be consolidated.

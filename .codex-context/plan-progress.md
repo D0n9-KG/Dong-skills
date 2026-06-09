@@ -1,22 +1,21 @@
 # Plan Progress
 
 ## Active Plan
-CE-inspired Dong Skills enhancement pass.
+Recovery-order alignment and governance omission check.
 
 ## Tasks
-- [x] Review CE source for strategy, compound memory, refresh, code/doc review, session history, and demo evidence patterns.
-- [x] Add `codex-solution-memory`, schema references, `scripts/solutions.mjs`, hook CLI commands, and `solution-index.md`.
-- [x] Add `codex-review-panel`, `codex-session-history`, `codex-strategy-anchor`, and `codex-evidence-capture`.
-- [x] Update governance routing, onboarding, learning, verification, docs stewardship, review, context-budget, AGENTS snippet, and README.
-- [x] Update install/bootstrap scripts and asset parity for new helper scripts.
-- [x] Run health/release/tests and fix failures.
-- [x] Sync updated global skills.
-- [x] Commit and push checkpoint `a53936d`.
+- [x] Compare AGENTS recovery order with `SessionStart` / `PostCompact` hook recovery output.
+- [x] Add `.codex-context/solution-index.md` and on-demand `STRATEGY.md` / `CONCEPTS.md` / `docs/solutions/` guidance to hook recovery output.
+- [x] Include a compact `solution-index.md` excerpt in automatic recovery context.
+- [x] Sync the onboarding bootstrap asset copy.
+- [x] Promote bootstrap asset parity drift from warning to health-check failure.
+- [x] Add regression coverage for installed bootstrap hook recovery output and asset parity failure.
+- [x] Run tests, health, release, docs, architecture, budget, solution, and learning checks.
 
 ## Current Step
-None.
+Push amended checkpoint and verify remote.
 
 ## Out Of Scope
 - Global hooks.
-- Wholesale CE import of Slack, Rails/Xcode, image generation, promotion/social copy, and fully autonomous workflows.
 - Raw session transcript ingestion.
+- Loading full `docs/solutions/` bodies automatically after compaction.

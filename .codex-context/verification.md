@@ -1,70 +1,6 @@
 # Verification
 
 ## Commands Run
-- Personal-path scan, exact credential-pattern scan, obsolete global-hook artifact scan, and runtime-artifact scan after Git checkpoint changes.
-  - Result: pass
-  - Evidence: no matches outside `.git`; no raw observations, logs, backups, smoke-test leftovers, or old global-hook artifacts found.
-  - Date: 2026-06-09 17:01 +08:00
-- Final zip generation and entry inspection after adding `codex-git-checkpoint`.
-  - Result: pass
-  - Evidence: `dong-skills.zip` contains 71 entries including `.agents`, `.codex`, `.codex-context`, and `.agents/skills/codex-git-checkpoint/SKILL.md`; it contains no `.git`, raw observations, smoke-test leftovers, private path markers, or old global-hook artifacts.
-  - Date: 2026-06-09 17:04 +08:00
-- Git checkpoint push verification.
-  - Result: pass
-  - Evidence: local `HEAD` and `origin/main` both pointed to `51490ac86c8277a8c18cab907bb524733a9aa605` after pushing `feat(skills): add Git checkpoint discipline`.
-  - Date: 2026-06-09 17:06 +08:00
-- Syntax checks after hardening pass.
-  - Result: pass
-  - Evidence: `node --check` passed for root hook, onboarding asset hook, root helper scripts, onboarding asset helper scripts, and `tests/project-ops.test.mjs`.
-  - Date: 2026-06-09 18:40 +08:00
-- Repeatable regression tests.
-  - Result: pass
-  - Evidence: `node --test tests/project-ops.test.mjs` passed 4/4 tests covering bootstrap `.gitignore`, learning redaction, Git Checkpoint validation, and section-aware recovery.
-  - Date: 2026-06-09 18:43 +08:00
-- Dong Skills health check.
-  - Result: pass
-  - Evidence: `node scripts/project-ops-health.mjs .` reported `Issues: none`.
-  - Date: 2026-06-09 18:43 +08:00
-- Release check.
-  - Result: pass
-  - Evidence: `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
-  - Date: 2026-06-09 18:43 +08:00
-- Context budget after hardening.
-  - Result: pass with known weight increase
-  - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated ~22,045 tokens across 27 files; `.codex/hooks/project-ops.mjs` remains the heavy file at ~8,980 tokens.
-  - Date: 2026-06-09 18:43 +08:00
-- Diff whitespace check.
-  - Result: pass
-  - Evidence: `git diff --check` returned exit code 0.
-  - Date: 2026-06-09 18:44 +08:00
-- Git checkpoint push verification for hardening commit.
-  - Result: pass
-  - Evidence: `fix(skills): harden project ops governance` was committed as `103e9de` and pushed to `origin/main`.
-  - Date: 2026-06-09 18:50 +08:00
-- State prune on this kit.
-  - Result: pass
-  - Evidence: `node .codex/hooks/project-ops.mjs state-prune --keep 10 --apply` archived 18 older verification entries to `.codex-context/archive/verification-2026-06-09.md` and kept 10 active entries.
-  - Date: 2026-06-09 21:05 +08:00
-- Expanded regression tests after split hook and governance additions.
-  - Result: pass
-  - Evidence: `node --test tests/project-ops.test.mjs` passed 7/7 tests covering bootstrap dependencies, learning redaction, Git Checkpoint validation, recovery, stale artifact gate, PreCompact gate, and state pruning.
-  - Date: 2026-06-09 21:30 +08:00
-- Final release check.
-  - Result: pass
-  - Evidence: `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
-  - Date: 2026-06-09 21:30 +08:00
-- Final health check.
-  - Result: pass
-  - Evidence: `node scripts/project-ops-health.mjs .` reported `Issues: none` with no asset parity warnings.
-  - Date: 2026-06-09 21:30 +08:00
-- Context budget after split and pruning.
-  - Result: pass
-  - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated ~22,931 tokens across 38 active files; hook entrypoint is ~636 tokens / 87 lines, and archive/raw are excluded from active budget.
-  - Date: 2026-06-09 21:30 +08:00
-- Architecture and docs stewardship scans.
-  - Result: pass
-  - Evidence: architecture scan found no files or directories over thresholds; docs scan found no relative-date warnings after README wording cleanup.
-  - Date: 2026-06-09 21:30 +08:00
 - Diff whitespace check.
   - Result: pass
   - Evidence: `git diff --check` returned exit code 0.
@@ -105,7 +41,38 @@
   - Result: pass
   - Evidence: global install check found all five new skills under `.agents/skills`; `git push origin main` pushed `a53936d`; `git ls-remote origin refs/heads/main` returned `a53936d0c8e036ae053e7a95fde8c5c660e2181c`.
   - Date: 2026-06-09 23:48 +08:00
-
+- Recovery-order alignment regression tests.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 9/9 tests, including installed bootstrap hook recovery order, solution-index recovery excerpt, and asset parity failure coverage.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment health and release checks.
+  - Result: pass
+  - Evidence: `node scripts/project-ops-health.mjs .`, `node .codex/hooks/project-ops.mjs health-check`, `node scripts/release-check.mjs .`, and `git diff --check` all passed.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment docs, architecture, budget, solution, and learning checks.
+  - Result: pass with advisory notes
+  - Evidence: architecture scan found only `tests/project-ops.test.mjs` over the large-file threshold; docs scan found no hard issue; context budget estimated ~28,130 tokens before pruning; `solution-status` found no invalid docs; `learning-status` found no pending observations.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment global install check.
+  - Result: pass
+  - Evidence: `scripts/install-windows.ps1` installed curated skills to `%USERPROFILE%\.agents\skills` using a temporary target project; global `codex-codebase-onboarding` asset recovery contains `solution-index.md` and on-demand `STRATEGY.md` / `CONCEPTS.md` / `docs/solutions` guidance.
+  - Date: 2026-06-10 01:02 +08:00
+- State pruning after recovery alignment.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs state-prune --keep 10 --apply` archived 22 older verification entries and reduced active context budget to ~27,616 tokens across 44 active files.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment final release verification after skill-rule update.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 9/9 tests; `node scripts/project-ops-health.mjs .` reported `Issues: none`; `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan; `git diff --check` passed.
+  - Date: 2026-06-10 01:14 +08:00
+- Recovery-order alignment final global install check.
+  - Result: pass
+  - Evidence: temporary-target `scripts/install-windows.ps1` run synced global skills; global `codex-verification-loop`, `codex-docs-stewardship`, and onboarding recovery asset contain the new recovery and verification-order rules.
+  - Date: 2026-06-10 01:14 +08:00
+- Recovery-order alignment checkpoint commit.
+  - Result: pass
+  - Evidence: local checkpoint commit created with subject `fix(skills): align recovery context`; it will be amended with final handoff state before push.
+  - Date: 2026-06-10 01:18 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

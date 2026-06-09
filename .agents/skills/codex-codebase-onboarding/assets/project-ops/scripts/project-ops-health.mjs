@@ -177,7 +177,7 @@ function checkContext(root, issues) {
   }
 }
 
-function checkAssetParity(root, warnings) {
+function checkAssetParity(root, issues) {
   const assetRoot = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops");
   if (!fs.existsSync(assetRoot)) return;
 
@@ -219,14 +219,14 @@ function checkAssetParity(root, warnings) {
   for (const [rootFile, assetFile] of pairs) {
     if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) continue;
     if (sha256(rootFile) !== sha256(assetFile)) {
-      warnings.push(`Bootstrap asset differs from root file: ${path.relative(root, assetFile).replace(/\\/g, "/")}`);
+      issues.push(`Bootstrap asset differs from root file: ${path.relative(root, assetFile).replace(/\\/g, "/")}`);
     }
   }
 
   const rootLib = path.join(root, ".codex", "scripts", "lib");
   const assetLib = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "scripts", "lib");
   if (!fs.existsSync(rootLib) || !fs.existsSync(assetLib)) {
-    warnings.push("Bootstrap asset is missing .codex/scripts/lib parity tree");
+    issues.push("Bootstrap asset is missing .codex/scripts/lib parity tree");
     return;
   }
 
@@ -241,16 +241,15 @@ function checkAssetParity(root, warnings) {
     const rootFile = path.join(rootLib, relFile);
     const assetFile = path.join(assetLib, relFile);
     if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) {
-      warnings.push(`Bootstrap asset lib file mismatch: ${relFile}`);
+      issues.push(`Bootstrap asset lib file mismatch: ${relFile}`);
     } else if (sha256(rootFile) !== sha256(assetFile)) {
-      warnings.push(`Bootstrap asset differs from root lib file: .codex/scripts/lib/${relFile}`);
+      issues.push(`Bootstrap asset differs from root lib file: .codex/scripts/lib/${relFile}`);
     }
   }
 }
 
 function run(root) {
   const issues = [];
-  const warnings = [];
 
   if (!fs.existsSync(path.join(root, ".codex", "hooks", "project-ops.mjs"))) {
     issues.push("Missing .codex/hooks/project-ops.mjs");
@@ -273,7 +272,7 @@ function run(root) {
   checkRuntimeGitignore(root, issues);
   checkTrackedRaw(root, issues);
   checkContext(root, issues);
-  checkAssetParity(root, warnings);
+  checkAssetParity(root, issues);
 
   const lines = [
     "Dong Skills health check",
@@ -286,11 +285,6 @@ function run(root) {
     for (const issue of issues) lines.push(`- ${issue}`);
   } else {
     lines.push("Issues: none");
-  }
-
-  if (warnings.length) {
-    lines.push("", "Warnings:");
-    for (const warning of warnings) lines.push(`- ${warning}`);
   }
 
   lines.push("", issues.length ? "Result: fail" : "Result: pass");

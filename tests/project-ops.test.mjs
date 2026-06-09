@@ -11,6 +11,7 @@ const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
 const bootstrap = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "scripts", "bootstrap-project-ops.ps1");
 const statePrune = path.join(root, "scripts", "state-prune.mjs");
 const solutions = path.join(root, "scripts", "solutions.mjs");
+const health = path.join(root, "scripts", "project-ops-health.mjs");
 
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "dong-skills-test-"));
@@ -91,6 +92,76 @@ Continue test.
 `);
 }
 
+function readyHealthFixture(projectRoot) {
+  const ctx = path.join(projectRoot, ".codex-context");
+  const hooks = {};
+  for (const eventName of ["SessionStart", "UserPromptSubmit", "PostToolUse", "PreCompact", "PostCompact", "Stop"]) {
+    hooks[eventName] = [{ hooks: [{ command: "node .codex/hooks/project-ops.mjs" }] }];
+  }
+
+  write(path.join(projectRoot, ".codex", "hooks.json"), JSON.stringify({ hooks }, null, 2));
+  write(path.join(projectRoot, ".codex", "hooks", "project-ops.mjs"), "console.log('root hook');\n");
+  write(path.join(projectRoot, ".codex", "scripts", "lib", "core.mjs"), "export const value = 1;\n");
+  for (const scriptName of ["project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
+    write(path.join(projectRoot, "scripts", scriptName), "#!/usr/bin/env node\n");
+  }
+  write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n");
+
+  for (const name of [
+    "current-state.md",
+    "project-map.md",
+    "spec.md",
+    "plan-progress.md",
+    "artifact-index.md",
+    "decisions.md",
+    "open-questions.md",
+    "risks.md",
+    "verification.md",
+    "learned-instincts.md",
+    "solution-index.md"
+  ]) {
+    write(path.join(ctx, name), `# ${name}\n`);
+  }
+
+  write(path.join(ctx, "handoff-summary.md"), `# Handoff Summary
+
+## Objective
+Test.
+
+## Latest User Instruction
+Test.
+
+## Approved Scope / Spec
+Test.
+
+## Plan Status
+Test.
+
+## Files Modified
+None.
+
+## Decisions Made
+None.
+
+## Verification Evidence
+Fixture.
+
+## Git Checkpoint
+- Latest commit: fixture
+- Push state: not pushed
+- Files included: none
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+
+## Next Action
+Continue.
+
+## Files To Re-read First
+- .codex-context/handoff-summary.md
+`);
+}
+
 test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const project = tempProject();
   execFileSync("powershell.exe", [
@@ -112,6 +183,17 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "session-history.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
+
+  const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
+  const recovery = execFileSync(process.execPath, [installedHook], {
+    cwd: project,
+    input: JSON.stringify({ cwd: project, hook_event_name: "SessionStart" }),
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"]
+  }).trim();
+  const context = JSON.parse(recovery).hookSpecificOutput.additionalContext;
+  assert.match(context, /7\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /9\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
 });
 
 test("learning observations redact private key bodies and URL userinfo", () => {
@@ -199,13 +281,18 @@ Resume final task.
 `);
   write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nResume final task.\n");
   write(path.join(project, ".codex-context", "plan-progress.md"), "# Plan Progress\n\n## Current Step\nResume.\n");
+  write(path.join(project, ".codex-context", "solution-index.md"), "# Solution Index\n\n## Knowledge Store\n- docs/solutions present: yes\n");
   write(path.join(project, ".codex-context", "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- None.\n");
 
   const output = runHook(project, { hook_event_name: "SessionStart" });
   const context = output.hookSpecificOutput.additionalContext;
+  assert.match(context, /7\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /9\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
   assert.match(context, /## Git Checkpoint/);
   assert.match(context, /## Next Action\nResume final task\./);
   assert.match(context, /## Files To Re-read First\n- important\.md/);
+  assert.match(context, /Solution index excerpt:/);
+  assert.match(context, /docs\/solutions present: yes/);
 });
 
 test("PostToolUse blocks when artifact index is stale after project file changes", () => {
@@ -273,6 +360,23 @@ test("state-prune archives old verification commands and keeps recent evidence",
   const archive = fs.readFileSync(path.join(ctx, "archive", archives[0]), "utf8");
   assert.match(archive, /command 1/);
   assert.match(archive, /command 2/);
+});
+
+test("health check fails when bootstrap assets drift from root files", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+
+  const assetRoot = path.join(project, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops");
+  write(path.join(assetRoot, ".codex", "hooks", "project-ops.mjs"), "console.log('different asset hook');\n");
+  write(path.join(assetRoot, ".codex", "scripts", "lib", "core.mjs"), "export const value = 1;\n");
+
+  assert.throws(() => {
+    execFileSync(process.execPath, [health, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
 });
 
 test("solutions validator accepts structured docs and rejects missing frontmatter", () => {
