@@ -81,6 +81,10 @@
   - Result: pass
   - Evidence: `dong-skills.zip` contains 71 entries including `.agents`, `.codex`, `.codex-context`, and `.agents/skills/codex-git-checkpoint/SKILL.md`; it contains no `.git`, raw observations, smoke-test leftovers, private path markers, or old global-hook artifacts.
   - Date: 2026-06-09 17:04 +08:00
+- Git checkpoint push verification.
+  - Result: pass
+  - Evidence: local `HEAD` and `origin/main` both pointed to `51490ac86c8277a8c18cab907bb524733a9aa605` after pushing `feat(skills): add Git checkpoint discipline`.
+  - Date: 2026-06-09 17:06 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

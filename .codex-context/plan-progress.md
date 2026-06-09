@@ -10,10 +10,10 @@ Inline plan for Git checkpoint skill addition.
 - [x] Add hook-level Git checkpoint reminders.
 - [x] Run syntax, smoke, privacy, and packaging verification.
 - [x] Install updated global skills.
-- [ ] Commit and push the update.
+- [x] Commit and push the update.
 
 ## Current Step
-Regenerate release zip, then commit and push.
+None.
 
 ## Out Of Scope
 - Automatic commits.

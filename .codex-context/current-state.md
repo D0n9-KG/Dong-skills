@@ -7,7 +7,7 @@ Add Git/GitHub checkpoint discipline to Dong Skills so Codex archives meaningful
 Add a self-use skill for GitHub archive commits and push discipline, including reminders to checkpoint regularly and commit-message requirements, referencing popular existing skill patterns.
 
 ## Current Phase
-delivery
+handoff
 
 ## Active Assumptions
 - The feature should be part of the curated Dong Skills set, not an optional add-on.
@@ -18,7 +18,7 @@ delivery
 - None.
 
 ## Next Action
-Regenerate the release zip, commit the Git checkpoint skill update, and push it to GitHub.
+Use `codex-git-checkpoint` for future meaningful work before long pauses, compaction, delivery, or GitHub archive/push.
 
 ## Last Updated
-2026-06-09 17:02 +08:00
+2026-06-09 17:06 +08:00
