@@ -1,18 +1,20 @@
 # Plan Progress
 
 ## Active Plan
-Inline plan for project-level bootstrap release.
+Inline plan for Git checkpoint skill addition.
 
 ## Tasks
-- [x] Remove global hook installation artifacts from the kit.
-- [x] Add onboarding-skill bootstrap script and project-ops assets.
-- [x] Update README and skill guidance for skill-based new-project startup.
-- [x] Run release verification: syntax checks, privacy scan, runtime-artifact scan, installed-skill checks.
-- [x] Regenerate release zip and push the updated repository.
+- [x] Research existing commit/publish workflow patterns.
+- [x] Add `codex-git-checkpoint` skill.
+- [x] Wire the skill into governance, execution, AGENTS snippets, README, and handoff templates.
+- [x] Add hook-level Git checkpoint reminders.
+- [x] Run syntax, smoke, privacy, and packaging verification.
+- [x] Install updated global skills.
+- [ ] Commit and push the update.
 
 ## Current Step
-None.
+Regenerate release zip, then commit and push.
 
 ## Out Of Scope
-- Global hook installation.
-- Optional governance module split.
+- Automatic commits.
+- PR creation replacement for the GitHub plugin.

@@ -23,6 +23,7 @@ If a skill conflicts with the latest user instruction, follow the user and updat
 - Written plan to execute: `executing-plans`.
 - Bug, failing test, unexpected behavior: `systematic-debugging`.
 - Before completion claim: `verification-before-completion`.
+- Before long pause, compaction, final delivery, or GitHub archive/push: `codex-git-checkpoint`.
 - Meaningful implementation ready for risk review: `requesting-code-review`.
 - Review feedback received: `receiving-code-review`.
 - Context drift, compaction, or state size concern: `codex-context-budget`.
@@ -35,6 +36,7 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 - Before edits: know the relevant files and update `artifact-index.md` when they matter.
 - During work: keep `plan-progress.md` and `current-state.md` current.
 - Before long pauses, compaction, or final response: refresh `handoff-summary.md`.
+- Before long pauses or final response with meaningful changes: commit/push a Git checkpoint or record the deferred reason in `handoff-summary.md`.
 - Before success claims: run or record verification in `verification.md`.
 
 ## Tool Mapping

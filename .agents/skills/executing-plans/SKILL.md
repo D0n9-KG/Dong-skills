@@ -15,7 +15,8 @@ Execute the plan without losing the thread. Keep progress, evidence, and next ac
 4. Implement the task using the repo's existing patterns.
 5. Run the task's verification command or record why it cannot be run.
 6. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, and `.codex-context/current-state.md`.
-7. Repeat until the plan is complete or a blocker is reached.
+7. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
+8. Repeat until the plan is complete or a blocker is reached.
 
 ## Checkpoints
 
@@ -46,6 +47,7 @@ Stop and surface the issue when:
 Before reporting completion:
 
 - Use `verification-before-completion`.
+- Use `codex-git-checkpoint` when meaningful changes should be archived before delivery.
 - Re-read the spec and plan.
 - Confirm all tasks and acceptance criteria are covered.
 - Record verification evidence or explicit gaps.

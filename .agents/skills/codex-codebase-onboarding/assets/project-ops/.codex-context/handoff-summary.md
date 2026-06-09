@@ -20,6 +20,8 @@
 
 ## Verification Evidence
 
+## Git Checkpoint
+
 ## Learned Instincts To Preserve
 
 ## Next Action

@@ -1,0 +1,129 @@
+---
+name: codex-git-checkpoint
+description: Git and GitHub checkpoint discipline for Codex project work. Use before long pauses, compaction, final delivery, branch switches, risky changes, or whenever meaningful verified work should be archived with a clear commit and optional push.
+---
+
+# Codex Git Checkpoint
+
+Use this skill to keep long-running work archived without mixing unrelated changes or producing vague commits.
+
+## Trigger
+
+Use this skill when any of these are true:
+
+- A plan task, phase, bug fix, review pass, or project setup milestone is verified.
+- Work has accumulated across multiple files, a large diff, or a long session.
+- Before compaction, final response, branch switch, risky refactor, dependency change, or destructive operation.
+- The user asks to commit, push, publish, archive, checkpoint, save work, or upload to GitHub.
+- A hook reports uncommitted changes, unpushed commits, or missing Git Checkpoint notes.
+
+Do not wait until the entire project is finished if a coherent verified checkpoint already exists.
+
+## Rules
+
+- A commit is an archive checkpoint, not proof that the task is complete.
+- Never stage unrelated user changes silently.
+- Never use `git add -A` unless the whole worktree is confirmed in scope.
+- Never commit generated secrets, raw observations, logs, backups, local paths, or private runtime data.
+- Never rewrite history, force-push, delete branches, or reset work without explicit user approval.
+- Do not push to a protected or shared branch when the safer path is a feature branch or draft PR.
+- If the work is not ready to commit, write the reason and next checkpoint in `handoff-summary.md` under `Git Checkpoint`.
+
+## Workflow
+
+1. Inspect repository state:
+   - `git status -sb`
+   - `git branch --show-current`
+   - `git remote -v`
+   - `git log --oneline -5`
+   - check upstream/ahead state when relevant: `git status -sb` usually shows it.
+2. Inspect the diff before staging:
+   - `git diff --stat`
+   - `git diff`
+   - if staged changes already exist, also inspect `git diff --cached`.
+3. Decide scope:
+   - Include only files created or modified for the current verified checkpoint.
+   - If unrelated changes exist, stage explicit file paths only.
+   - If scope is mixed and cannot be separated safely, ask the user before committing.
+4. Refresh project state before committing:
+   - `artifact-index.md`: files changed and why they matter.
+   - `verification.md`: fresh command evidence or explicit gap.
+   - `handoff-summary.md`: current state, next action, and `Git Checkpoint`.
+5. Stage intentionally:
+   - Prefer `git add -- path1 path2 ...`.
+   - Use `git add -A` only after verifying every changed file belongs in scope.
+6. Re-check staged content:
+   - `git diff --cached --stat`
+   - `git diff --cached`
+7. Commit with a clear message.
+8. Push when appropriate:
+   - If the user asked for GitHub archive/push, push after a successful commit.
+   - If no upstream exists, use `git push -u origin <branch>`.
+   - If pushing to the default branch is risky, create or use a feature branch unless the user explicitly wants direct push.
+9. Verify archive state:
+   - `git status -sb`
+   - `git log --oneline -3`
+   - `git ls-remote origin refs/heads/<branch>` after pushing when remote confirmation matters.
+10. Report branch, commit SHA, pushed remote, verification run, and any excluded files or remaining dirty changes.
+
+## Commit Message Standard
+
+Prefer Conventional Commit shape when it fits the repository:
+
+```text
+type(scope): concise summary
+
+What changed:
+- ...
+
+Why:
+- ...
+
+Verification:
+- ...
+```
+
+Use common types such as `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `build`, or `ci`.
+
+For small private checkpoints, a plain imperative subject is acceptable, but it still must be specific.
+
+Good subjects:
+
+- `feat(skills): add Git checkpoint discipline`
+- `docs(readme): document project-level hook bootstrap`
+- `chore(release): refresh Dong Skills handoff state`
+
+Bad subjects:
+
+- `update`
+- `misc changes`
+- `fix stuff`
+- `checkpoint`
+
+For multi-file, behavior-changing, risky, or public commits, include a body that explains:
+
+- what changed
+- why it changed
+- verification evidence
+- any risks, exclusions, or follow-up work
+
+## Git Checkpoint Handoff Section
+
+Before compaction, long pauses, or final delivery, keep this section meaningful:
+
+```markdown
+## Git Checkpoint
+- Latest commit:
+- Push state:
+- Files included:
+- Files intentionally left uncommitted:
+- Deferred reason:
+- Next checkpoint:
+```
+
+If work is ready and committed, record the commit and push state.
+If work is not ready to commit, record the reason instead of pretending the archive is clean.
+
+## GitHub Publish Boundary
+
+This skill covers checkpoint commit and optional push. If the user asks for a full GitHub publish flow with PR creation, use the GitHub plugin skill `github:yeet` after this checkpoint discipline has confirmed scope, commit quality, and verification evidence.

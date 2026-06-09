@@ -1,24 +1,24 @@
 # Current State
 
 ## Objective
-Prepare Dong Skills as a public Codex project-operations kit with global skills and project-level hooks.
+Add Git/GitHub checkpoint discipline to Dong Skills so Codex archives meaningful work with clear commits and push state.
 
 ## Latest User Instruction
-Use `codex-codebase-onboarding` as the new-project entrypoint so a project can bootstrap itself from the skill; remove global hooks and keep hooks project-scoped.
+Add a self-use skill for GitHub archive commits and push discipline, including reminders to checkpoint regularly and commit-message requirements, referencing popular existing skill patterns.
 
 ## Current Phase
-handoff
+delivery
 
 ## Active Assumptions
-- The user wants skills installed globally, but hooks installed per project for flexibility.
-- New repositories should not require a manual project installer run after Dong Skills has been installed once.
-- Public release content must avoid private runtime data, local absolute paths, tokens, raw observations, logs, and backups.
+- The feature should be part of the curated Dong Skills set, not an optional add-on.
+- Hooks should remind and gate through project-level state, but should allow deferring a commit when work is not ready by recording the reason in `handoff-summary.md`.
+- Full PR creation remains delegated to the GitHub plugin flow; this new skill focuses on checkpoint commit, message quality, and optional push.
 
 ## Blockers
 - None.
 
 ## Next Action
-Use `codex-codebase-onboarding` to bootstrap and onboard the next target project.
+Regenerate the release zip, commit the Git checkpoint skill update, and push it to GitHub.
 
 ## Last Updated
-2026-06-09 16:16 +08:00
+2026-06-09 17:02 +08:00

@@ -204,6 +204,8 @@ Keep this file as a compact index. Store individual instincts under \`.codex-con
 
 ## Verification Evidence
 
+## Git Checkpoint
+
 ## Learned Instincts To Preserve
 
 ## Next Action
@@ -275,6 +277,107 @@ function gitChangedFiles(root) {
   } catch {
     return [];
   }
+}
+
+function gitStatusFiles(root) {
+  try {
+    const out = execFileSync("git", ["status", "--porcelain"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    return out.split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => line.slice(3).trim())
+      .map((name) => name.includes(" -> ") ? name.split(" -> ").pop().trim() : name)
+      .map((name) => name.replace(/^"|"$/g, "").replace(/\\/g, "/"))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function gitCurrentBranch(root) {
+  try {
+    return execFileSync("git", ["branch", "--show-current"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function gitHasRemote(root) {
+  try {
+    const out = execFileSync("git", ["remote"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+    return out.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function gitAheadBehind(root) {
+  try {
+    execFileSync("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+  } catch {
+    return { hasUpstream: false, ahead: 0, behind: 0 };
+  }
+
+  try {
+    const out = execFileSync("git", ["rev-list", "--left-right", "--count", "HEAD...@{u}"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+    const [aheadRaw, behindRaw] = out.split(/\s+/);
+    return {
+      hasUpstream: true,
+      ahead: Number.parseInt(aheadRaw || "0", 10) || 0,
+      behind: Number.parseInt(behindRaw || "0", 10) || 0
+    };
+  } catch {
+    return { hasUpstream: true, ahead: 0, behind: 0 };
+  }
+}
+
+function gitCheckpointStatus(root, ctx, latest) {
+  const statusFiles = gitStatusFiles(root);
+  const branch = gitCurrentBranch(root);
+  const remote = gitHasRemote(root);
+  const aheadBehind = gitAheadBehind(root);
+  const issues = [];
+
+  if (statusFiles.length > 0) issues.push(`${statusFiles.length} uncommitted file(s)`);
+  if (aheadBehind.ahead > 0) issues.push(`${aheadBehind.ahead} unpushed commit(s)`);
+  if (remote && branch && !aheadBehind.hasUpstream) issues.push(`branch '${branch}' has no upstream`);
+
+  const needsCheckpoint = issues.length > 0;
+  const handoffFile = path.join(ctx, REQUIRED_FILES.handoff);
+  const handoff = readText(handoffFile);
+  const checkpoint = sectionContent(handoff, "Git Checkpoint");
+  const checkpointFresh = latest ? mtimeMs(handoffFile) >= latest - 1000 : true;
+  const checkpointRecorded = meaningful(checkpoint) && checkpointFresh;
+
+  return {
+    ok: !needsCheckpoint || checkpointRecorded,
+    needsCheckpoint,
+    checkpointRecorded,
+    statusFiles,
+    issues,
+    summary: needsCheckpoint
+      ? `Git checkpoint needs review: ${issues.join("; ")}. Use codex-git-checkpoint to commit/push or record the deferred reason in handoff-summary.md -> Git Checkpoint.`
+      : "Git checkpoint ok: worktree has no uncommitted files and no unpushed commits."
+  };
 }
 
 function mtimeMs(file) {
@@ -354,6 +457,7 @@ function handoffStatus(ctx, latest) {
     "Files Modified",
     "Decisions Made",
     "Verification Evidence",
+    "Git Checkpoint",
     "Next Action",
     "Files To Re-read First"
   ];
@@ -613,17 +717,19 @@ function excerpt(ctx, name, max) {
   return text ? text.slice(0, max) : "";
 }
 
-function sessionRecoveryContext(ctx, eventName) {
+function sessionRecoveryContext(root, ctx, eventName) {
   const learning = learningStatus(ctx);
   const learningSummary = learning.ok
     ? "No pending learning review."
     : `Pending learning review: ${learning.issues.join("; ")}.`;
+  const checkpointSummary = gitCheckpointStatus(root, ctx, 0).summary;
 
   const parts = [
     "Codex Project Ops hooks are active.",
     "Recovery order: handoff-summary.md -> current-state.md -> project-map.md -> spec.md -> plan-progress.md -> artifact-index.md -> learned-instincts.md -> latest user instruction.",
-    "Before editing, keep artifact-index.md current. Before completion, update verification.md and handoff-summary.md.",
+    "Before editing, keep artifact-index.md current. Before completion, update verification.md, Git Checkpoint, and handoff-summary.md.",
     learningSummary,
+    checkpointSummary,
     "",
     "Handoff excerpt:",
     excerpt(ctx, REQUIRED_FILES.handoff, 1800),
@@ -647,11 +753,11 @@ function sessionRecoveryContext(ctx, eventName) {
 }
 
 function sessionStart(input, root, ctx) {
-  writeJson(sessionRecoveryContext(ctx, "SessionStart"));
+  writeJson(sessionRecoveryContext(root, ctx, "SessionStart"));
 }
 
 function postCompact(input, root, ctx) {
-  writeJson(sessionRecoveryContext(ctx, "PostCompact"));
+  writeJson(sessionRecoveryContext(root, ctx, "PostCompact"));
 }
 
 function userPromptSubmit(input, root, ctx) {
@@ -702,7 +808,8 @@ function postToolUse(input, root, ctx) {
 
 function preCompact(input, root, ctx) {
   const changed = gitChangedFiles(root);
-  const latest = latestChangedMtime(root, changed);
+  const statusFiles = gitStatusFiles(root);
+  const latest = latestChangedMtime(root, [...new Set([...changed, ...statusFiles])]);
   const issues = [];
 
   for (const [key, label] of [
@@ -723,6 +830,9 @@ function preCompact(input, root, ctx) {
   const learning = learningStatus(ctx);
   issues.push(...learning.issues);
 
+  const checkpoint = gitCheckpointStatus(root, ctx, latest);
+  if (!checkpoint.ok) issues.push(checkpoint.summary);
+
   if (issues.length === 0) return;
 
   writeJson({
@@ -731,7 +841,7 @@ function preCompact(input, root, ctx) {
     systemMessage: [
       "Codex Project Ops blocked compaction.",
       `Issues: ${issues.join("; ")}.`,
-      "Refresh current-state.md, plan-progress.md, artifact-index.md, handoff-summary.md, and learned-instincts.md as applicable. Then compact again."
+      "Refresh current-state.md, plan-progress.md, artifact-index.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. Then compact again."
     ].join("\n")
   });
 }
@@ -744,12 +854,15 @@ function stop(input, root, ctx) {
 
   const changed = gitChangedFiles(root);
   const learning = learningStatus(ctx);
-  if (changed.length === 0 && learning.ok) {
+  const statusFiles = gitStatusFiles(root);
+  const latest = latestChangedMtime(root, [...new Set([...changed, ...statusFiles])]);
+  const checkpoint = gitCheckpointStatus(root, ctx, latest);
+
+  if (changed.length === 0 && learning.ok && checkpoint.ok) {
     writeJson({ continue: true });
     return;
   }
 
-  const latest = latestChangedMtime(root, changed);
   const issues = [];
 
   if (changed.length > 0) {
@@ -773,6 +886,7 @@ function stop(input, root, ctx) {
   }
 
   issues.push(...learning.issues);
+  if (!checkpoint.ok) issues.push(checkpoint.summary);
 
   if (issues.length === 0) {
     writeJson({ continue: true });
@@ -785,7 +899,7 @@ function stop(input, root, ctx) {
       "Before stopping, refresh Codex Project Ops state.",
       changed.length ? `Changed files: ${shortList(changed)}.` : "No non-context files changed.",
       `Issues: ${issues.join("; ")}.`,
-      "Update artifact-index.md, current-state.md, verification.md, handoff-summary.md, and learned-instincts.md as applicable. If verification was not run, record the explicit gap instead of claiming success."
+      "Update artifact-index.md, current-state.md, verification.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. If verification was not run, record the explicit gap instead of claiming success."
     ].join("\n")
   });
 }

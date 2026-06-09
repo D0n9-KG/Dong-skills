@@ -16,6 +16,7 @@ Use only the bundled curated set by default:
 - `executing-plans`
 - `systematic-debugging`
 - `verification-before-completion`
+- `codex-git-checkpoint`
 - `requesting-code-review`
 - `receiving-code-review`
 - `codex-codebase-onboarding`
@@ -69,4 +70,4 @@ After compaction, recover in this order:
 
 ## Completion
 
-Before claiming work is complete, run fresh verification or record the explicit verification gap in `verification.md`. Then refresh `handoff-summary.md`.
+Before claiming work is complete, run fresh verification or record the explicit verification gap in `verification.md`. Then use `codex-git-checkpoint` to commit/push a checkpoint or record why it is deferred in `handoff-summary.md`, and refresh `handoff-summary.md`.

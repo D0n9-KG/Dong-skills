@@ -53,6 +53,34 @@
   - Result: pass
   - Evidence: `dong-skills.zip` contains 70 entries including `.agents`, `.codex`, and `.codex-context`; it contains no `.git`, raw observations, smoke-test leftovers, private path markers, or obsolete global-hook artifacts.
   - Date: 2026-06-09 16:16 +08:00
+- `node --check` on root project hook, onboarding bootstrap hook asset, global installed onboarding hook asset, and existing JS utility scripts after adding Git checkpoint logic.
+  - Result: pass
+  - Evidence: all checked JavaScript files returned exit code 0.
+  - Date: 2026-06-09 17:00 +08:00
+- Temporary-project Git checkpoint smoke test.
+  - Result: pass
+  - Evidence: dirty worktree with missing `Git Checkpoint` blocked Stop; adding a meaningful deferred checkpoint in `handoff-summary.md` allowed Stop to continue.
+  - Date: 2026-06-09 16:58 +08:00
+- Global skill install check for `codex-git-checkpoint`, `codex-project-governance`, `using-superpowers`, `executing-plans`, and `codex-codebase-onboarding`.
+  - Result: pass
+  - Evidence: each skill directory and `SKILL.md` exists under the global `.agents/skills` root.
+  - Date: 2026-06-09 17:00 +08:00
+- README and skill content check.
+  - Result: pass
+  - Evidence: README contains the Chinese Git archive discipline section and `codex-git-checkpoint`; the new skill contains commit-message and handoff-section requirements.
+  - Date: 2026-06-09 17:00 +08:00
+- `git diff --check`
+  - Result: pass
+  - Evidence: no whitespace errors.
+  - Date: 2026-06-09 17:00 +08:00
+- Personal-path scan, exact credential-pattern scan, obsolete global-hook artifact scan, and runtime-artifact scan after Git checkpoint changes.
+  - Result: pass
+  - Evidence: no matches outside `.git`; no raw observations, logs, backups, smoke-test leftovers, or old global-hook artifacts found.
+  - Date: 2026-06-09 17:01 +08:00
+- Final zip generation and entry inspection after adding `codex-git-checkpoint`.
+  - Result: pass
+  - Evidence: `dong-skills.zip` contains 71 entries including `.agents`, `.codex`, `.codex-context`, and `.agents/skills/codex-git-checkpoint/SKILL.md`; it contains no `.git`, raw observations, smoke-test leftovers, private path markers, or old global-hook artifacts.
+  - Date: 2026-06-09 17:04 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

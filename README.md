@@ -25,6 +25,7 @@ Dong Skills 把这些信息移出聊天窗口，放进项目内的 `.codex-conte
 - **压缩前检查**：`PreCompact` hook 会检查 handoff、核心状态文件和学习评审是否新鲜。它可以尝试阻断压缩，但不能保证在所有极限上下文场景中完全阻止 Codex 自动压缩。
 - **文件变更追踪**：`PostToolUse` hook 会在非上下文文件变化后要求刷新 `artifact-index.md`。
 - **完成前闸门**：`Stop` hook 会要求状态、产物索引、验证记录、交接摘要和学习评审保持最新。
+- **Git 存档纪律**：`PreCompact` 和 `Stop` 会检查未提交变更、未推送提交和 Git Checkpoint 记录，提醒 Codex 使用 `codex-git-checkpoint` 提交/推送，或写明为什么暂不提交。
 - **学习沉淀**：`UserPromptSubmit` hook 只捕获明确学习信号、用户纠正和长期偏好，写入短摘录、指纹和脱敏后的 raw observation。真正的 active memory 必须由 `codex-learning-memory` 决定 Save、Improve then Save、Absorb into Existing 或 Drop。
 - **上下文预算**：`codex-context-budget` 用来检查 AGENTS、skills、hooks、state files 是否正在膨胀。
 
@@ -38,6 +39,7 @@ Dong Skills 把这些信息移出聊天窗口，放进项目内的 `.codex-conte
 | `executing-plans` | 按计划逐项执行，并维护进度和检查点。 |
 | `systematic-debugging` | 遇到 bug、测试失败或异常行为时先定位根因。 |
 | `verification-before-completion` | 宣称完成、修复或通过前必须有验证证据。 |
+| `codex-git-checkpoint` | 在阶段边界、长暂停、压缩、交付或 GitHub 存档前检查 diff、提交信息、commit 和 push 纪律。 |
 | `requesting-code-review` | 对实际 diff、spec、plan 和验证证据做聚焦评审。 |
 | `receiving-code-review` | 处理 review 反馈时先判断有效性和风险。 |
 | `codex-codebase-onboarding` | 新项目启动时建立项目地图、命令、入口、约定和未知项。 |
@@ -154,7 +156,8 @@ It helps with:
 - `SessionStart` and `PostCompact` hooks inject the recovery order.
 - `PreCompact` checks whether handoff, state, and learning review are ready before compaction. It can request blocking, but it should not be treated as an absolute guarantee against every automatic compaction case.
 - `PostToolUse` asks Codex to refresh `artifact-index.md` after non-context file changes.
-- `Stop` checks state, artifacts, verification, handoff, and learning review before a session ends.
+- `Stop` checks state, artifacts, verification, Git checkpoint notes, handoff, and learning review before a session ends.
+- `PreCompact` and `Stop` remind Codex to use `codex-git-checkpoint` when work has uncommitted changes, unpushed commits, or missing checkpoint notes.
 - `codex-learning-memory` turns raw observations into scoped instincts only after review.
 - `codex-context-budget` audits token pressure from AGENTS, skills, hooks, and state files.
 
@@ -168,6 +171,7 @@ It helps with:
 | `executing-plans` | Execute written plans task by task with checkpoints. |
 | `systematic-debugging` | Find root cause before patching bugs or failures. |
 | `verification-before-completion` | Require evidence before completion claims. |
+| `codex-git-checkpoint` | Enforce diff review, commit-message quality, checkpoint commit, and optional GitHub push discipline before pauses, compaction, delivery, or archive. |
 | `requesting-code-review` | Review actual diffs against spec, plan, and verification. |
 | `receiving-code-review` | Evaluate review feedback before applying it. |
 | `codex-codebase-onboarding` | Map a new repo's architecture, commands, entry points, tests, and conventions. |

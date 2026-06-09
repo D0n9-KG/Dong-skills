@@ -1,33 +1,35 @@
 # Spec
 
 ## Problem
-Using Dong Skills in a new project should not require the user to manually run a project installer every time. Global hooks are too rigid for per-repository governance.
+Dong Skills still lacks explicit Git/GitHub archive discipline. Codex can work for a long time without checkpoint commits, or commit with vague messages that do not explain scope, intent, verification, or push state.
 
 ## Goals
-- Keep Dong Skills skills globally available.
-- Keep hooks project-scoped.
-- Let `codex-codebase-onboarding` bootstrap missing project-level `.codex-context`, `.codex/hooks`, `.codex/hooks.json`, and `AGENTS.md` governance instructions.
-- Publish a clean repository and zip without private runtime data.
+- Add `codex-git-checkpoint` to the curated skill set.
+- Require diff review, scope selection, verification awareness, clear commit messages, and push-state reporting.
+- Remind Codex before compaction, stopping, final delivery, branch switches, risky changes, and long pauses.
+- Allow a documented deferral when work is not ready to commit.
+- Keep project-level hooks and bootstrap assets consistent.
 
 ## Non-Goals
-- Do not install global hooks.
-- Do not require every new project to run the kit-level installer manually after the skills are installed.
+- Do not force automatic commits.
+- Do not force half-finished or unverified work into Git.
+- Do not replace the GitHub plugin's full PR publishing workflow.
 
 ## Approved Scope
-- Add bootstrap assets and script to the onboarding skill.
-- Update installer and README to describe project-level hooks and skill-based project bootstrap.
-- Remove obsolete global-hook dispatcher artifacts.
+- New `codex-git-checkpoint` skill.
+- Updates to `codex-project-governance`, `using-superpowers`, `executing-plans`, README, AGENTS snippets, handoff templates, and project hook checks.
 
 ## User Decisions
-- 2026-06-09: Use project-level hooks instead of global hooks.
-- 2026-06-09: Make new-project bootstrap part of `codex-codebase-onboarding`.
+- 2026-06-09: Add a GitHub archive commit/push discipline skill to Dong Skills.
+- 2026-06-09: Codex should be reminded to checkpoint regularly and write clear commit messages.
 
 ## Acceptance Criteria
-- Global `~/.codex/hooks.json` and global dispatcher are absent.
-- Installed onboarding skill contains bootstrap script and assets.
-- Re-running bootstrap is idempotent and does not duplicate hook groups.
-- Release scan finds no private paths, secrets, raw observations, logs, backups, or smoke-test projects.
-- JavaScript hook and utility scripts pass syntax checks.
+- `codex-git-checkpoint` exists and is installed globally.
+- Curated skill lists include `codex-git-checkpoint`.
+- Bootstrap assets include the new skill guidance and `Git Checkpoint` handoff section.
+- Hooks surface missing Git checkpoint notes for uncommitted changes, unpushed commits, or missing upstream state.
+- Commit/push guidance prevents unrelated staging, vague commits, unsafe force-pushes, and private runtime data leaks.
+- Verification and release scans pass.
 
 ## Open Questions
 - None.
