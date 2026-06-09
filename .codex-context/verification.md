@@ -81,6 +81,10 @@
   - Result: pass
   - Evidence: local `HEAD` and `origin/main` both pointed to `0f214afa17bfa3e4f67e7e380fd7c9bdeb7a050e` after pushing `feat(skills): add architecture and docs governance`.
   - Date: 2026-06-09 21:42 +08:00
+- Health-check alias fix verification.
+  - Result: pass
+  - Evidence: after allowing `Latest functional commit` as a valid Git Checkpoint label, `node scripts/project-ops-health.mjs .`, `node scripts/release-check.mjs .`, `node --test tests/project-ops.test.mjs`, and `git diff --check` all passed.
+  - Date: 2026-06-09 21:56 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

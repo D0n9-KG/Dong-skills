@@ -41,12 +41,12 @@ const REQUIRED_HANDOFF_SECTIONS = [
 ];
 
 const REQUIRED_CHECKPOINT_FIELDS = [
-  "Latest commit",
-  "Push state",
-  "Files included",
-  "Files intentionally left uncommitted",
-  "Deferred reason",
-  "Next checkpoint"
+  ["Latest commit", "Latest functional commit"],
+  ["Push state"],
+  ["Files included"],
+  ["Files intentionally left uncommitted"],
+  ["Deferred reason"],
+  ["Next checkpoint"]
 ];
 
 function gitRoot(cwd) {
@@ -169,9 +169,9 @@ function checkContext(root, issues) {
   }
 
   const checkpoint = sectionContent(handoff, "Git Checkpoint");
-  for (const field of REQUIRED_CHECKPOINT_FIELDS) {
-    if (!checkpoint.includes(`${field}:`)) {
-      issues.push(`handoff-summary.md Git Checkpoint missing field label: ${field}`);
+  for (const labels of REQUIRED_CHECKPOINT_FIELDS) {
+    if (!labels.some((field) => checkpoint.includes(`${field}:`))) {
+      issues.push(`handoff-summary.md Git Checkpoint missing field label: ${labels.join(" or ")}`);
     }
   }
 }
