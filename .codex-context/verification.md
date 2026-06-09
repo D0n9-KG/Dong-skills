@@ -77,6 +77,10 @@
   - Result: pass
   - Evidence: `node .codex/hooks/project-ops.mjs learning-status` reported 0 raw observations, 0 pending observations, and fresh index.
   - Date: 2026-06-09 21:33 +08:00
+- Git checkpoint push verification for governance optimization.
+  - Result: pass
+  - Evidence: local `HEAD` and `origin/main` both pointed to `0f214afa17bfa3e4f67e7e380fd7c9bdeb7a050e` after pushing `feat(skills): add architecture and docs governance`.
+  - Date: 2026-06-09 21:42 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

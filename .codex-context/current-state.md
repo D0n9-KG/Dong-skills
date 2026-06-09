@@ -7,7 +7,7 @@ Harden Dong Skills with split project hooks, state archival, lighter debugging g
 Optimize items 1, 3, 6, and 7; investigate related popular skills; add architecture/documentation governance so Codex does not let projects become concentrated, flat, stale, or hard to continue.
 
 ## Current Phase
-verification
+delivery
 
 ## Active Assumptions
 - Project-level hooks remain the default; global hooks stay out of scope.
@@ -18,7 +18,7 @@ verification
 - None.
 
 ## Next Action
-Run final verification, install updated global skills, commit, push, and report verified state.
+Report verified pushed state to the user.
 
 ## Last Updated
-2026-06-09 21:26 +08:00
+2026-06-09 21:42 +08:00

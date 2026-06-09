@@ -13,12 +13,12 @@ User-approved optimization pass for items 1, 3, 6, 7 plus architecture/docs gove
 - [x] Add `codex-docs-stewardship` with docs scan script.
 - [x] Update README, AGENTS snippet, project governance routing, onboarding, and context-budget guidance.
 - [x] Prune this kit's old verification history into `.codex-context/archive/`.
-- [ ] Run final verification.
-- [ ] Sync updated global skills.
-- [ ] Commit and push.
+- [x] Run final verification.
+- [x] Sync updated global skills.
+- [x] Commit and push functional checkpoint `0f214af`.
 
 ## Current Step
-Final verification and checkpoint.
+Final state refresh.
 
 ## Out Of Scope
 - Global hooks.
