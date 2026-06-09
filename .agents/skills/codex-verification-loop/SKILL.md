@@ -17,6 +17,7 @@ Use project evidence, not guesses:
 - Tests: targeted unit tests first, then broader tests when risk warrants.
 - Security: secret scan, dependency audit, auth/permission review when relevant.
 - Diff review: always inspect changed files before reporting done.
+- Product evidence: for observable UI, CLI, API, generated artifact, or workflow changes, use `codex-evidence-capture` so the behavior is exercised directly.
 
 ## Minimum Record
 
@@ -27,6 +28,12 @@ Update `.codex-context/verification.md`:
 - `[command]`
   - Result: pass | fail | blocked
   - Evidence: [short output summary]
+  - Date: [YYYY-MM-DD HH:mm local]
+
+## Product Evidence
+- `[action]`
+  - Result: pass | fail | blocked
+  - Evidence: [screenshot path, rendered artifact path, command output summary, or explicit reason not applicable]
   - Date: [YYYY-MM-DD HH:mm local]
 
 ## Not Yet Verified

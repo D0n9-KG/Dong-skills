@@ -14,7 +14,10 @@ Act as an editor, not a recorder. The goal is a small, accurate knowledge system
 1. Enumerate docs and state files before editing:
    - `README.md`
    - `AGENTS.md`
+   - `STRATEGY.md`
+   - `CONCEPTS.md`
    - `docs/**/*.md`
+   - `docs/solutions/**/*.md`
    - `.codex-context/*.md`
    - `.codex-context/instincts/**/*.md`
 2. Run the optional scan when useful:
@@ -46,6 +49,15 @@ Check docs against current repo facts:
 - `.codex-context/project-map.md` matches current structure
 - `.codex-context/decisions.md` records load-bearing decisions
 - `.codex-context/verification.md` has recent evidence or explicit gaps
+- `.codex-context/solution-index.md` matches `docs/solutions/` and `CONCEPTS.md`
+- `docs/solutions/` entries have valid frontmatter and are not stale, duplicate, or contradicted by current code
+- `CONCEPTS.md` contains stable vocabulary only, not implementation notes or task logs
+
+When `docs/solutions/` exists, run:
+
+```powershell
+node .codex/hooks/project-ops.mjs solution-status --update-index
+```
 
 ## State File Hygiene
 
@@ -65,6 +77,8 @@ node .codex/hooks/project-ops.mjs state-prune --keep 8 --apply
 - New API or integration: update README or docs, project-map Architecture, risks, and verification.
 - New module or structural decision: update project-map, decisions, risks, and architecture watchpoints.
 - User correction or durable preference: evaluate with `codex-learning-memory`, then update learned instincts.
+- Verified non-trivial fix or reusable solution: evaluate with `codex-solution-memory`, then update `docs/solutions/`, `CONCEPTS.md`, and `solution-index.md`.
+- Strategy change: update `STRATEGY.md`, decisions, risks, and any specs/plans that depend on it.
 - Milestone handoff: update handoff-summary, artifact-index, verification, and Git Checkpoint.
 
 ## Final Check
@@ -74,5 +88,6 @@ Before reporting completion:
 - no stale relative dates such as today/yesterday/recently unless they are intentionally quoted
 - no docs claim commands that were not verified or marked as gaps
 - no duplicate/conflicting instructions across README, AGENTS, and `.codex-context`
+- `docs/solutions/` and `CONCEPTS.md` are surfaced in `AGENTS.md` once adopted
 - no raw observations or logs committed outside `.codex-context/raw/`
 - handoff names files to re-read first

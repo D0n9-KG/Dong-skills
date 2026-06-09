@@ -282,6 +282,8 @@ Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "instincts.mjs") -Destin
 Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "state-prune.mjs") -Destination (Join-Path $targetScriptDir "state-prune.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "solutions.mjs") -Destination (Join-Path $targetScriptDir "solutions.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "session-history.mjs") -Destination (Join-Path $targetScriptDir "session-history.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"

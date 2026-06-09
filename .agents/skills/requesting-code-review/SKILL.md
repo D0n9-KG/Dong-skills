@@ -5,7 +5,7 @@ description: Use after meaningful implementation, before merge or delivery, or w
 
 # Requesting Code Review
 
-Run a focused review against the actual diff, spec, plan, and verification evidence. Default to inline self-review. Use a separate reviewer mechanism only when the user explicitly asks and the tool is available.
+Run a focused review against the actual diff, spec, plan, and verification evidence. For meaningful changes, route to `codex-review-panel`; keep this skill as the lightweight entry point and review request discipline.
 
 ## When
 
@@ -23,6 +23,7 @@ Collect:
 - `git diff --stat` and relevant `git diff`.
 - Verification evidence from `.codex-context/verification.md`.
 - Known risks or open questions.
+- Related `docs/solutions/` entries, if the changed area has prior solution memory.
 
 ## Review Checklist
 
@@ -32,6 +33,7 @@ Collect:
 - Are tests real unit or end-to-end checks rather than mock-only proof?
 - Does the code fit existing architecture and conventions?
 - Are docs and state files updated where needed?
+- Would a persona panel add value because the change is high-risk, cross-cutting, user-visible, or plan-heavy? If yes, use `codex-review-panel`.
 
 ## Feedback Handling
 

@@ -1,24 +1,25 @@
 # Current State
 
 ## Objective
-Harden Dong Skills with split project hooks, state archival, lighter debugging guidance, architecture governance, and docs stewardship.
+Enhance Dong Skills with Compound Engineering inspired strategy, solution memory, review panel, session-history, and evidence-capture workflows.
 
 ## Latest User Instruction
-Optimize items 1, 3, 6, and 7; investigate related popular skills; add architecture/documentation governance so Codex does not let projects become concentrated, flat, stale, or hard to continue.
+Borrow useful ideas from everyinc/compound-engineering-plugin and strengthen Dong Skills.
 
 ## Current Phase
-delivery
+implementation
 
 ## Active Assumptions
 - Project-level hooks remain the default; global hooks stay out of scope.
-- New architecture/docs governance should be part of the curated main flow, not optional external modules.
-- Archive files under `.codex-context/archive/` are durable but read on demand, not active recovery context.
+- CE-inspired additions should be Codex-native and project-level, not a wholesale CE clone.
+- Slack, image generation, Rails/Xcode-specific, and fully autonomous CE components remain out of scope.
+- Structured solution memory is separate from short learned instincts.
 
 ## Blockers
 - None.
 
 ## Next Action
-No remaining project action; report verified pushed state to the user.
+Finish wiring docs/tests/assets, run release verification, install updated global skills, then checkpoint and push.
 
 ## Last Updated
-2026-06-09 21:49 +08:00
+2026-06-09 23:30 +08:00

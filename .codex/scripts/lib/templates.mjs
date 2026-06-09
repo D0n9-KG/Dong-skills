@@ -12,6 +12,7 @@ export const REQUIRED_FILES = {
   risks: "risks.md",
   verification: "verification.md",
   instincts: "learned-instincts.md",
+  solutions: "solution-index.md",
   handoff: "handoff-summary.md"
 };
 
@@ -160,6 +161,9 @@ export const TEMPLATES = {
 ## Commands Run
 - None yet.
 
+## Product Evidence
+- None yet.
+
 ## Not Yet Verified
 - None yet.
 `,
@@ -185,6 +189,25 @@ Keep this file as a compact index. Store individual instincts under \`.codex-con
 - None yet.
 
 ## Maintenance Log
+- None yet.
+`,
+  "solution-index.md": `# Solution Index
+
+## Knowledge Store
+- docs/solutions present: no
+- CONCEPTS.md present: no
+- Solution docs: 0
+
+## Categories
+- None yet.
+
+## Validation
+- No validation issues found.
+
+## Refresh Signals
+- No refresh candidates found.
+
+## Last Updated
 - None yet.
 `,
   "handoff-summary.md": `# Handoff Summary

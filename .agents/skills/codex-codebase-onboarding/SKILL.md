@@ -12,6 +12,7 @@ Bootstrap Dong Skills project configuration when needed, then build a concise, e
 Before onboarding a project, check whether these files exist in the target project:
 
 - `.codex-context/project-map.md`
+- `.codex-context/solution-index.md`
 - `.codex/hooks/project-ops.mjs`
 - `.codex/hooks.json`
 - `AGENTS.md` containing `<!-- codex-project-ops:start -->`
@@ -36,12 +37,14 @@ After bootstrapping, continue onboarding in the same turn. Tell the user they sh
 
 1. Run the Bootstrap Gate if needed.
 2. Read `AGENTS.md` and key docs if present.
-3. List top-level files and directories.
-4. Detect manifests: `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `.csproj`, `composer.json`.
-5. Detect frameworks and entry points: `next.config.*`, `vite.config.*`, `src/main.*`, `src/app.*`, `app/`, `pages/`, `cmd/`, `server.*`, `manage.py`.
-6. Detect tests and verification commands: `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, `pytest.ini`, `vitest.config.*`, `jest.config.*`, CI workflows.
-7. Detect conventions from nearby files before claiming style rules.
-8. Record unknowns explicitly instead of guessing.
+3. Read `STRATEGY.md`, `CONCEPTS.md`, and `docs/solutions/README.md` if present; otherwise record them as absent, not required.
+4. List top-level files and directories.
+5. Detect manifests: `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `.csproj`, `composer.json`.
+6. Detect frameworks and entry points: `next.config.*`, `vite.config.*`, `src/main.*`, `src/app.*`, `app/`, `pages/`, `cmd/`, `server.*`, `manage.py`.
+7. Detect tests and verification commands: `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, `pytest.ini`, `vitest.config.*`, `jest.config.*`, CI workflows.
+8. Detect conventions from nearby files before claiming style rules.
+9. Run `node .codex/hooks/project-ops.mjs solution-status --update-index` when the hook script is installed.
+10. Record unknowns explicitly instead of guessing.
 
 ## Output
 
@@ -51,6 +54,7 @@ Update `.codex-context/project-map.md` with:
 - stack and package manager
 - architecture and important directories
 - architecture watchpoints such as large files, flat directories, unclear ownership, or coupling risks
+- strategy anchor and knowledge stores (`STRATEGY.md`, `CONCEPTS.md`, `docs/solutions/`) when present
 - entry points and request/data flow
 - build, test, lint, typecheck, and dev commands
 - naming and code style conventions

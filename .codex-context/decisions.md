@@ -10,9 +10,13 @@
 - Split hook runtime code lives under `.codex/scripts/lib/`; the hook file itself stays thin.
 - `.codex-context/archive/` is durable on-demand history and is excluded from active context-budget estimates.
 - `codex-architecture-governance` and `codex-docs-stewardship` are main curated skills, not optional external modules.
+- CE-inspired additions are adopted selectively: strategy anchor, structured solution memory, persona review panel, session-history metadata scan, and product evidence capture.
+- `codex-solution-memory` owns full `docs/solutions/` documents and `CONCEPTS.md`; `codex-learning-memory` remains limited to compact instincts.
+- Session history tooling must report metadata/keyword counts first and avoid raw transcript output.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
 - Requiring a manual project installer run for every new repository after the skills are already installed.
 - Automatic commits without diff review and scope confirmation.
 - Treating architecture/docs cleanup as only a final manual tidy-up step.
+- Wholesale import of CE platform-specific skills such as Slack, Rails/Xcode, image generation, promotion/social copy, and fully autonomous workflows.

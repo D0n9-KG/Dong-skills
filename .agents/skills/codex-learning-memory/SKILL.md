@@ -7,6 +7,8 @@ description: Project-scoped and global-candidate learning memory for Codex, adap
 
 Capture reusable experience as curated instincts, not loose notes. This skill adapts ECC continuous-learning-v2's instinct model for Codex without requiring vendor-specific observer agents.
 
+Use `codex-solution-memory` instead when the learning needs a full problem/solution document, examples, cross-references, or `CONCEPTS.md` vocabulary. This skill is for short trigger/action instincts.
+
 ## Capture Mode
 
 Learning is curated, not fully automatic.
@@ -49,6 +51,7 @@ Do not capture:
 - simple typos or one-off tool failures
 - vague preferences with no trigger
 - duplicate guidance already present in `AGENTS.md`, `.codex-context/`, or a skill
+- material that belongs as a structured `docs/solutions/` entry
 
 ## Quality Gate
 
@@ -59,10 +62,12 @@ Before saving an instinct, run this decision process:
    - `project`: repo conventions, architecture, file locations, framework choices
    - `global-candidate`: user workflow preferences or cross-project practices
 3. **Deduplicate**: search existing instincts, `AGENTS.md`, state files, and relevant skills.
+   - Also search `docs/solutions/` for durable solution docs before saving an instinct.
 4. **Evaluate**:
    - Save: unique, specific, evidence-backed, reusable
    - Improve then Save: valuable but too broad or underspecified
    - Absorb into Existing: duplicate or better as an update to another instinct/doc
+   - Promote to Solution Memory: needs full problem, solution, rationale, examples, or vocabulary
    - Drop: trivial, one-off, unverified, stale, or unsafe
 5. **Record evidence**: command output, user correction, review item, or file reference.
 6. **Update index**: refresh `.codex-context/learned-instincts.md`.

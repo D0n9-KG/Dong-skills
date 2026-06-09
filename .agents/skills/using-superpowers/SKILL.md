@@ -23,13 +23,17 @@ If a skill conflicts with the latest user instruction, follow the user and updat
 - Written plan to execute: `executing-plans`.
 - Bug, failing test, unexpected behavior: `systematic-debugging`.
 - Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
+- Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
+- Prior session context needed beyond project files: `codex-session-history`.
 - Before completion claim: `verification-before-completion`.
+- Observable UI/CLI/API/artifact behavior needs proof: `codex-evidence-capture`.
 - Before long pause, compaction, final delivery, or GitHub archive/push: `codex-git-checkpoint`.
-- Meaningful implementation ready for risk review: `requesting-code-review`.
+- Meaningful implementation, plan, doc, or high-risk change ready for risk review: `codex-review-panel`.
 - Review feedback received: `receiving-code-review`.
 - Context drift, compaction, or state size concern: `codex-context-budget`.
 - Milestone cleanup, stale docs, state archiving, or handoff/documentation hygiene: `codex-docs-stewardship`.
 - Learning from repeated corrections or project-specific instincts: `codex-learning-memory`.
+- Structured reusable solution or stale `docs/solutions/` learning: `codex-solution-memory`.
 
 Do not load every skill. Read only the one needed now, plus directly referenced files if required.
 

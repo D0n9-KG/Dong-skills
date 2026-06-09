@@ -1,90 +1,93 @@
 # Handoff Summary
 
 ## Objective
-Optimize Dong Skills with split hook runtime, state archiving, leaner debugging guidance, architecture governance, and documentation stewardship.
+Enhance Dong Skills with Compound Engineering inspired strategy, solution memory, review panel, session-history, and evidence-capture workflows.
 
 ## Latest User Instruction
-Optimize reviewed items 1, 3, 6, and 7; investigate related popular skills; add key workspace governance skills for architecture quality and clean documentation/state archives.
+Borrow useful ideas from `everyinc/compound-engineering-plugin` and strengthen Dong Skills.
 
 ## Approved Scope / Spec
-Approved scope includes hook split, install/bootstrap asset updates, state pruning, expanded tests, systematic-debugging slimming, new `codex-architecture-governance`, new `codex-docs-stewardship`, README/AGENTS/skill routing updates, `.codex-context` updates, global skill install, verification, commit, and push.
+Approved scope: selectively adapt CE concepts that improve Codex project governance without wholesale importing CE. Adopt strategy anchor, structured solution memory, concept vocabulary, solution refresh discipline, persona review panel, safe session-history lookup, product evidence capture, install/bootstrap wiring, health/release checks, README/AGENTS updates, global install, commit, and push.
 
 ## Plan Status
-Implementation, local verification, global skill sync, commit, and push are complete.
+Implementation, asset sync, tests, health check, release check, context budget check, and global skill install are complete. Commit and push are pending.
 
 ## Files Modified
+- `.agents/skills/codex-solution-memory/`
+- `.agents/skills/codex-review-panel/`
+- `.agents/skills/codex-session-history/`
+- `.agents/skills/codex-strategy-anchor/`
+- `.agents/skills/codex-evidence-capture/`
+- `.agents/skills/*/SKILL.md` routing updates for project governance, onboarding, docs, learning, verification, review, and context budget
 - `.codex/hooks/project-ops.mjs`
-- `.codex/scripts/lib/*.mjs`
-- `scripts/state-prune.mjs`
-- `scripts/context-budget.mjs`
-- `scripts/project-ops-health.mjs`
+- `.codex/scripts/lib/templates.mjs`
+- `scripts/solutions.mjs`
+- `scripts/session-history.mjs`
 - `scripts/install-windows.ps1`
+- `scripts/project-ops-health.mjs`
 - `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/`
-- `.agents/skills/systematic-debugging/`
-- `.agents/skills/codex-architecture-governance/`
-- `.agents/skills/codex-docs-stewardship/`
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/codex-context-budget/SKILL.md`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
 - `AGENTS.project-ops.snippet.md`
 - `README.md`
 - `tests/project-ops.test.mjs`
+- `licenses/COMPOUND-ENGINEERING-LICENSE`
 - `.codex-context/*.md`
-- `.codex-context/archive/verification-2026-06-09.md`
 
 ## Files Read But Not Changed
-- External references from Claude Skills docs, Superpowers, architect-review, architecture skill examples, and docs cleanup patterns were researched and summarized, not copied wholesale.
+- CE temporary clone at commit `b625049` was inspected and then discarded.
+- CE files reviewed: `ce-compound`, `ce-compound-refresh`, `ce-code-review`, `ce-doc-review`, `ce-sessions`, `ce-strategy`, `ce-demo-reel`, and plugin README.
 
 ## Decisions Made
-- Split hook code into runtime libs under `.codex/scripts/lib/` and keep the hook file as a dispatcher.
-- Keep archive files under `.codex-context/archive/` as durable on-demand history, excluded from active budget.
-- Add architecture/docs governance as curated main skills.
-- Keep scan scripts heuristic and advisory; they do not authorize automatic refactors.
-- Keep `systematic-debugging` short and move details into references.
+- Adopt CE ideas selectively: strategy anchor, structured solution memory, concept vocabulary, review panel, session metadata scan, and product evidence capture.
+- Keep `codex-learning-memory` for compact instincts; move complex reusable knowledge to `codex-solution-memory`.
+- Keep session-history tooling metadata-first and transcript-safe.
+- Keep project-level hooks as the installation model; no global hooks.
+- Keep full `docs/solutions/` bodies and session histories on-demand, with `.codex-context/solution-index.md` as the compact recovery pointer.
 
 ## Open Questions And Assumptions
 - No open questions.
-- Assumption: project-level hooks remain the preferred installation model.
+- Assumption: Codex must be restarted or a new thread opened for newly installed global skills to appear in the current skill list.
 
 ## Risks
-- New projects rely on onboarding asset parity for split hook libs.
-- Codex UI hook trust display still needs manual `/hooks` trust after fresh bootstrap.
-- Archive history can grow and should be reviewed by docs stewardship over time.
+- `solutions.mjs` validates frontmatter and obvious references only; semantic staleness still requires review.
+- `session-history.mjs` intentionally avoids raw transcript output, so it is a discovery tool rather than a full historian.
+- More skills increase the global list; routing docs are kept concise to control active context.
+- Fresh project hooks still require user trust through `/hooks` when Codex prompts.
 
 ## Verification Evidence
-- `node --test tests/project-ops.test.mjs` passed 7/7 tests.
-- `node scripts/release-check.mjs .` passed.
-- `node scripts/project-ops-health.mjs .` passed with no issues.
-- `node .codex/hooks/project-ops.mjs context-budget` showed hook entrypoint down to ~636 tokens / 87 lines; active budget excludes raw/archive.
-- Architecture and docs scans passed; docs scan reported no relative-date warnings.
+- `node --check` passed for new scripts, hook entrypoint, and tests.
+- `node .codex/hooks/project-ops.mjs solution-status`, `solution-validate`, and `session-history scan --days 0` ran successfully.
 - `git diff --check` passed.
-- Global skills existence check passed for new and key existing Dong Skills.
-- Learning status reported no pending observations.
+- `node --test tests/project-ops.test.mjs` passed 8/8 tests.
+- `node scripts/project-ops-health.mjs .` reported `Issues: none`.
+- `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+- `node .codex/hooks/project-ops.mjs context-budget` estimated about 27,717 tokens across 44 active files.
+- Global install check found all five new skills under the global `.agents/skills` root.
 
 ## Git Checkpoint
-- Latest functional commit: `0f214af` (`feat(skills): add architecture and docs governance`) pushed to `origin/main`.
-- Push state: functional commit and state-refresh checkpoints have been pushed; verify current exact HEAD with `git rev-parse HEAD` and `git ls-remote origin refs/heads/main`.
-- Files included: all implementation, docs, tests, assets, state archive, and state refresh files listed above.
-- Files intentionally left uncommitted: none.
-- Deferred reason: none.
-- Next checkpoint: next meaningful change.
+- Latest commit: pending
+- Push state: pending
+- Files included: all implementation, docs, tests, assets, license, and state files listed above.
+- Files intentionally left uncommitted: none planned.
+- Deferred reason: commit/push step is next.
+- Next checkpoint: commit `feat(skills): add compound-inspired project governance` and push `main`.
 
 ## Learned Instincts To Preserve
-- Split hook runtime must remain asset-synced with onboarding bootstrap assets.
-- `.codex-context/archive/` is durable but on-demand; do not add it to compaction recovery order.
-- Architecture/docs governance should run before debt becomes a late-stage cleanup problem.
+- Structured solution memory and short instincts must stay separate.
+- Bootstrap assets must stay in parity with root hook/scripts/templates.
+- Session-history retrieval must stay metadata-first and privacy-preserving.
+- Product evidence is separate from test output.
 
 ## Next Action
-Report verified outcome to the user.
+Stage the verified scope, commit, push to `origin/main`, and verify remote state.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
 - `.codex-context/current-state.md`
 - `.codex-context/project-map.md`
+- `.agents/skills/codex-solution-memory/SKILL.md`
+- `.agents/skills/codex-review-panel/SKILL.md`
 - `.codex/hooks/project-ops.mjs`
-- `.codex/scripts/lib/`
+- `scripts/solutions.mjs`
+- `scripts/session-history.mjs`
 - `tests/project-ops.test.mjs`
-- `.agents/skills/codex-architecture-governance/SKILL.md`
-- `.agents/skills/codex-docs-stewardship/SKILL.md`

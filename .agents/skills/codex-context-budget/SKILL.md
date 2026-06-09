@@ -34,9 +34,10 @@ node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 - `.codex/hooks.json`
 - `.codex/hooks/*.mjs`
 - `.codex-context/*.md`
+- `STRATEGY.md`, `CONCEPTS.md`, and `docs/solutions/` indexes when they are loaded into active context
 - MCP configs if present: `.mcp.json`, `.codex/config.toml`
 
-`.codex-context/raw/` and `.codex-context/archive/` are excluded from active-budget estimates because they are recovery artifacts read only on demand.
+`.codex-context/raw/`, `.codex-context/archive/`, full session histories, and full `docs/solutions/` bodies are excluded from active-budget estimates because they are read only on demand. Keep `.codex-context/solution-index.md` as the compact active pointer.
 
 ## Heuristics
 
@@ -46,6 +47,8 @@ node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 - `AGENTS.md` over 250 lines: candidate for slimming
 - state files with raw logs pasted in: move logs to `.codex-context/raw/`
 - old verification history: archive with `state-prune` instead of deleting evidence
+- `docs/solutions/` growth: consolidate duplicates with `codex-solution-memory`; do not paste all solutions into active state
+- session history: search metadata first with `codex-session-history`; never bulk-load transcripts
 
 ## Recommendations
 

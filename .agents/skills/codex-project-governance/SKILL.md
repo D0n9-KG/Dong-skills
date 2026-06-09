@@ -36,11 +36,16 @@ If those files conflict with the latest user instruction, the latest user instru
 - `systematic-debugging`: bug, test failure, build failure, unexpected behavior.
 - `codex-architecture-governance`: structural changes, large files, flat directories, unclear boundaries, refactors, or repeated fixes caused by coupling.
 - `codex-verification-loop`: select build, type, lint, test, security, and diff checks.
+- `codex-evidence-capture`: capture real product-use evidence for UI, CLI, API, generated artifact, workflow, or bug-fix behavior.
 - `verification-before-completion`: before claiming complete, fixed, passing, ready, or delivered.
 - `codex-git-checkpoint`: archive verified work with clear commits and optional GitHub push before pauses, compaction, or delivery.
-- `requesting-code-review`: after meaningful implementation or before delivery.
+- `codex-review-panel`: persona-based review for meaningful implementation, plans, docs, architecture, and delivery evidence.
+- `requesting-code-review`: lightweight review entry or handoff to `codex-review-panel`.
 - `receiving-code-review`: when review feedback arrives.
 - `codex-learning-memory`: record, validate, prune, and promote evidence-backed project instincts.
+- `codex-solution-memory`: capture and maintain structured solution docs in `docs/solutions/` and `CONCEPTS.md`.
+- `codex-session-history`: safely search prior agent sessions when project files do not contain enough recovery context.
+- `codex-strategy-anchor`: create or maintain `STRATEGY.md` as upstream grounding for product/project direction.
 - `codex-docs-stewardship`: milestone cleanup, stale docs, state-file archiving, README/AGENTS/docs reconciliation, or handoff cleanliness.
 - `codex-context-budget`: audit skill, hook, and state-file context cost.
 
@@ -48,18 +53,19 @@ Load only the skill needed for the current phase.
 
 ## Lifecycle
 
-1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, project map, relevant docs, and relevant code.
-2. Scope: if intent is unclear or behavior-changing, use `brainstorming`; update `spec.md`.
-3. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`.
-4. Implement: follow the plan and existing codebase patterns; keep `artifact-index.md` fresh.
-5. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
-6. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
-7. Verify: use `codex-verification-loop` and/or `verification-before-completion`; update `verification.md`.
-8. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
-9. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
-10. Review: use `requesting-code-review` or an inline self-review; record accepted and rejected findings.
-11. Learn: after verified work or user correction, use `codex-learning-memory`.
-12. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
+1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
+2. Recover: if the latest context is missing and project files are insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
+3. Scope: if intent is unclear or behavior-changing, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md`.
+4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`.
+5. Implement: follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
+6. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
+7. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
+8. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.
+9. Review: use `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings.
+10. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
+11. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions.
+12. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
+13. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
 
 ## Hooks
 
@@ -83,5 +89,7 @@ Before any completion claim:
 3. Update `verification.md` with command, result, evidence, date, and gaps.
 4. Use `codex-git-checkpoint` to commit/push a checkpoint, or record the deferred reason in `handoff-summary.md`.
 5. If `.codex-context/raw/observations.jsonl` has pending learning events, use `codex-learning-memory` to save, absorb, or drop them, then refresh `learned-instincts.md`.
-6. Refresh `handoff-summary.md`.
-7. Then answer the user with verified state and remaining gaps.
+6. If verified work produced a durable solution or stale learning signal, use `codex-solution-memory` or record why it is not worth capturing.
+7. Refresh `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed.
+8. Refresh `handoff-summary.md`.
+9. Then answer the user with verified state and remaining gaps.

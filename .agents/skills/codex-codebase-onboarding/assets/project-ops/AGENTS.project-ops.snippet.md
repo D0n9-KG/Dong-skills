@@ -19,6 +19,11 @@ Use only the bundled curated set by default:
 - `codex-git-checkpoint`
 - `codex-architecture-governance`
 - `codex-docs-stewardship`
+- `codex-review-panel`
+- `codex-solution-memory`
+- `codex-session-history`
+- `codex-strategy-anchor`
+- `codex-evidence-capture`
 - `requesting-code-review`
 - `receiving-code-review`
 - `codex-codebase-onboarding`
@@ -50,16 +55,31 @@ Use `.codex-context/raw/` for raw logs or large outputs.
 Project bootstrap should keep `.codex-context/raw/*` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
 Use `.codex-context/archive/` for old but still useful verification or handoff history.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
+Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions/` and `CONCEPTS.md`; do not paste full solution docs into active state.
+
+If present:
+
+- `STRATEGY.md` is the project/product direction anchor for major brainstorming and planning.
+- `CONCEPTS.md` is stable project vocabulary.
+- `docs/solutions/` stores structured verified learnings with YAML frontmatter.
 
 Use `codex-architecture-governance` before or after structural changes, major refactors, large-file growth, flat-directory growth, unclear ownership, or repeated bugs caused by coupling. Keep architecture facts in `project-map.md`, decisions in `decisions.md`, and structural risks in `risks.md`.
 
 Use `codex-docs-stewardship` at milestones, before handoff, after API/architecture changes, or when README/AGENTS/docs/.codex-context may be stale. Delete, merge, or archive stale docs instead of keeping misleading notes.
+
+Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 
 ## Learning Memory
 
 Learning is curated. Hooks may automatically capture likely learning signals in `.codex-context/raw/observations.jsonl`, but those observations are compact/redacted and are not active rules.
 
 Before compaction, final delivery, or a long pause, review pending observations with `codex-learning-memory`: save useful patterns as instincts, absorb duplicates into existing docs, or record dropped noise. Refresh `.codex-context/learned-instincts.md` after review.
+
+For non-trivial verified fixes or reusable solutions, use `codex-solution-memory` instead of saving a loose instinct. Refresh `docs/solutions/`, `CONCEPTS.md`, and `.codex-context/solution-index.md` as needed.
+
+## Session History
+
+Use `codex-session-history` only when project files are insufficient or the user references previous sessions. Search metadata/keyword counts first, never paste full transcripts, and move durable findings into `.codex-context/` or `docs/solutions/`.
 
 ## Compaction
 
@@ -73,11 +93,13 @@ After compaction, recover in this order:
 4. `.codex-context/spec.md`
 5. `.codex-context/plan-progress.md`
 6. `.codex-context/artifact-index.md`
-7. `.codex-context/learned-instincts.md`
-8. latest user instruction
+7. `.codex-context/solution-index.md`
+8. `.codex-context/learned-instincts.md`
+9. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
+10. latest user instruction
 
 ## Completion
 
-Before claiming work is complete, run fresh verification or record the explicit verification gap in `verification.md`. Then use `codex-git-checkpoint` to commit/push a checkpoint or record why it is deferred in `handoff-summary.md`, and refresh `handoff-summary.md`.
+Before claiming work is complete, run fresh verification or record the explicit verification gap in `verification.md`. For observable UI/CLI/API/artifact/workflow changes, capture product evidence or explicitly record why it is blocked/not applicable. Then use `codex-git-checkpoint` to commit/push a checkpoint or record why it is deferred in `handoff-summary.md`, and refresh `handoff-summary.md`.
 
 For installation or release hygiene, run `node .codex/hooks/project-ops.mjs health-check` from the target project when hooks are installed.

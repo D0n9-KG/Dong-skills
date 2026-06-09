@@ -45,6 +45,19 @@ if (cliMode && cliMode.startsWith("instinct-")) {
   process.exit(0);
 }
 
+if (cliMode && cliMode.startsWith("solution-")) {
+  const root = gitRoot(parseRootArg(process.argv, process.cwd()));
+  const command = cliMode.replace(/^solution-/, "");
+  runProjectOpsScript(root, "solutions.mjs", [command, ...parseExtraArgs(process.argv, process.cwd())], import.meta.url);
+  process.exit(0);
+}
+
+if (cliMode === "session-history") {
+  const root = gitRoot(process.cwd());
+  runProjectOpsScript(root, "session-history.mjs", process.argv.slice(3), import.meta.url);
+  process.exit(0);
+}
+
 const projectOpsScripts = {
   "health-check": "project-ops-health.mjs",
   "release-check": "release-check.mjs",

@@ -15,6 +15,7 @@ const REQUIRED_CONTEXT_FILES = [
   "risks.md",
   "verification.md",
   "learned-instincts.md",
+  "solution-index.md",
   "handoff-summary.md"
 ];
 
@@ -204,6 +205,14 @@ function checkAssetParity(root, warnings) {
     [
       path.join(root, "scripts", "state-prune.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "state-prune.mjs")
+    ],
+    [
+      path.join(root, "scripts", "solutions.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "solutions.mjs")
+    ],
+    [
+      path.join(root, "scripts", "session-history.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "session-history.mjs")
     ]
   ];
 
@@ -253,7 +262,7 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "lib", "core.mjs"))) {
     issues.push("Missing .codex/scripts/lib/core.mjs required by split project hook");
   }
-  for (const scriptName of ["project-ops-health.mjs", "release-check.mjs", "state-prune.mjs"]) {
+  for (const scriptName of ["project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
     if (!fs.existsSync(path.join(root, ".codex", "scripts", scriptName)) &&
         !fs.existsSync(path.join(root, "scripts", scriptName))) {
       issues.push(`Missing project ops helper script: ${scriptName}`);

@@ -85,6 +85,25 @@
   - Result: pass
   - Evidence: after allowing `Latest functional commit` as a valid Git Checkpoint label, `node scripts/project-ops-health.mjs .`, `node scripts/release-check.mjs .`, `node --test tests/project-ops.test.mjs`, and `git diff --check` all passed.
   - Date: 2026-06-09 21:56 +08:00
+- CE-inspired enhancement syntax and command smoke checks.
+  - Result: pass
+  - Evidence: `node --check` passed for `scripts/solutions.mjs`, `scripts/session-history.mjs`, `.codex/hooks/project-ops.mjs`, and `tests/project-ops.test.mjs`; `solution-status`, `solution-validate`, and `session-history scan --days 0` ran successfully through the hook CLI.
+  - Date: 2026-06-09 23:36 +08:00
+- CE-inspired enhancement regression tests.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 8/8 tests, including bootstrap of `solution-index.md`, new helper scripts, and solution frontmatter validation.
+  - Date: 2026-06-09 23:36 +08:00
+- CE-inspired enhancement health and release checks.
+  - Result: pass
+  - Evidence: `git diff --check` passed; `node scripts/project-ops-health.mjs .` reported `Issues: none`; `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-09 23:36 +08:00
+- Context budget after CE-inspired enhancement.
+  - Result: pass with known weight increase
+  - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated about 27,717 tokens across 44 active files; largest active files stayed below the split threshold.
+  - Date: 2026-06-09 23:36 +08:00
+
+## Product Evidence
+- None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

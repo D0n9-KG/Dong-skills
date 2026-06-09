@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
 const bootstrap = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "scripts", "bootstrap-project-ops.ps1");
 const statePrune = path.join(root, "scripts", "state-prune.mjs");
+const solutions = path.join(root, "scripts", "solutions.mjs");
 
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "dong-skills-test-"));
@@ -107,7 +108,10 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.match(gitignore, /!\.codex-context\/raw\/\.gitkeep/);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "core.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "solutions.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "session-history.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
 });
 
 test("learning observations redact private key bodies and URL userinfo", () => {
@@ -269,4 +273,43 @@ test("state-prune archives old verification commands and keeps recent evidence",
   const archive = fs.readFileSync(path.join(ctx, "archive", archives[0]), "utf8");
   assert.match(archive, /command 1/);
   assert.match(archive, /command 2/);
+});
+
+test("solutions validator accepts structured docs and rejects missing frontmatter", () => {
+  const project = tempProject();
+  write(path.join(project, "docs", "solutions", "runtime-errors", "good.md"), `---
+title: "Good runtime fix"
+date: 2026-06-09
+track: bug
+category: runtime-errors
+problem_type: runtime-fix
+status: active
+scope: worker
+tags: [worker, runtime]
+verified_by: "node --test worker"
+---
+
+# Good runtime fix
+
+## Problem
+
+Verified fix.
+`);
+  write(path.join(project, "docs", "solutions", "runtime-errors", "bad.md"), "# Missing frontmatter\n");
+
+  assert.throws(() => {
+    execFileSync(process.execPath, [solutions, project, "validate"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+
+  fs.rmSync(path.join(project, "docs", "solutions", "runtime-errors", "bad.md"));
+  const out = execFileSync(process.execPath, [solutions, project, "validate"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Result: pass/);
 });
