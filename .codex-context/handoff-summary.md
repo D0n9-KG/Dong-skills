@@ -10,7 +10,7 @@ Optimize reviewed items 1, 3, 6, and 7; investigate related popular skills; add 
 Approved scope includes hook split, install/bootstrap asset updates, state pruning, expanded tests, systematic-debugging slimming, new `codex-architecture-governance`, new `codex-docs-stewardship`, README/AGENTS/skill routing updates, `.codex-context` updates, global skill install, verification, commit, and push.
 
 ## Plan Status
-Implementation, local verification, global skill sync, commit, and push are complete. This file is the final state refresh.
+Implementation, local verification, global skill sync, commit, and push are complete.
 
 ## Files Modified
 - `.codex/hooks/project-ops.mjs`
@@ -64,12 +64,12 @@ Implementation, local verification, global skill sync, commit, and push are comp
 - Learning status reported no pending observations.
 
 ## Git Checkpoint
-- Latest commit: `0f214af` (`feat(skills): add architecture and docs governance`) pushed to `origin/main`.
-- Push state: local `HEAD` and `origin/main` both point to `0f214afa17bfa3e4f67e7e380fd7c9bdeb7a050e`.
+- Latest functional commit: `0f214af` (`feat(skills): add architecture and docs governance`) pushed to `origin/main`.
+- Push state: functional commit and state-refresh checkpoints have been pushed; verify current exact HEAD with `git rev-parse HEAD` and `git ls-remote origin refs/heads/main`.
 - Files included: all implementation, docs, tests, assets, state archive, and state refresh files listed above.
-- Files intentionally left uncommitted: this final state refresh until committed.
-- Deferred reason: final state refresh records the pushed functional checkpoint.
-- Next checkpoint: commit and push final state refresh.
+- Files intentionally left uncommitted: none.
+- Deferred reason: none.
+- Next checkpoint: next meaningful change.
 
 ## Learned Instincts To Preserve
 - Split hook runtime must remain asset-synced with onboarding bootstrap assets.
@@ -77,7 +77,7 @@ Implementation, local verification, global skill sync, commit, and push are comp
 - Architecture/docs governance should run before debt becomes a late-stage cleanup problem.
 
 ## Next Action
-Commit and push final state refresh, then report verified outcome.
+Report verified outcome to the user.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
