@@ -1,24 +1,24 @@
 # Current State
 
 ## Objective
-Harden Dong Skills after full review: privacy protection, upgrade migration, checkpoint validation, recovery quality, health checks, release checks, and regression tests.
+Harden Dong Skills with split project hooks, state archival, lighter debugging guidance, architecture governance, and docs stewardship.
 
 ## Latest User Instruction
-Patch all reviewed issues in order.
+Optimize items 1, 3, 6, and 7; investigate related popular skills; add architecture/documentation governance so Codex does not let projects become concentrated, flat, stale, or hard to continue.
 
 ## Current Phase
-handoff
+verification
 
 ## Active Assumptions
-- Fixes should remain part of the main Dong Skills flow, not optional modules.
 - Project-level hooks remain the default; global hooks stay out of scope.
-- Existing projects should be upgraded without overwriting project-specific context content.
+- New architecture/docs governance should be part of the curated main flow, not optional external modules.
+- Archive files under `.codex-context/archive/` are durable but read on demand, not active recovery context.
 
 ## Blockers
 - None.
 
 ## Next Action
-No remaining implementation action. Final state checkpoint is being recorded.
+Run final verification, install updated global skills, commit, push, and report verified state.
 
 ## Last Updated
-2026-06-09 18:50 +08:00
+2026-06-09 21:26 +08:00

@@ -28,6 +28,9 @@ Dong Skills 把这些信息移出聊天窗口，放进项目内的 `.codex-conte
 - **Git 存档纪律**：`PreCompact` 和 `Stop` 会检查未提交变更、未推送提交和 Git Checkpoint 记录，提醒 Codex 使用 `codex-git-checkpoint` 提交/推送，或写明为什么暂不提交。
 - **学习沉淀**：`UserPromptSubmit` hook 只捕获明确学习信号、用户纠正和长期偏好，写入短摘录、指纹和脱敏后的 raw observation。真正的 active memory 必须由 `codex-learning-memory` 决定 Save、Improve then Save、Absorb into Existing 或 Drop。
 - **上下文预算**：`codex-context-budget` 用来检查 AGENTS、skills、hooks、state files 是否正在膨胀。
+- **架构治理**：`codex-architecture-governance` 用来审查大文件、平铺目录、耦合、重复概念和不清晰的模块边界，防止项目越做越难推进。
+- **文档治理**：`codex-docs-stewardship` 用来在阶段边界清理 README、AGENTS、docs 和 `.codex-context/`，删除或归档过期内容，保持项目知识干净。
+- **状态归档**：`state-prune` 可以把旧的验证记录归档到 `.codex-context/archive/`，让 `verification.md` 保持短而可恢复。
 - **运行时隐私保护**：安装和 bootstrap 会确保 `.codex-context/raw/` 被 `.gitignore` 忽略，只保留 `.gitkeep` 可追踪。
 - **健康检查与发布检查**：`health-check` 审计项目安装状态，`release-check` 跑语法、测试、隐私和运行时产物检查。
 
@@ -42,6 +45,8 @@ Dong Skills 把这些信息移出聊天窗口，放进项目内的 `.codex-conte
 | `systematic-debugging` | 遇到 bug、测试失败或异常行为时先定位根因。 |
 | `verification-before-completion` | 宣称完成、修复或通过前必须有验证证据。 |
 | `codex-git-checkpoint` | 在阶段边界、长暂停、压缩、交付或 GitHub 存档前检查 diff、提交信息、commit 和 push 纪律。 |
+| `codex-architecture-governance` | 审查架构边界、依赖方向、大文件、平铺目录和可测试性，指导安全结构改造。 |
+| `codex-docs-stewardship` | 清理和同步 README、AGENTS、docs、`.codex-context/` 与归档状态历史。 |
 | `requesting-code-review` | 对实际 diff、spec、plan 和验证证据做聚焦评审。 |
 | `receiving-code-review` | 处理 review 反馈时先判断有效性和风险。 |
 | `codex-codebase-onboarding` | 新项目启动时建立项目地图、命令、入口、约定和未知项。 |
@@ -68,7 +73,7 @@ Windows PowerShell:
 
 - 把 bundled skills 安装到用户的 `.agents\skills` 目录。
 - 在目标项目创建或补齐 `.codex-context/` 模板，并给已有模板补缺失章节。
-- 安装 `.codex/hooks/project-ops.mjs` 并合并 `.codex/hooks.json`。
+- 安装 `.codex/hooks/project-ops.mjs`、`.codex/scripts/lib/` 和 helper scripts，并合并 `.codex/hooks.json`。
 - 合并 `.gitignore` 运行时保护规则，避免误提交 `.codex-context/raw/observations.jsonl`。
 - 把受 marker 管理的项目说明片段合并进 `AGENTS.md`。
 
@@ -88,7 +93,7 @@ Dong Skills 使用项目级 hooks，不安装全局 hooks。这样每个项目�
 
 `codex-codebase-onboarding` 会先检查项目是否已有 Dong Skills 配置；如果没有，会运行它自带的 bootstrap 脚本，写入 `.codex-context/`、`.codex/hooks/`、`.codex/hooks.json` 和 `AGENTS.md` marker block，然后继续建立 `project-map.md`。
 
-如果刚刚 bootstrap 了项目级 hooks，重启 Codex 或从该项目重新开一个 thread，再用 `/hooks` 信任项目 hooks。
+完成项目级 hooks 的 bootstrap 后，重启 Codex 或从该项目重新开一个 thread，再用 `/hooks` 信任项目 hooks。
 
 ### 常用命令
 
@@ -101,6 +106,7 @@ node .codex/hooks/project-ops.mjs instinct-status
 node .codex/hooks/project-ops.mjs instinct-validate
 node .codex/hooks/project-ops.mjs instinct-prune --dry-run
 node .codex/hooks/project-ops.mjs instinct-promotion-candidates
+node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 node .codex/hooks/project-ops.mjs health-check
 ```
 
@@ -113,6 +119,7 @@ node scripts/instincts.mjs validate "C:\path\to\repo"
 node scripts/instincts.mjs prune "C:\path\to\repo" --dry-run
 node scripts/project-ops-health.mjs "C:\path\to\repo"
 node scripts/release-check.mjs "."
+node scripts/state-prune.mjs "C:\path\to\repo" --keep 8 --dry-run
 ```
 
 ### 隐私与发布安全
@@ -167,6 +174,9 @@ It helps with:
 - `PreCompact` and `Stop` remind Codex to use `codex-git-checkpoint` when work has uncommitted changes, unpushed commits, or missing checkpoint notes.
 - `codex-learning-memory` turns raw observations into scoped instincts only after review.
 - `codex-context-budget` audits token pressure from AGENTS, skills, hooks, and state files.
+- `codex-architecture-governance` audits large files, flat directories, coupling, duplicate concepts, unclear ownership, and testability before architecture debt compounds.
+- `codex-docs-stewardship` reconciles README, AGENTS, docs, and `.codex-context/` at milestones and removes, merges, or archives stale knowledge.
+- `state-prune` archives old verification history into `.codex-context/archive/` so state files stay compact.
 - installers and bootstraps add `.gitignore` rules so `.codex-context/raw/` runtime data is not committed accidentally.
 - `health-check` audits project installation state, and `release-check` runs syntax, test, privacy, and runtime-artifact checks.
 
@@ -181,6 +191,8 @@ It helps with:
 | `systematic-debugging` | Find root cause before patching bugs or failures. |
 | `verification-before-completion` | Require evidence before completion claims. |
 | `codex-git-checkpoint` | Enforce diff review, commit-message quality, checkpoint commit, and optional GitHub push discipline before pauses, compaction, delivery, or archive. |
+| `codex-architecture-governance` | Audit architecture boundaries, dependency direction, large files, flat directories, and testability before structural debt accumulates. |
+| `codex-docs-stewardship` | Reconcile README, AGENTS, docs, `.codex-context/`, and archived state history. |
 | `requesting-code-review` | Review actual diffs against spec, plan, and verification. |
 | `receiving-code-review` | Evaluate review feedback before applying it. |
 | `codex-codebase-onboarding` | Map a new repo's architecture, commands, entry points, tests, and conventions. |
@@ -207,7 +219,7 @@ The installer:
 
 - copies bundled skills into the user's `.agents\skills` directory
 - creates missing `.codex-context/` templates in the target project and patches missing template sections during upgrades
-- installs `.codex/hooks/project-ops.mjs`
+- installs `.codex/hooks/project-ops.mjs`, `.codex/scripts/lib/`, and helper scripts
 - merges managed hook groups into `.codex/hooks.json`
 - merges `.gitignore` runtime protections for `.codex-context/raw/`
 - merges the managed project-ops marker block into `AGENTS.md`
@@ -239,6 +251,7 @@ node .codex/hooks/project-ops.mjs instinct-status
 node .codex/hooks/project-ops.mjs instinct-validate
 node .codex/hooks/project-ops.mjs instinct-prune --dry-run
 node .codex/hooks/project-ops.mjs instinct-promotion-candidates
+node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 node .codex/hooks/project-ops.mjs health-check
 ```
 
@@ -251,6 +264,7 @@ node scripts/instincts.mjs validate "C:\path\to\repo"
 node scripts/instincts.mjs prune "C:\path\to\repo" --dry-run
 node scripts/project-ops-health.mjs "C:\path\to\repo"
 node scripts/release-check.mjs "."
+node scripts/state-prune.mjs "C:\path\to\repo" --keep 8 --dry-run
 ```
 
 ### Privacy And Safety

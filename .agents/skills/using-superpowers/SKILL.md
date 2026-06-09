@@ -22,11 +22,13 @@ If a skill conflicts with the latest user instruction, follow the user and updat
 - Existing spec, multi-step task: `writing-plans`.
 - Written plan to execute: `executing-plans`.
 - Bug, failing test, unexpected behavior: `systematic-debugging`.
+- Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
 - Before completion claim: `verification-before-completion`.
 - Before long pause, compaction, final delivery, or GitHub archive/push: `codex-git-checkpoint`.
 - Meaningful implementation ready for risk review: `requesting-code-review`.
 - Review feedback received: `receiving-code-review`.
 - Context drift, compaction, or state size concern: `codex-context-budget`.
+- Milestone cleanup, stale docs, state archiving, or handoff/documentation hygiene: `codex-docs-stewardship`.
 - Learning from repeated corrections or project-specific instincts: `codex-learning-memory`.
 
 Do not load every skill. Read only the one needed now, plus directly referenced files if required.

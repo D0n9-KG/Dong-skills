@@ -34,12 +34,14 @@ If those files conflict with the latest user instruction, the latest user instru
 - `writing-plans`: approved spec or multi-step implementation.
 - `executing-plans`: execute a written plan task by task.
 - `systematic-debugging`: bug, test failure, build failure, unexpected behavior.
+- `codex-architecture-governance`: structural changes, large files, flat directories, unclear boundaries, refactors, or repeated fixes caused by coupling.
 - `codex-verification-loop`: select build, type, lint, test, security, and diff checks.
 - `verification-before-completion`: before claiming complete, fixed, passing, ready, or delivered.
 - `codex-git-checkpoint`: archive verified work with clear commits and optional GitHub push before pauses, compaction, or delivery.
 - `requesting-code-review`: after meaningful implementation or before delivery.
 - `receiving-code-review`: when review feedback arrives.
 - `codex-learning-memory`: record, validate, prune, and promote evidence-backed project instincts.
+- `codex-docs-stewardship`: milestone cleanup, stale docs, state-file archiving, README/AGENTS/docs reconciliation, or handoff cleanliness.
 - `codex-context-budget`: audit skill, hook, and state-file context cost.
 
 Load only the skill needed for the current phase.
@@ -50,12 +52,14 @@ Load only the skill needed for the current phase.
 2. Scope: if intent is unclear or behavior-changing, use `brainstorming`; update `spec.md`.
 3. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`.
 4. Implement: follow the plan and existing codebase patterns; keep `artifact-index.md` fresh.
-5. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
-6. Verify: use `codex-verification-loop` and/or `verification-before-completion`; update `verification.md`.
-7. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
-8. Review: use `requesting-code-review` or an inline self-review; record accepted and rejected findings.
-9. Learn: after verified work or user correction, use `codex-learning-memory`.
-10. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
+5. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
+6. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
+7. Verify: use `codex-verification-loop` and/or `verification-before-completion`; update `verification.md`.
+8. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
+9. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
+10. Review: use `requesting-code-review` or an inline self-review; record accepted and rejected findings.
+11. Learn: after verified work or user correction, use `codex-learning-memory`.
+12. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
 
 ## Hooks
 

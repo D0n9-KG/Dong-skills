@@ -73,6 +73,16 @@ function sha256(file) {
   return createHash("sha256").update(readText(file), "utf8").digest("hex");
 }
 
+function walkFiles(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkFiles(full, out);
+    else out.push(full);
+  }
+  return out;
+}
+
 function sectionContent(markdown, heading) {
   const lines = markdown.split(/\r?\n/);
   const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
@@ -167,6 +177,9 @@ function checkContext(root, issues) {
 }
 
 function checkAssetParity(root, warnings) {
+  const assetRoot = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops");
+  if (!fs.existsSync(assetRoot)) return;
+
   const pairs = [
     [
       path.join(root, ".codex", "hooks", "project-ops.mjs"),
@@ -187,6 +200,10 @@ function checkAssetParity(root, warnings) {
     [
       path.join(root, "scripts", "release-check.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "release-check.mjs")
+    ],
+    [
+      path.join(root, "scripts", "state-prune.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "state-prune.mjs")
     ]
   ];
 
@@ -194,6 +211,30 @@ function checkAssetParity(root, warnings) {
     if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) continue;
     if (sha256(rootFile) !== sha256(assetFile)) {
       warnings.push(`Bootstrap asset differs from root file: ${path.relative(root, assetFile).replace(/\\/g, "/")}`);
+    }
+  }
+
+  const rootLib = path.join(root, ".codex", "scripts", "lib");
+  const assetLib = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "scripts", "lib");
+  if (!fs.existsSync(rootLib) || !fs.existsSync(assetLib)) {
+    warnings.push("Bootstrap asset is missing .codex/scripts/lib parity tree");
+    return;
+  }
+
+  const rootFiles = walkFiles(rootLib)
+    .map((file) => path.relative(rootLib, file).replace(/\\/g, "/"))
+    .sort();
+  const assetFiles = walkFiles(assetLib)
+    .map((file) => path.relative(assetLib, file).replace(/\\/g, "/"))
+    .sort();
+  const allFiles = new Set([...rootFiles, ...assetFiles]);
+  for (const relFile of allFiles) {
+    const rootFile = path.join(rootLib, relFile);
+    const assetFile = path.join(assetLib, relFile);
+    if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) {
+      warnings.push(`Bootstrap asset lib file mismatch: ${relFile}`);
+    } else if (sha256(rootFile) !== sha256(assetFile)) {
+      warnings.push(`Bootstrap asset differs from root lib file: .codex/scripts/lib/${relFile}`);
     }
   }
 }
@@ -208,6 +249,15 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "instincts.mjs")) &&
       !fs.existsSync(path.join(root, "scripts", "instincts.mjs"))) {
     issues.push("Missing project ops instincts script");
+  }
+  if (!fs.existsSync(path.join(root, ".codex", "scripts", "lib", "core.mjs"))) {
+    issues.push("Missing .codex/scripts/lib/core.mjs required by split project hook");
+  }
+  for (const scriptName of ["project-ops-health.mjs", "release-check.mjs", "state-prune.mjs"]) {
+    if (!fs.existsSync(path.join(root, ".codex", "scripts", scriptName)) &&
+        !fs.existsSync(path.join(root, "scripts", scriptName))) {
+      issues.push(`Missing project ops helper script: ${scriptName}`);
+    }
   }
 
   checkHooksJson(root, issues);

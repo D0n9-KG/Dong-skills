@@ -9,6 +9,7 @@ import test from "node:test";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
 const bootstrap = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "scripts", "bootstrap-project-ops.ps1");
+const statePrune = path.join(root, "scripts", "state-prune.mjs");
 
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "dong-skills-test-"));
@@ -104,6 +105,9 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const gitignore = fs.readFileSync(path.join(project, ".gitignore"), "utf8");
   assert.match(gitignore, /\.codex-context\/raw\/\*/);
   assert.match(gitignore, /!\.codex-context\/raw\/\.gitkeep/);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "core.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
 });
 
 test("learning observations redact private key bodies and URL userinfo", () => {
@@ -198,4 +202,71 @@ Resume final task.
   assert.match(context, /## Git Checkpoint/);
   assert.match(context, /## Next Action\nResume final task\./);
   assert.match(context, /## Files To Re-read First\n- important\.md/);
+});
+
+test("PostToolUse blocks when artifact index is stale after project file changes", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  const ctx = path.join(project, ".codex-context");
+  const artifactIndex = path.join(ctx, "artifact-index.md");
+  write(artifactIndex, "# Artifact Index\n\n## Modified\n- None yet.\n");
+  const old = new Date(Date.now() - 20_000);
+  fs.utimesSync(artifactIndex, old, old);
+  write(path.join(project, "work.txt"), "changed\n");
+
+  const output = runHook(project, { hook_event_name: "PostToolUse" });
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /artifact-index\.md is not fresh/);
+  assert.match(output.reason, /work\.txt/);
+});
+
+test("PreCompact blocks when handoff is missing or stale", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  write(path.join(project, "work.txt"), "changed\n");
+
+  const output = runHook(project, { hook_event_name: "PreCompact" });
+  assert.equal(output.continue, false);
+  assert.equal(output.stopReason, "codex-project-ops-handoff-not-ready");
+  assert.match(output.systemMessage, /handoff-summary\.md/);
+});
+
+test("state-prune archives old verification commands and keeps recent evidence", () => {
+  const project = tempProject();
+  const ctx = path.join(project, ".codex-context");
+  write(path.join(ctx, "verification.md"), `# Verification
+
+## Commands Run
+- command 1
+  - Result: pass
+- command 2
+  - Result: pass
+- command 3
+  - Result: pass
+- command 4
+  - Result: pass
+
+## Not Yet Verified
+- UI trust prompt.
+`);
+
+  const out = execFileSync(process.execPath, [statePrune, project, "--keep", "2", "--apply"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Archive: 2 item/);
+
+  const verification = fs.readFileSync(path.join(ctx, "verification.md"), "utf8");
+  assert.doesNotMatch(verification, /command 1/);
+  assert.doesNotMatch(verification, /command 2/);
+  assert.match(verification, /command 3/);
+  assert.match(verification, /command 4/);
+  assert.match(verification, /UI trust prompt/);
+
+  const archives = fs.readdirSync(path.join(ctx, "archive")).filter((name) => name.startsWith("verification-"));
+  assert.equal(archives.length, 1);
+  const archive = fs.readFileSync(path.join(ctx, "archive", archives[0]), "utf8");
+  assert.match(archive, /command 1/);
+  assert.match(archive, /command 2/);
 });

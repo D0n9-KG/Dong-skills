@@ -17,6 +17,8 @@ Use only the bundled curated set by default:
 - `systematic-debugging`
 - `verification-before-completion`
 - `codex-git-checkpoint`
+- `codex-architecture-governance`
+- `codex-docs-stewardship`
 - `requesting-code-review`
 - `receiving-code-review`
 - `codex-codebase-onboarding`
@@ -46,7 +48,12 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 
 Use `.codex-context/raw/` for raw logs or large outputs.
 Project bootstrap should keep `.codex-context/raw/*` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
+Use `.codex-context/archive/` for old but still useful verification or handoff history.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
+
+Use `codex-architecture-governance` before or after structural changes, major refactors, large-file growth, flat-directory growth, unclear ownership, or repeated bugs caused by coupling. Keep architecture facts in `project-map.md`, decisions in `decisions.md`, and structural risks in `risks.md`.
+
+Use `codex-docs-stewardship` at milestones, before handoff, after API/architecture changes, or when README/AGENTS/docs/.codex-context may be stale. Delete, merge, or archive stale docs instead of keeping misleading notes.
 
 ## Learning Memory
 

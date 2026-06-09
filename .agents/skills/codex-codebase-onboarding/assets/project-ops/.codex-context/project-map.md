@@ -28,5 +28,8 @@
 ## Where To Change Things
 - [Task type]: `path`
 
+## Architecture Watchpoints
+- [Large files, flat directories, coupling, or unclear ownership to revisit.]
+
 ## Unknowns
 - [Unknown and how to verify.]

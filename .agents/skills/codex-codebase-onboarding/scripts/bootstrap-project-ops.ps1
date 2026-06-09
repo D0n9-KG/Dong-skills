@@ -8,6 +8,7 @@ $skillRoot = Split-Path -Parent $PSScriptRoot
 $assetsRoot = Join-Path $skillRoot "assets\project-ops"
 $sourceContext = Join-Path $assetsRoot ".codex-context"
 $sourceCodex = Join-Path $assetsRoot ".codex"
+$sourceCodexScripts = Join-Path $sourceCodex "scripts"
 $sourceScripts = Join-Path $assetsRoot "scripts"
 $sourceAgentsSnippet = Join-Path $assetsRoot "AGENTS.project-ops.snippet.md"
 
@@ -15,7 +16,7 @@ if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
   throw "Target project root not found: $TargetProjectRoot"
 }
 
-foreach ($required in @($sourceContext, $sourceCodex, $sourceScripts, $sourceAgentsSnippet)) {
+foreach ($required in @($sourceContext, $sourceCodex, $sourceCodexScripts, $sourceScripts, $sourceAgentsSnippet)) {
   if (!(Test-Path -LiteralPath $required)) {
     throw "Missing bootstrap resource: $required"
   }
@@ -254,9 +255,13 @@ $targetScriptDir = Join-Path $targetCodex "scripts"
 New-Item -ItemType Directory -Force -Path $targetHookDir | Out-Null
 New-Item -ItemType Directory -Force -Path $targetScriptDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\project-ops.mjs") -Destination (Join-Path $targetHookDir "project-ops.mjs") -Force
+Get-ChildItem -LiteralPath $sourceCodexScripts -Force | ForEach-Object {
+  Copy-Item -LiteralPath $_.FullName -Destination $targetScriptDir -Recurse -Force
+}
 Copy-Item -LiteralPath (Join-Path $sourceScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "state-prune.mjs") -Destination (Join-Path $targetScriptDir "state-prune.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"

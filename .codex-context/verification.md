@@ -1,78 +1,6 @@
 # Verification
 
 ## Commands Run
-- `node --check` on `scripts/context-budget.mjs`, `scripts/instincts.mjs`, `.codex/hooks/project-ops.mjs`, onboarding bootstrap hook asset, and onboarding bootstrap instincts asset.
-  - Result: pass
-  - Evidence: all checked JavaScript files returned exit code 0.
-  - Date: 2026-06-09 16:05 +08:00
-- `rg --files -uuu -g '!.git/**'`
-  - Result: pass
-  - Evidence: release file list contains skills, hooks, context templates, scripts, README, licenses, and no smoke-test project.
-  - Date: 2026-06-09 16:05 +08:00
-- Personal-path scan for local user, local workspace, and dated local work directory markers.
-  - Result: pass
-  - Evidence: no matches outside `.git`.
-  - Date: 2026-06-09 16:06 +08:00
-- Exact credential-pattern scan for GitHub/OpenAI-style tokens, bearer values, and key/value secrets.
-  - Result: pass
-  - Evidence: no matches outside `.git`.
-  - Date: 2026-06-09 16:06 +08:00
-- Broad security-word scan excluding README examples.
-  - Result: pass with reviewed false positives
-  - Evidence: matches were intentional detector/redaction regexes in `project-ops.mjs` and security wording in skill docs; no actual credential values were found.
-  - Date: 2026-06-09 16:06 +08:00
-- Installed-skill/global-hook check.
-  - Result: pass
-  - Evidence: global `hooks.json` and global dispatcher were absent; installed onboarding bootstrap script and hook asset were present.
-  - Date: 2026-06-09 16:07 +08:00
-- Temporary-project bootstrap smoke test.
-  - Result: pass
-  - Evidence: bootstrap generated required `.codex-context`, `.codex/hooks/project-ops.mjs`, `.codex/hooks.json`, `.codex/scripts/instincts.mjs`, and `AGENTS.md`; second run kept exactly one Dong Skills hook group per event; AGENTS marker count was 2; no `observations.jsonl` was created; simulated `SessionStart` returned the expected active-hooks message.
-  - Date: 2026-06-09 16:07 +08:00
-- PowerShell parse check on `scripts/install-windows.ps1` and onboarding `bootstrap-project-ops.ps1`.
-  - Result: pass
-  - Evidence: PowerShell parser returned no syntax errors.
-  - Date: 2026-06-09 16:07 +08:00
-- Obsolete global-hook artifact scan.
-  - Result: pass
-  - Evidence: no matches in the release tree or installed onboarding skill.
-  - Date: 2026-06-09 16:07 +08:00
-- README UTF-8/content check.
-  - Result: pass
-  - Evidence: Node UTF-8 read found the Chinese project-level-hook statement and English `codex-codebase-onboarding` startup wording.
-  - Date: 2026-06-09 16:07 +08:00
-- `git diff --check`
-  - Result: pass
-  - Evidence: no whitespace errors.
-  - Date: 2026-06-09 16:07 +08:00
-- Runtime-artifact scan for backups, temp/log files, raw observations, and smoke-test leftovers.
-  - Result: pass
-  - Evidence: no matches outside `.git`.
-  - Date: 2026-06-09 16:07 +08:00
-- Final zip generation and entry inspection.
-  - Result: pass
-  - Evidence: `dong-skills.zip` contains 70 entries including `.agents`, `.codex`, and `.codex-context`; it contains no `.git`, raw observations, smoke-test leftovers, private path markers, or obsolete global-hook artifacts.
-  - Date: 2026-06-09 16:16 +08:00
-- `node --check` on root project hook, onboarding bootstrap hook asset, global installed onboarding hook asset, and existing JS utility scripts after adding Git checkpoint logic.
-  - Result: pass
-  - Evidence: all checked JavaScript files returned exit code 0.
-  - Date: 2026-06-09 17:00 +08:00
-- Temporary-project Git checkpoint smoke test.
-  - Result: pass
-  - Evidence: dirty worktree with missing `Git Checkpoint` blocked Stop; adding a meaningful deferred checkpoint in `handoff-summary.md` allowed Stop to continue.
-  - Date: 2026-06-09 16:58 +08:00
-- Global skill install check for `codex-git-checkpoint`, `codex-project-governance`, `using-superpowers`, `executing-plans`, and `codex-codebase-onboarding`.
-  - Result: pass
-  - Evidence: each skill directory and `SKILL.md` exists under the global `.agents/skills` root.
-  - Date: 2026-06-09 17:00 +08:00
-- README and skill content check.
-  - Result: pass
-  - Evidence: README contains the Chinese Git archive discipline section and `codex-git-checkpoint`; the new skill contains commit-message and handoff-section requirements.
-  - Date: 2026-06-09 17:00 +08:00
-- `git diff --check`
-  - Result: pass
-  - Evidence: no whitespace errors.
-  - Date: 2026-06-09 17:00 +08:00
 - Personal-path scan, exact credential-pattern scan, obsolete global-hook artifact scan, and runtime-artifact scan after Git checkpoint changes.
   - Result: pass
   - Evidence: no matches outside `.git`; no raw observations, logs, backups, smoke-test leftovers, or old global-hook artifacts found.
@@ -113,6 +41,42 @@
   - Result: pass
   - Evidence: `fix(skills): harden project ops governance` was committed as `103e9de` and pushed to `origin/main`.
   - Date: 2026-06-09 18:50 +08:00
+- State prune on this kit.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs state-prune --keep 10 --apply` archived 18 older verification entries to `.codex-context/archive/verification-2026-06-09.md` and kept 10 active entries.
+  - Date: 2026-06-09 21:05 +08:00
+- Expanded regression tests after split hook and governance additions.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 7/7 tests covering bootstrap dependencies, learning redaction, Git Checkpoint validation, recovery, stale artifact gate, PreCompact gate, and state pruning.
+  - Date: 2026-06-09 21:30 +08:00
+- Final release check.
+  - Result: pass
+  - Evidence: `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-09 21:30 +08:00
+- Final health check.
+  - Result: pass
+  - Evidence: `node scripts/project-ops-health.mjs .` reported `Issues: none` with no asset parity warnings.
+  - Date: 2026-06-09 21:30 +08:00
+- Context budget after split and pruning.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated ~22,931 tokens across 38 active files; hook entrypoint is ~636 tokens / 87 lines, and archive/raw are excluded from active budget.
+  - Date: 2026-06-09 21:30 +08:00
+- Architecture and docs stewardship scans.
+  - Result: pass
+  - Evidence: architecture scan found no files or directories over thresholds; docs scan found no relative-date warnings after README wording cleanup.
+  - Date: 2026-06-09 21:30 +08:00
+- Diff whitespace check.
+  - Result: pass
+  - Evidence: `git diff --check` returned exit code 0.
+  - Date: 2026-06-09 21:30 +08:00
+- Global skill install check.
+  - Result: pass
+  - Evidence: `codex-architecture-governance`, `codex-docs-stewardship`, `codex-project-governance`, `codex-codebase-onboarding`, `systematic-debugging`, `codex-context-budget`, and `codex-git-checkpoint` all have `SKILL.md` under the global `.agents/skills` root.
+  - Date: 2026-06-09 21:32 +08:00
+- Learning review status.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs learning-status` reported 0 raw observations, 0 pending observations, and fresh index.
+  - Date: 2026-06-09 21:33 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

@@ -1,78 +1,90 @@
 # Handoff Summary
 
 ## Objective
-Harden Dong Skills after full review.
+Optimize Dong Skills with split hook runtime, state archiving, leaner debugging guidance, architecture governance, and documentation stewardship.
 
 ## Latest User Instruction
-Patch all reviewed issues in order.
+Optimize reviewed items 1, 3, 6, and 7; investigate related popular skills; add key workspace governance skills for architecture quality and clean documentation/state archives.
 
 ## Approved Scope / Spec
-Fix raw runtime privacy, learning redaction, existing-project upgrade migration, Git Checkpoint validation, recovery excerpts, health/release checks, repeatable tests, docs, and bootstrap assets.
+Approved scope includes hook split, install/bootstrap asset updates, state pruning, expanded tests, systematic-debugging slimming, new `codex-architecture-governance`, new `codex-docs-stewardship`, README/AGENTS/skill routing updates, `.codex-context` updates, global skill install, verification, commit, and push.
 
 ## Plan Status
-Implementation, verification, and functional checkpoint push are complete. This file records the final handoff state.
+Implementation and local verification are complete. Git checkpoint commit/push is pending.
 
 ## Files Modified
 - `.codex/hooks/project-ops.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
+- `.codex/scripts/lib/*.mjs`
+- `scripts/state-prune.mjs`
+- `scripts/context-budget.mjs`
+- `scripts/project-ops-health.mjs`
 - `scripts/install-windows.ps1`
 - `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- `scripts/project-ops-health.mjs`
-- `scripts/release-check.mjs`
-- `tests/project-ops.test.mjs`
-- `README.md`
-- `AGENTS.project-ops.snippet.md`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/`
+- `.agents/skills/systematic-debugging/`
+- `.agents/skills/codex-architecture-governance/`
+- `.agents/skills/codex-docs-stewardship/`
+- `.agents/skills/codex-project-governance/SKILL.md`
+- `.agents/skills/using-superpowers/SKILL.md`
+- `.agents/skills/codex-context-budget/SKILL.md`
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`
+- `AGENTS.project-ops.snippet.md`
+- `README.md`
+- `tests/project-ops.test.mjs`
 - `.codex-context/*.md`
+- `.codex-context/archive/verification-2026-06-09.md`
 
 ## Files Read But Not Changed
-- Existing project ops hook, installer, bootstrap, README, AGENTS snippet, and state files were inspected before editing.
+- External references from Claude Skills docs, Superpowers, architect-review, architecture skill examples, and docs cleanup patterns were researched and summarized, not copied wholesale.
 
 ## Decisions Made
-- Keep project-level hooks as the only hook installation path.
-- Use onboarding asset templates as the installer source for target projects, not the kit's live `.codex-context` state.
-- Treat raw observations as runtime data and protect them through target `.gitignore`.
-- Validate structured Git Checkpoint fields when checkpoint review is needed.
+- Split hook code into runtime libs under `.codex/scripts/lib/` and keep the hook file as a dispatcher.
+- Keep archive files under `.codex-context/archive/` as durable on-demand history, excluded from active budget.
+- Add architecture/docs governance as curated main skills.
+- Keep scan scripts heuristic and advisory; they do not authorize automatic refactors.
+- Keep `systematic-debugging` short and move details into references.
 
 ## Open Questions And Assumptions
 - No open questions.
-- Assumption: health/release scripts can stay plain Node scripts with no package manager dependency.
+- Assumption: project-level hooks remain the preferred installation model.
 
 ## Risks
-- Template migration appends missing sections but does not rewrite existing project-specific content.
-- Health/release checks are intentionally conservative and may surface false positives that should be reviewed rather than bypassed.
+- New projects rely on onboarding asset parity for split hook libs.
+- Codex UI hook trust display still needs manual `/hooks` trust after fresh bootstrap.
+- Archive history can grow and should be reviewed by docs stewardship over time.
 
 ## Verification Evidence
-- `node --check` passed for updated hooks, helper scripts, asset scripts, and tests.
-- `node --test tests/project-ops.test.mjs` passed 4/4 tests.
-- `node scripts/project-ops-health.mjs .` passed with `Issues: none`.
-- `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+- `node --test tests/project-ops.test.mjs` passed 7/7 tests.
+- `node scripts/release-check.mjs .` passed.
+- `node scripts/project-ops-health.mjs .` passed with no issues.
+- `node .codex/hooks/project-ops.mjs context-budget` showed hook entrypoint down to ~636 tokens / 87 lines; active budget excludes raw/archive.
+- Architecture and docs scans passed; docs scan reported no relative-date warnings.
 - `git diff --check` passed.
-- Functional checkpoint commit `103e9de` was pushed to `origin/main`.
+- Global skills existence check passed for new and key existing Dong Skills.
+- Learning status reported no pending observations.
 
 ## Git Checkpoint
-- Latest commit: `103e9de` (`fix(skills): harden project ops governance`) pushed to `origin/main`.
-- Push state: functional hardening commit is pushed; this final handoff refresh is the only pending state update.
-- Files included: hook hardening, install/bootstrap updates, helper scripts, tests, docs, bootstrap assets, and project state files.
-- Files intentionally left uncommitted: final handoff/current-state/verification refresh until the state checkpoint commit is made.
-- Deferred reason: final state refresh needs its own small checkpoint after recording the pushed functional commit.
-- Next checkpoint: commit and push final state refresh.
+- Latest commit: pending.
+- Push state: pending commit and push.
+- Files included: all implementation, docs, tests, assets, state archive, and state refresh files listed above.
+- Files intentionally left uncommitted: none intended.
+- Deferred reason: checkpoint not yet created at the time this handoff was written.
+- Next checkpoint: commit and push this optimization pass, then refresh handoff with the pushed commit hash.
 
 ## Learned Instincts To Preserve
-- Raw observations are runtime data and should be ignored in target projects.
-- Recovery excerpts should prioritize handoff sections by meaning, not only file position.
-- Installers should source clean templates, not live project state.
+- Split hook runtime must remain asset-synced with onboarding bootstrap assets.
+- `.codex-context/archive/` is durable but on-demand; do not add it to compaction recovery order.
+- Architecture/docs governance should run before debt becomes a late-stage cleanup problem.
 
 ## Next Action
-Commit and push final state refresh.
+Commit and push the optimization pass.
 
 ## Files To Re-read First
+- `.codex-context/handoff-summary.md`
 - `.codex-context/current-state.md`
-- `.codex-context/spec.md`
-- `.codex-context/plan-progress.md`
-- `.codex-context/artifact-index.md`
+- `.codex-context/project-map.md`
 - `.codex/hooks/project-ops.mjs`
-- `scripts/install-windows.ps1`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `.codex/scripts/lib/`
 - `tests/project-ops.test.mjs`
+- `.agents/skills/codex-architecture-governance/SKILL.md`
+- `.agents/skills/codex-docs-stewardship/SKILL.md`

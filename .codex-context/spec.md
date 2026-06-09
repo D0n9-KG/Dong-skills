@@ -1,37 +1,43 @@
 # Spec
 
 ## Problem
-The Dong Skills review found several hardening gaps: raw learning observations could be committed in target projects, learning redaction missed some sensitive forms, existing project upgrades did not patch missing template sections, Git Checkpoint notes were accepted when vague, recovery excerpts could omit the most important handoff sections, and hook behavior lacked repeatable regression tests.
+Dong Skills had several remaining governance gaps: the project hook was a large single file, verification history could bloat active state, `systematic-debugging` was heavier than necessary, and the curated workflow lacked explicit architecture and documentation stewardship to prevent projects from becoming concentrated, flat, stale, or hard to resume.
 
 ## Goals
-- Protect `.codex-context/raw/` in target project `.gitignore`.
-- Redact complete private-key blocks and URL userinfo from learning observations.
-- Patch missing context-template sections during install/bootstrap without overwriting project-specific content.
-- Validate structured Git Checkpoint fields when work is dirty, unpushed, or lacks upstream.
-- Make recovery excerpts section-aware so `Git Checkpoint`, `Next Action`, and `Files To Re-read First` survive long handoffs.
-- Add health-check, release-check, and repeatable tests.
-- Keep root files and onboarding bootstrap assets consistent.
+- Split `.codex/hooks/project-ops.mjs` into a thin dispatcher and maintainable runtime modules.
+- Ensure install/bootstrap copies split hook dependencies into target projects.
+- Add state archival so old verification evidence can move to `.codex-context/archive/` while active files stay compact.
+- Expand regression tests around hook gates, bootstrap dependencies, and state pruning.
+- Slim `systematic-debugging/SKILL.md` and move detailed guidance into references.
+- Add a curated architecture governance skill with a practical scan script.
+- Add a curated docs/state stewardship skill with a practical scan script.
+- Update README, AGENTS snippet, project governance routing, onboarding, context-budget guidance, assets, and state files.
+- Preserve privacy and release hygiene.
 
 ## Non-Goals
 - Do not install global hooks.
-- Do not auto-commit or auto-push work.
-- Do not replace GitHub plugin PR workflows.
-- Do not rewrite unrelated Superpowers/ECC-derived skills.
+- Do not automate structural refactors based only on heuristic scans.
+- Do not auto-commit or auto-push without checkpoint review.
+- Do not add unrelated external skills.
 
 ## Approved Scope
-- Hook logic, install/bootstrap scripts, onboarding assets, README/AGENTS guidance, health/release scripts, tests, and project state files.
+- Hook runtime, install/bootstrap scripts, onboarding assets, tests, README/AGENTS guidance, curated skill docs, scan scripts, state pruning, and `.codex-context` state.
 
 ## User Decisions
-- 2026-06-09: Patch all reviewed issues in order.
-- 2026-06-09: Keep these fixes in the main Dong Skills flow, not optional modules.
+- 2026-06-09: Optimize reviewed items 1, 3, 6, and 7.
+- 2026-06-09: Add project architecture governance and documentation/state stewardship to prevent long-running projects from degrading.
+- 2026-06-09: Keep these as main curated Dong Skills behavior, not optional modules.
 
 ## Acceptance Criteria
-- Syntax checks pass for hooks, helper scripts, and tests.
-- Node regression tests pass.
-- `health-check` passes for the kit root.
-- `release-check` passes for the kit root or any remaining gap is explicit.
-- Privacy scan finds no personal paths, credentials, raw observations, logs, backups, or runtime artifacts.
-- Bootstrap assets contain the same hook/helper behavior as root.
+- Hook CLI and event behavior still works after splitting.
+- Bootstrap installs `.codex/scripts/lib/` and `state-prune.mjs`.
+- Regression tests cover bootstrap dependencies, stale artifact gate, PreCompact gate, learning redaction, checkpoint validation, recovery, and state pruning.
+- `state-prune` archives old verification evidence and leaves recent evidence plus explicit gaps active.
+- `systematic-debugging` main skill is short and loads detailed references on demand.
+- New architecture/docs skills are present, routed, and documented.
+- Health/release checks pass, privacy scan passes, and bootstrap asset parity is clean.
+- Updated global skills are installed.
+- Commit is pushed to GitHub.
 
 ## Open Questions
 - None.

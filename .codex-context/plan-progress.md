@@ -1,23 +1,26 @@
 # Plan Progress
 
 ## Active Plan
-Inline hardening plan from the full self-use skill review.
+User-approved optimization pass for items 1, 3, 6, 7 plus architecture/docs governance.
 
 ## Tasks
-- [x] Fix raw runtime ignore protection and learning excerpt redaction.
-- [x] Add context-template migration for existing projects.
-- [x] Validate structured Git Checkpoint fields instead of accepting vague notes.
-- [x] Make SessionStart/PostCompact recovery read important handoff sections instead of only the file head.
-- [x] Add health-check and release-check scripts.
-- [x] Add repeatable regression tests for bootstrap, privacy redaction, checkpoint gate, and recovery.
-- [x] Sync onboarding bootstrap assets.
-- [x] Run full release verification and fix any failures.
-- [x] Refresh handoff and checkpoint.
+- [x] Split `.codex/hooks/project-ops.mjs` into a thin entrypoint and `.codex/scripts/lib/*.mjs`.
+- [x] Update install/bootstrap scripts to copy split hook libraries and `state-prune.mjs`.
+- [x] Add state archival with `scripts/state-prune.mjs` and hook CLI proxy.
+- [x] Add regression tests for bootstrap split dependencies, stale artifact gate, PreCompact gate, and state pruning.
+- [x] Slim `systematic-debugging/SKILL.md` and move details into `references/`.
+- [x] Add `codex-architecture-governance` with architecture scan script.
+- [x] Add `codex-docs-stewardship` with docs scan script.
+- [x] Update README, AGENTS snippet, project governance routing, onboarding, and context-budget guidance.
+- [x] Prune this kit's old verification history into `.codex-context/archive/`.
+- [ ] Run final verification.
+- [ ] Sync updated global skills.
+- [ ] Commit and push.
 
 ## Current Step
-None.
+Final verification and checkpoint.
 
 ## Out Of Scope
 - Global hooks.
-- Automatic commits or pushes.
-- Replacing GitHub plugin PR creation flows.
+- Automatic commits without diff review.
+- Fully automated refactors driven by scan scripts.

@@ -10,6 +10,7 @@ $sourceSkillsRoot = Join-Path $kitRoot ".agents\skills"
 $projectOpsAssets = Join-Path $sourceSkillsRoot "codex-codebase-onboarding\assets\project-ops"
 $sourceContext = Join-Path $projectOpsAssets ".codex-context"
 $sourceCodex = Join-Path $projectOpsAssets ".codex"
+$sourceCodexScripts = Join-Path $sourceCodex "scripts"
 $sourceProjectScripts = Join-Path $projectOpsAssets "scripts"
 $sourceAgentsSnippet = Join-Path $projectOpsAssets "AGENTS.project-ops.snippet.md"
 
@@ -17,7 +18,7 @@ if (!(Test-Path -LiteralPath $sourceSkillsRoot)) {
   throw "Source skills not found: $sourceSkillsRoot"
 }
 
-foreach ($required in @($sourceContext, $sourceCodex, $sourceProjectScripts, $sourceAgentsSnippet)) {
+foreach ($required in @($sourceContext, $sourceCodex, $sourceCodexScripts, $sourceProjectScripts, $sourceAgentsSnippet)) {
   if (!(Test-Path -LiteralPath $required)) {
     throw "Missing project ops install resource: $required"
   }
@@ -274,9 +275,13 @@ $targetScriptDir = Join-Path $targetCodex "scripts"
 New-Item -ItemType Directory -Force -Path $targetHookDir | Out-Null
 New-Item -ItemType Directory -Force -Path $targetScriptDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\project-ops.mjs") -Destination (Join-Path $targetHookDir "project-ops.mjs") -Force
+Get-ChildItem -LiteralPath $sourceCodexScripts -Force | ForEach-Object {
+  Copy-Item -LiteralPath $_.FullName -Destination $targetScriptDir -Recurse -Force
+}
 Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "state-prune.mjs") -Destination (Join-Path $targetScriptDir "state-prune.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"

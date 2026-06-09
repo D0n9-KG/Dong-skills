@@ -53,7 +53,12 @@ for (const rel of ["AGENTS.md", ".codex/hooks.json", ".mcp.json", ".codex/config
 }
 candidates.push(...walkFiles(root, ".agents/skills").filter((file) => file.endsWith("/SKILL.md") || file.endsWith("\\SKILL.md")));
 candidates.push(...walkFiles(root, ".codex/hooks").filter((file) => /\.(mjs|js|ps1|sh)$/i.test(file)));
-candidates.push(...walkFiles(root, ".codex-context").filter((file) => /\.(md|jsonl)$/i.test(file) && !file.includes(`${path.sep}raw${path.sep}`)));
+candidates.push(...walkFiles(root, ".codex/scripts").filter((file) => /\.(mjs|js|ps1|sh)$/i.test(file)));
+candidates.push(...walkFiles(root, ".codex-context").filter((file) =>
+  /\.(md|jsonl)$/i.test(file) &&
+  !file.includes(`${path.sep}raw${path.sep}`) &&
+  !file.includes(`${path.sep}archive${path.sep}`)
+));
 
 const rows = candidates.map((file) => {
   const text = readText(file);

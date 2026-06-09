@@ -28,7 +28,7 @@ When the shell is already in the target repository, keep the working directory t
 & "<resolved-skill-dir>\scripts\bootstrap-project-ops.ps1" -TargetProjectRoot (Get-Location).Path
 ```
 
-The bootstrap script installs project hooks, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data.
+The bootstrap script installs project hooks and split hook libraries, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data.
 
 After bootstrapping, continue onboarding in the same turn. Tell the user they should restart Codex or start a new thread from the project if they need `/hooks` to show the newly installed project hooks immediately.
 
@@ -50,6 +50,7 @@ Update `.codex-context/project-map.md` with:
 - project purpose, if known
 - stack and package manager
 - architecture and important directories
+- architecture watchpoints such as large files, flat directories, unclear ownership, or coupling risks
 - entry points and request/data flow
 - build, test, lint, typecheck, and dev commands
 - naming and code style conventions
