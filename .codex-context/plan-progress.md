@@ -8,10 +8,10 @@ Inline plan for project-level bootstrap release.
 - [x] Add onboarding-skill bootstrap script and project-ops assets.
 - [x] Update README and skill guidance for skill-based new-project startup.
 - [x] Run release verification: syntax checks, privacy scan, runtime-artifact scan, installed-skill checks.
-- [ ] Regenerate release zip and push the updated repository.
+- [x] Regenerate release zip and push the updated repository.
 
 ## Current Step
-Regenerate release zip and push repository update.
+None.
 
 ## Out Of Scope
 - Global hook installation.

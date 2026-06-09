@@ -7,7 +7,7 @@ Prepare Dong Skills as a public Codex project-operations kit with global skills 
 Use `codex-codebase-onboarding` as the new-project entrypoint so a project can bootstrap itself from the skill; remove global hooks and keep hooks project-scoped.
 
 ## Current Phase
-delivery
+handoff
 
 ## Active Assumptions
 - The user wants skills installed globally, but hooks installed per project for flexibility.
@@ -18,7 +18,7 @@ delivery
 - None.
 
 ## Next Action
-Regenerate the publish zip and push the repository update.
+Use `codex-codebase-onboarding` to bootstrap and onboard the next target project.
 
 ## Last Updated
-2026-06-09 16:07 +08:00
+2026-06-09 16:16 +08:00

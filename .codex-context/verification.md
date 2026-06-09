@@ -49,6 +49,10 @@
   - Result: pass
   - Evidence: no matches outside `.git`.
   - Date: 2026-06-09 16:07 +08:00
+- Final zip generation and entry inspection.
+  - Result: pass
+  - Evidence: `dong-skills.zip` contains 70 entries including `.agents`, `.codex`, and `.codex-context`; it contains no `.git`, raw observations, smoke-test leftovers, private path markers, or obsolete global-hook artifacts.
+  - Date: 2026-06-09 16:16 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

@@ -10,7 +10,7 @@ Continue the release after changing the design so new projects start through `co
 Onboarding skill bootstraps missing project governance files, then continues codebase onboarding. The public release should not include private runtime data.
 
 ## Plan Status
-Implementation and release verification are in place. Zip regeneration, commit, and push are the remaining steps.
+Implementation, release verification, zip regeneration, commit, and push are complete.
 
 ## Files Modified
 - `.agents/skills/codex-codebase-onboarding/SKILL.md`
@@ -34,13 +34,13 @@ No open questions. Assumption: after a fresh bootstrap, Codex may need a restart
 Release must be scanned for private data. PreCompact hooks are useful but not an absolute guarantee against every automatic compaction edge case.
 
 ## Verification Evidence
-JavaScript syntax checks, PowerShell parse checks, release file listing, personal-path scan, exact credential scan, reviewed broad security-word scan, installed-skill/global-hook check, obsolete global-hook artifact scan, temporary-project bootstrap smoke test, README content check, diff whitespace check, and runtime-artifact scan passed on 2026-06-09.
+JavaScript syntax checks, PowerShell parse checks, release file listing, personal-path scan, exact credential scan, reviewed broad security-word scan, installed-skill/global-hook check, obsolete global-hook artifact scan, temporary-project bootstrap smoke test, README content check, diff whitespace check, runtime-artifact scan, and final zip inspection passed on 2026-06-09.
 
 ## Learned Instincts To Preserve
 Project learning should be curated through `codex-learning-memory`; raw observations are not active memory and should not be published.
 
 ## Next Action
-Regenerate the publish zip and push the repository update.
+Use `codex-codebase-onboarding` as the startup skill in the next target project; restart Codex or open a new thread after bootstrap so `/hooks` can show and trust project hooks.
 
 ## Files To Re-read First
 - `.codex-context/current-state.md`
