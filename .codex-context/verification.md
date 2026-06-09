@@ -101,6 +101,10 @@
   - Result: pass with known weight increase
   - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated about 27,717 tokens across 44 active files; largest active files stayed below the split threshold.
   - Date: 2026-06-09 23:36 +08:00
+- Global skill install and GitHub push verification.
+  - Result: pass
+  - Evidence: global install check found all five new skills under `.agents/skills`; `git push origin main` pushed `a53936d`; `git ls-remote origin refs/heads/main` returned `a53936d0c8e036ae053e7a95fde8c5c660e2181c`.
+  - Date: 2026-06-09 23:48 +08:00
 
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.

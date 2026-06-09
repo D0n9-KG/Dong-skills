@@ -7,7 +7,7 @@ Enhance Dong Skills with Compound Engineering inspired strategy, solution memory
 Borrow useful ideas from everyinc/compound-engineering-plugin and strengthen Dong Skills.
 
 ## Current Phase
-implementation
+delivery
 
 ## Active Assumptions
 - Project-level hooks remain the default; global hooks stay out of scope.
@@ -19,7 +19,7 @@ implementation
 - None.
 
 ## Next Action
-Finish wiring docs/tests/assets, run release verification, install updated global skills, then checkpoint and push.
+Report verified pushed state to the user.
 
 ## Last Updated
-2026-06-09 23:30 +08:00
+2026-06-09 23:48 +08:00
