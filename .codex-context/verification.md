@@ -109,6 +109,10 @@
   - Result: pass
   - Evidence: `git diff --check` returned exit code 0.
   - Date: 2026-06-09 18:44 +08:00
+- Git checkpoint push verification for hardening commit.
+  - Result: pass
+  - Evidence: `fix(skills): harden project ops governance` was committed as `103e9de` and pushed to `origin/main`.
+  - Date: 2026-06-09 18:50 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

@@ -15,7 +15,7 @@ Inline hardening plan from the full self-use skill review.
 - [x] Refresh handoff and checkpoint.
 
 ## Current Step
-Create and push Git checkpoint.
+None.
 
 ## Out Of Scope
 - Global hooks.

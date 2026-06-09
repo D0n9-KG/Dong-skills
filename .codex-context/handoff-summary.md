@@ -10,7 +10,7 @@ Patch all reviewed issues in order.
 Fix raw runtime privacy, learning redaction, existing-project upgrade migration, Git Checkpoint validation, recovery excerpts, health/release checks, repeatable tests, docs, and bootstrap assets.
 
 ## Plan Status
-Implementation and verification are complete. Git checkpoint is in progress.
+Implementation, verification, and functional checkpoint push are complete. This file records the final handoff state.
 
 ## Files Modified
 - `.codex/hooks/project-ops.mjs`
@@ -49,14 +49,15 @@ Implementation and verification are complete. Git checkpoint is in progress.
 - `node scripts/project-ops-health.mjs .` passed with `Issues: none`.
 - `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
 - `git diff --check` passed.
+- Functional checkpoint commit `103e9de` was pushed to `origin/main`.
 
 ## Git Checkpoint
-- Latest commit: `453e0aea4527ea415f312c666cc3fb4858451360`
-- Push state: previous release state is pushed to `origin/main`; current hardening work is intentionally uncommitted pending checkpoint commit/push.
-- Files included: none for the current hardening work yet.
-- Files intentionally left uncommitted: hook hardening, install/bootstrap updates, helper scripts, tests, docs, bootstrap assets, and state refresh files.
-- Deferred reason: checkpoint commit/push is the next action after this handoff refresh.
-- Next checkpoint: commit and push the verified hardening pass.
+- Latest commit: `103e9de` (`fix(skills): harden project ops governance`) pushed to `origin/main`.
+- Push state: functional hardening commit is pushed; this final handoff refresh is the only pending state update.
+- Files included: hook hardening, install/bootstrap updates, helper scripts, tests, docs, bootstrap assets, and project state files.
+- Files intentionally left uncommitted: final handoff/current-state/verification refresh until the state checkpoint commit is made.
+- Deferred reason: final state refresh needs its own small checkpoint after recording the pushed functional commit.
+- Next checkpoint: commit and push final state refresh.
 
 ## Learned Instincts To Preserve
 - Raw observations are runtime data and should be ignored in target projects.
@@ -64,7 +65,7 @@ Implementation and verification are complete. Git checkpoint is in progress.
 - Installers should source clean templates, not live project state.
 
 ## Next Action
-Commit and push the verified hardening pass.
+Commit and push final state refresh.
 
 ## Files To Re-read First
 - `.codex-context/current-state.md`

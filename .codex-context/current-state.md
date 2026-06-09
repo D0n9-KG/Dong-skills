@@ -7,7 +7,7 @@ Harden Dong Skills after full review: privacy protection, upgrade migration, che
 Patch all reviewed issues in order.
 
 ## Current Phase
-delivery
+handoff
 
 ## Active Assumptions
 - Fixes should remain part of the main Dong Skills flow, not optional modules.
@@ -18,7 +18,7 @@ delivery
 - None.
 
 ## Next Action
-Create and push Git checkpoint for the verified hardening pass.
+No remaining implementation action. Final state checkpoint is being recorded.
 
 ## Last Updated
-2026-06-09 18:45 +08:00
+2026-06-09 18:50 +08:00
