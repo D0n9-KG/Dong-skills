@@ -85,6 +85,30 @@
   - Result: pass
   - Evidence: local `HEAD` and `origin/main` both pointed to `51490ac86c8277a8c18cab907bb524733a9aa605` after pushing `feat(skills): add Git checkpoint discipline`.
   - Date: 2026-06-09 17:06 +08:00
+- Syntax checks after hardening pass.
+  - Result: pass
+  - Evidence: `node --check` passed for root hook, onboarding asset hook, root helper scripts, onboarding asset helper scripts, and `tests/project-ops.test.mjs`.
+  - Date: 2026-06-09 18:40 +08:00
+- Repeatable regression tests.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 4/4 tests covering bootstrap `.gitignore`, learning redaction, Git Checkpoint validation, and section-aware recovery.
+  - Date: 2026-06-09 18:43 +08:00
+- Dong Skills health check.
+  - Result: pass
+  - Evidence: `node scripts/project-ops-health.mjs .` reported `Issues: none`.
+  - Date: 2026-06-09 18:43 +08:00
+- Release check.
+  - Result: pass
+  - Evidence: `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-09 18:43 +08:00
+- Context budget after hardening.
+  - Result: pass with known weight increase
+  - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated ~22,045 tokens across 27 files; `.codex/hooks/project-ops.mjs` remains the heavy file at ~8,980 tokens.
+  - Date: 2026-06-09 18:43 +08:00
+- Diff whitespace check.
+  - Result: pass
+  - Evidence: `git diff --check` returned exit code 0.
+  - Date: 2026-06-09 18:44 +08:00
 
 ## Not Yet Verified
 - Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

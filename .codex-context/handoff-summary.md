@@ -1,65 +1,77 @@
 # Handoff Summary
 
 ## Objective
-Add Git/GitHub checkpoint discipline to Dong Skills.
+Harden Dong Skills after full review.
 
 ## Latest User Instruction
-Add a self-use skill for GitHub archive commits and push discipline, including checkpoint reminders and clear commit-message requirements.
+Patch all reviewed issues in order.
 
 ## Approved Scope / Spec
-Add `codex-git-checkpoint`, wire it into the curated workflow, update project-level hooks to require Git checkpoint notes when dirty/unpushed state exists, and keep bootstrap assets consistent.
+Fix raw runtime privacy, learning redaction, existing-project upgrade migration, Git Checkpoint validation, recovery excerpts, health/release checks, repeatable tests, docs, and bootstrap assets.
 
 ## Plan Status
-Implementation, verification, global skill installation, zip regeneration, commit, and push are complete.
+Implementation and verification are complete. Git checkpoint is in progress.
 
 ## Files Modified
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/codex-git-checkpoint/SKILL.md`
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/executing-plans/SKILL.md`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/`
 - `.codex/hooks/project-ops.mjs`
-- `AGENTS.project-ops.snippet.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
 - `scripts/install-windows.ps1`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `scripts/project-ops-health.mjs`
+- `scripts/release-check.mjs`
+- `tests/project-ops.test.mjs`
 - `README.md`
+- `AGENTS.project-ops.snippet.md`
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/`
 - `.codex-context/*.md`
 
 ## Files Read But Not Changed
-- GitHub plugin `yeet` skill was inspected locally for publish-flow boundaries.
-- Existing project ops skills and hooks were inspected before editing.
+- Existing project ops hook, installer, bootstrap, README, AGENTS snippet, and state files were inspected before editing.
 
 ## Decisions Made
-Use `codex-git-checkpoint` for checkpoint commit/push discipline. Do not force automatic commits; allow documented deferral in handoff when work is not ready.
+- Keep project-level hooks as the only hook installation path.
+- Use onboarding asset templates as the installer source for target projects, not the kit's live `.codex-context` state.
+- Treat raw observations as runtime data and protect them through target `.gitignore`.
+- Validate structured Git Checkpoint fields when checkpoint review is needed.
 
 ## Open Questions And Assumptions
-No open questions. Assumption: full PR creation remains handled by the GitHub plugin workflow when explicitly requested.
+- No open questions.
+- Assumption: health/release scripts can stay plain Node scripts with no package manager dependency.
 
 ## Risks
-Checkpoint reminders could be noisy if applied too aggressively, so hooks require either a real commit/push or a meaningful deferred checkpoint note.
+- Template migration appends missing sections but does not rewrite existing project-specific content.
+- Health/release checks are intentionally conservative and may surface false positives that should be reviewed rather than bypassed.
 
 ## Verification Evidence
-JavaScript syntax checks, temporary-project Git checkpoint smoke test, global skill install check, README/skill content check, diff whitespace check, privacy scans, credential-pattern scan, old global-hook artifact scan, runtime-artifact scan, final zip inspection, and push verification passed on 2026-06-09.
+- `node --check` passed for updated hooks, helper scripts, asset scripts, and tests.
+- `node --test tests/project-ops.test.mjs` passed 4/4 tests.
+- `node scripts/project-ops-health.mjs .` passed with `Issues: none`.
+- `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+- `git diff --check` passed.
 
 ## Git Checkpoint
-- Latest functional commit: `51490ac86c8277a8c18cab907bb524733a9aa605` pushed to `origin/main`.
-- Push state: functional update pushed and verified; this handoff file is preserved by the final state commit.
-- Files included: new Git checkpoint skill, hook changes, README/AGENTS updates, bootstrap asset updates, project state, and final handoff refresh.
-- Files intentionally left uncommitted: none.
-- Deferred reason: none.
-- Next checkpoint: none until follow-up work begins.
+- Latest commit: `453e0aea4527ea415f312c666cc3fb4858451360`
+- Push state: previous release state is pushed to `origin/main`; current hardening work is intentionally uncommitted pending checkpoint commit/push.
+- Files included: none for the current hardening work yet.
+- Files intentionally left uncommitted: hook hardening, install/bootstrap updates, helper scripts, tests, docs, bootstrap assets, and state refresh files.
+- Deferred reason: checkpoint commit/push is the next action after this handoff refresh.
+- Next checkpoint: commit and push the verified hardening pass.
 
 ## Learned Instincts To Preserve
-Project learning should be curated through `codex-learning-memory`; raw observations are not active memory and should not be published.
+- Raw observations are runtime data and should be ignored in target projects.
+- Recovery excerpts should prioritize handoff sections by meaning, not only file position.
+- Installers should source clean templates, not live project state.
 
 ## Next Action
-No remaining action for this release.
+Commit and push the verified hardening pass.
 
 ## Files To Re-read First
 - `.codex-context/current-state.md`
 - `.codex-context/spec.md`
 - `.codex-context/plan-progress.md`
 - `.codex-context/artifact-index.md`
-- `README.md`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
+- `.codex/hooks/project-ops.mjs`
+- `scripts/install-windows.ps1`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `tests/project-ops.test.mjs`

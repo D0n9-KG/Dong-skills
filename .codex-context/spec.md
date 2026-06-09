@@ -1,35 +1,37 @@
 # Spec
 
 ## Problem
-Dong Skills still lacks explicit Git/GitHub archive discipline. Codex can work for a long time without checkpoint commits, or commit with vague messages that do not explain scope, intent, verification, or push state.
+The Dong Skills review found several hardening gaps: raw learning observations could be committed in target projects, learning redaction missed some sensitive forms, existing project upgrades did not patch missing template sections, Git Checkpoint notes were accepted when vague, recovery excerpts could omit the most important handoff sections, and hook behavior lacked repeatable regression tests.
 
 ## Goals
-- Add `codex-git-checkpoint` to the curated skill set.
-- Require diff review, scope selection, verification awareness, clear commit messages, and push-state reporting.
-- Remind Codex before compaction, stopping, final delivery, branch switches, risky changes, and long pauses.
-- Allow a documented deferral when work is not ready to commit.
-- Keep project-level hooks and bootstrap assets consistent.
+- Protect `.codex-context/raw/` in target project `.gitignore`.
+- Redact complete private-key blocks and URL userinfo from learning observations.
+- Patch missing context-template sections during install/bootstrap without overwriting project-specific content.
+- Validate structured Git Checkpoint fields when work is dirty, unpushed, or lacks upstream.
+- Make recovery excerpts section-aware so `Git Checkpoint`, `Next Action`, and `Files To Re-read First` survive long handoffs.
+- Add health-check, release-check, and repeatable tests.
+- Keep root files and onboarding bootstrap assets consistent.
 
 ## Non-Goals
-- Do not force automatic commits.
-- Do not force half-finished or unverified work into Git.
-- Do not replace the GitHub plugin's full PR publishing workflow.
+- Do not install global hooks.
+- Do not auto-commit or auto-push work.
+- Do not replace GitHub plugin PR workflows.
+- Do not rewrite unrelated Superpowers/ECC-derived skills.
 
 ## Approved Scope
-- New `codex-git-checkpoint` skill.
-- Updates to `codex-project-governance`, `using-superpowers`, `executing-plans`, README, AGENTS snippets, handoff templates, and project hook checks.
+- Hook logic, install/bootstrap scripts, onboarding assets, README/AGENTS guidance, health/release scripts, tests, and project state files.
 
 ## User Decisions
-- 2026-06-09: Add a GitHub archive commit/push discipline skill to Dong Skills.
-- 2026-06-09: Codex should be reminded to checkpoint regularly and write clear commit messages.
+- 2026-06-09: Patch all reviewed issues in order.
+- 2026-06-09: Keep these fixes in the main Dong Skills flow, not optional modules.
 
 ## Acceptance Criteria
-- `codex-git-checkpoint` exists and is installed globally.
-- Curated skill lists include `codex-git-checkpoint`.
-- Bootstrap assets include the new skill guidance and `Git Checkpoint` handoff section.
-- Hooks surface missing Git checkpoint notes for uncommitted changes, unpushed commits, or missing upstream state.
-- Commit/push guidance prevents unrelated staging, vague commits, unsafe force-pushes, and private runtime data leaks.
-- Verification and release scans pass.
+- Syntax checks pass for hooks, helper scripts, and tests.
+- Node regression tests pass.
+- `health-check` passes for the kit root.
+- `release-check` passes for the kit root or any remaining gap is explicit.
+- Privacy scan finds no personal paths, credentials, raw observations, logs, backups, or runtime artifacts.
+- Bootstrap assets contain the same hook/helper behavior as root.
 
 ## Open Questions
 - None.

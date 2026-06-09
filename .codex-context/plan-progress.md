@@ -1,20 +1,23 @@
 # Plan Progress
 
 ## Active Plan
-Inline plan for Git checkpoint skill addition.
+Inline hardening plan from the full self-use skill review.
 
 ## Tasks
-- [x] Research existing commit/publish workflow patterns.
-- [x] Add `codex-git-checkpoint` skill.
-- [x] Wire the skill into governance, execution, AGENTS snippets, README, and handoff templates.
-- [x] Add hook-level Git checkpoint reminders.
-- [x] Run syntax, smoke, privacy, and packaging verification.
-- [x] Install updated global skills.
-- [x] Commit and push the update.
+- [x] Fix raw runtime ignore protection and learning excerpt redaction.
+- [x] Add context-template migration for existing projects.
+- [x] Validate structured Git Checkpoint fields instead of accepting vague notes.
+- [x] Make SessionStart/PostCompact recovery read important handoff sections instead of only the file head.
+- [x] Add health-check and release-check scripts.
+- [x] Add repeatable regression tests for bootstrap, privacy redaction, checkpoint gate, and recovery.
+- [x] Sync onboarding bootstrap assets.
+- [x] Run full release verification and fix any failures.
+- [x] Refresh handoff and checkpoint.
 
 ## Current Step
-None.
+Create and push Git checkpoint.
 
 ## Out Of Scope
-- Automatic commits.
-- PR creation replacement for the GitHub plugin.
+- Global hooks.
+- Automatic commits or pushes.
+- Replacing GitHub plugin PR creation flows.

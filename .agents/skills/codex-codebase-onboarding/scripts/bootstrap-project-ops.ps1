@@ -48,6 +48,120 @@ function Copy-MissingTreeFiles {
   }
 }
 
+function Get-MarkdownSections {
+  param(
+    [string]$File
+  )
+
+  $content = Get-Content -LiteralPath $File -Raw
+  $lines = $content -split "\r?\n"
+  $sections = @()
+  $heading = $null
+  $body = @()
+
+  foreach ($line in $lines) {
+    if ($line -match "^##\s+(.+?)\s*$") {
+      if ($heading) {
+        $sections += [pscustomobject]@{
+          Heading = $heading
+          Body = (($body -join [Environment]::NewLine).Trim())
+        }
+      }
+      $heading = $Matches[1]
+      $body = @()
+    } elseif ($heading) {
+      $body += $line
+    }
+  }
+
+  if ($heading) {
+    $sections += [pscustomobject]@{
+      Heading = $heading
+      Body = (($body -join [Environment]::NewLine).Trim())
+    }
+  }
+
+  return $sections
+}
+
+function Update-ContextTemplateSections {
+  param(
+    [string]$From,
+    [string]$To
+  )
+
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+  Get-ChildItem -LiteralPath $From -File -Filter "*.md" | ForEach-Object {
+    $target = Join-Path $To $_.Name
+    if (!(Test-Path -LiteralPath $target)) {
+      return
+    }
+
+    $targetContent = Get-Content -LiteralPath $target -Raw
+    $updated = $targetContent.TrimEnd()
+    $changed = $false
+
+    foreach ($section in Get-MarkdownSections -File $_.FullName) {
+      $pattern = "(?m)^##\s+" + [regex]::Escape($section.Heading) + "\s*$"
+      if (-not [regex]::IsMatch($targetContent, $pattern)) {
+        $updated += "`n`n## $($section.Heading)"
+        if ($section.Body) {
+          $updated += "`n$($section.Body)"
+        }
+        $updated += "`n"
+        $changed = $true
+      }
+    }
+
+    if ($changed) {
+      [System.IO.File]::WriteAllText($target, $updated + [Environment]::NewLine, $utf8NoBom)
+    }
+  }
+}
+
+function Ensure-RuntimeGitignore {
+  param(
+    [string]$ProjectRoot
+  )
+
+  $gitignore = Join-Path $ProjectRoot ".gitignore"
+  $markerStart = "# codex-project-ops-runtime:start"
+  $markerEnd = "# codex-project-ops-runtime:end"
+  $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n$markerEnd"
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+  if (Test-Path -LiteralPath $gitignore) {
+    $content = Get-Content -LiteralPath $gitignore -Raw
+  } else {
+    $content = ""
+  }
+
+  $hasStart = $content -like "*$markerStart*"
+  $hasEnd = $content -like "*$markerEnd*"
+  if ($hasStart -xor $hasEnd) {
+    throw ".gitignore contains an incomplete codex-project-ops runtime marker block. Fix the marker pair before bootstrapping."
+  }
+
+  if ($hasStart -and $hasEnd) {
+    $pattern = "(?s)" + [regex]::Escape($markerStart) + ".*?" + [regex]::Escape($markerEnd)
+    $updated = [regex]::Replace($content, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $block })
+  } elseif ($content.Contains(".codex-context/raw/*") -and $content.Contains("!.codex-context/raw/.gitkeep")) {
+    return
+  } else {
+    $updated = $content.TrimEnd()
+    if ($updated) {
+      $updated += "`n`n$block"
+    } else {
+      $updated = $block
+    }
+  }
+
+  if ($updated -ne $content) {
+    [System.IO.File]::WriteAllText($gitignore, $updated + [Environment]::NewLine, $utf8NoBom)
+  }
+}
+
 function Ensure-JsonProperty {
   param(
     [object]$Object,
@@ -131,6 +245,8 @@ function Merge-HooksJson {
 
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
 Copy-MissingTreeFiles -From $sourceContext -To $targetContext
+Update-ContextTemplateSections -From $sourceContext -To $targetContext
+Ensure-RuntimeGitignore -ProjectRoot $TargetProjectRoot
 
 $targetCodex = Join-Path $TargetProjectRoot ".codex"
 $targetHookDir = Join-Path $targetCodex "hooks"
@@ -139,6 +255,8 @@ New-Item -ItemType Directory -Force -Path $targetHookDir | Out-Null
 New-Item -ItemType Directory -Force -Path $targetScriptDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\project-ops.mjs") -Destination (Join-Path $targetHookDir "project-ops.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"
@@ -170,5 +288,6 @@ if ($agentsContent -like "*$markerStart*" -and $agentsContent -like "*$markerEnd
 
 Write-Host "Bootstrapped Dong Skills project context to $targetContext"
 Write-Host "Installed project-level Dong Skills hooks to $targetCodex"
+Write-Host "Ensured .gitignore protects .codex-context/raw runtime data"
 Write-Host "Merged AGENTS.md project ops snippet into $agentsFile"
 Write-Host "Restart Codex or start a new thread from this project. Open /hooks and trust project hooks if prompted."

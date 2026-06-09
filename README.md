@@ -28,6 +28,8 @@ Dong Skills 把这些信息移出聊天窗口，放进项目内的 `.codex-conte
 - **Git 存档纪律**：`PreCompact` 和 `Stop` 会检查未提交变更、未推送提交和 Git Checkpoint 记录，提醒 Codex 使用 `codex-git-checkpoint` 提交/推送，或写明为什么暂不提交。
 - **学习沉淀**：`UserPromptSubmit` hook 只捕获明确学习信号、用户纠正和长期偏好，写入短摘录、指纹和脱敏后的 raw observation。真正的 active memory 必须由 `codex-learning-memory` 决定 Save、Improve then Save、Absorb into Existing 或 Drop。
 - **上下文预算**：`codex-context-budget` 用来检查 AGENTS、skills、hooks、state files 是否正在膨胀。
+- **运行时隐私保护**：安装和 bootstrap 会确保 `.codex-context/raw/` 被 `.gitignore` 忽略，只保留 `.gitkeep` 可追踪。
+- **健康检查与发布检查**：`health-check` 审计项目安装状态，`release-check` 跑语法、测试、隐私和运行时产物检查。
 
 ### 包含的 skills
 
@@ -65,8 +67,9 @@ Windows PowerShell:
 安装器会做这些事：
 
 - 把 bundled skills 安装到用户的 `.agents\skills` 目录。
-- 在目标项目创建或补齐 `.codex-context/` 模板。
+- 在目标项目创建或补齐 `.codex-context/` 模板，并给已有模板补缺失章节。
 - 安装 `.codex/hooks/project-ops.mjs` 并合并 `.codex/hooks.json`。
+- 合并 `.gitignore` 运行时保护规则，避免误提交 `.codex-context/raw/observations.jsonl`。
 - 把受 marker 管理的项目说明片段合并进 `AGENTS.md`。
 
 重跑安装器会升级已管理的 hook group 和 `AGENTS.md` marker 块，不会重复追加同一组 hooks。替换已有 marker 块时，会在目标项目旁生成一个 `.codex-project-ops.bak` 备份。
@@ -98,6 +101,7 @@ node .codex/hooks/project-ops.mjs instinct-status
 node .codex/hooks/project-ops.mjs instinct-validate
 node .codex/hooks/project-ops.mjs instinct-prune --dry-run
 node .codex/hooks/project-ops.mjs instinct-promotion-candidates
+node .codex/hooks/project-ops.mjs health-check
 ```
 
 从本 kit 目录运行：
@@ -107,6 +111,8 @@ node scripts/context-budget.mjs "C:\path\to\repo"
 node scripts/instincts.mjs status "C:\path\to\repo"
 node scripts/instincts.mjs validate "C:\path\to\repo"
 node scripts/instincts.mjs prune "C:\path\to\repo" --dry-run
+node scripts/project-ops-health.mjs "C:\path\to\repo"
+node scripts/release-check.mjs "."
 ```
 
 ### 隐私与发布安全
@@ -123,6 +129,7 @@ node scripts/instincts.mjs prune "C:\path\to\repo" --dry-run
 建议每次发布前运行：
 
 ```powershell
+node scripts/release-check.mjs "."
 rg -n -i -uuu "C:\\\\Users|Users\\\\|AppData|session_id|ghp_|github_pat_|sk-[A-Za-z0-9_-]{10,}|bearer\s+|password|passwd|secret|token=|api[_-]?key|cookie|authorization" .
 Get-ChildItem -Recurse -Force . | Where-Object { $_.Name -match '\.(bak|tmp|log)$|observations\.jsonl$|test-session' }
 ```
@@ -160,6 +167,8 @@ It helps with:
 - `PreCompact` and `Stop` remind Codex to use `codex-git-checkpoint` when work has uncommitted changes, unpushed commits, or missing checkpoint notes.
 - `codex-learning-memory` turns raw observations into scoped instincts only after review.
 - `codex-context-budget` audits token pressure from AGENTS, skills, hooks, and state files.
+- installers and bootstraps add `.gitignore` rules so `.codex-context/raw/` runtime data is not committed accidentally.
+- `health-check` audits project installation state, and `release-check` runs syntax, test, privacy, and runtime-artifact checks.
 
 ### Included Skills
 
@@ -197,9 +206,10 @@ When running from the target repository, omit the target path:
 The installer:
 
 - copies bundled skills into the user's `.agents\skills` directory
-- creates missing `.codex-context/` templates in the target project
+- creates missing `.codex-context/` templates in the target project and patches missing template sections during upgrades
 - installs `.codex/hooks/project-ops.mjs`
 - merges managed hook groups into `.codex/hooks.json`
+- merges `.gitignore` runtime protections for `.codex-context/raw/`
 - merges the managed project-ops marker block into `AGENTS.md`
 
 After installation, restart Codex or start a new thread. If Codex asks to trust hooks, open `/hooks` and trust the project hooks.
@@ -229,6 +239,7 @@ node .codex/hooks/project-ops.mjs instinct-status
 node .codex/hooks/project-ops.mjs instinct-validate
 node .codex/hooks/project-ops.mjs instinct-prune --dry-run
 node .codex/hooks/project-ops.mjs instinct-promotion-candidates
+node .codex/hooks/project-ops.mjs health-check
 ```
 
 From this kit:
@@ -238,6 +249,8 @@ node scripts/context-budget.mjs "C:\path\to\repo"
 node scripts/instincts.mjs status "C:\path\to\repo"
 node scripts/instincts.mjs validate "C:\path\to\repo"
 node scripts/instincts.mjs prune "C:\path\to\repo" --dry-run
+node scripts/project-ops-health.mjs "C:\path\to\repo"
+node scripts/release-check.mjs "."
 ```
 
 ### Privacy And Safety
@@ -249,6 +262,7 @@ The learning hook stores only a short redacted excerpt, a prompt fingerprint, an
 Before release, run a secret and privacy scan such as:
 
 ```powershell
+node scripts/release-check.mjs "."
 rg -n -i -uuu "C:\\\\Users|Users\\\\|AppData|session_id|ghp_|github_pat_|sk-[A-Za-z0-9_-]{10,}|bearer\s+|password|passwd|secret|token=|api[_-]?key|cookie|authorization" .
 Get-ChildItem -Recurse -Force . | Where-Object { $_.Name -match '\.(bak|tmp|log)$|observations\.jsonl$|test-session' }
 ```

@@ -45,6 +45,7 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `handoff-summary.md`
 
 Use `.codex-context/raw/` for raw logs or large outputs.
+Project bootstrap should keep `.codex-context/raw/*` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
 
 ## Learning Memory
@@ -71,3 +72,5 @@ After compaction, recover in this order:
 ## Completion
 
 Before claiming work is complete, run fresh verification or record the explicit verification gap in `verification.md`. Then use `codex-git-checkpoint` to commit/push a checkpoint or record why it is deferred in `handoff-summary.md`, and refresh `handoff-summary.md`.
+
+For installation or release hygiene, run `node .codex/hooks/project-ops.mjs health-check` from the target project when hooks are installed.

@@ -21,6 +21,12 @@
 ## Verification Evidence
 
 ## Git Checkpoint
+- Latest commit:
+- Push state:
+- Files included:
+- Files intentionally left uncommitted:
+- Deferred reason:
+- Next checkpoint:
 
 ## Learned Instincts To Preserve
 

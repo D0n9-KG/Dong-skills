@@ -1,0 +1,244 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+
+const REQUIRED_CONTEXT_FILES = [
+  "current-state.md",
+  "project-map.md",
+  "spec.md",
+  "plan-progress.md",
+  "artifact-index.md",
+  "decisions.md",
+  "open-questions.md",
+  "risks.md",
+  "verification.md",
+  "learned-instincts.md",
+  "handoff-summary.md"
+];
+
+const REQUIRED_HOOK_EVENTS = [
+  "SessionStart",
+  "UserPromptSubmit",
+  "PostToolUse",
+  "PreCompact",
+  "PostCompact",
+  "Stop"
+];
+
+const REQUIRED_HANDOFF_SECTIONS = [
+  "Objective",
+  "Latest User Instruction",
+  "Approved Scope / Spec",
+  "Plan Status",
+  "Files Modified",
+  "Decisions Made",
+  "Verification Evidence",
+  "Git Checkpoint",
+  "Next Action",
+  "Files To Re-read First"
+];
+
+const REQUIRED_CHECKPOINT_FIELDS = [
+  "Latest commit",
+  "Push state",
+  "Files included",
+  "Files intentionally left uncommitted",
+  "Deferred reason",
+  "Next checkpoint"
+];
+
+function gitRoot(cwd) {
+  try {
+    return execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+  } catch {
+    return path.resolve(cwd);
+  }
+}
+
+function readText(file) {
+  try {
+    return fs.readFileSync(file, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function sha256(file) {
+  return createHash("sha256").update(readText(file), "utf8").digest("hex");
+}
+
+function sectionContent(markdown, heading) {
+  const lines = markdown.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (start === -1) return "";
+  const body = [];
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (lines[i].startsWith("## ")) break;
+    body.push(lines[i]);
+  }
+  return body.join("\n").trim();
+}
+
+function hookCommandMentionsProjectOps(group) {
+  for (const hook of group.hooks || []) {
+    for (const field of ["command", "commandWindows", "command_windows"]) {
+      if (String(hook[field] || "").includes("project-ops.mjs")) return true;
+    }
+  }
+  return false;
+}
+
+function checkHooksJson(root, issues) {
+  const file = path.join(root, ".codex", "hooks.json");
+  if (!fs.existsSync(file)) {
+    issues.push("Missing .codex/hooks.json");
+    return;
+  }
+
+  let config;
+  try {
+    config = JSON.parse(readText(file));
+  } catch (error) {
+    issues.push(`Invalid .codex/hooks.json: ${error.message}`);
+    return;
+  }
+
+  for (const eventName of REQUIRED_HOOK_EVENTS) {
+    const groups = Array.isArray(config.hooks?.[eventName]) ? config.hooks[eventName] : [];
+    if (!groups.some(hookCommandMentionsProjectOps)) {
+      issues.push(`.codex/hooks.json is missing Dong Skills hook for ${eventName}`);
+    }
+  }
+}
+
+function checkRuntimeGitignore(root, issues) {
+  const file = path.join(root, ".gitignore");
+  const text = readText(file);
+  if (!text.includes(".codex-context/raw/*")) {
+    issues.push(".gitignore does not ignore .codex-context/raw/*");
+  }
+  if (!text.includes("!.codex-context/raw/.gitkeep")) {
+    issues.push(".gitignore does not keep .codex-context/raw/.gitkeep trackable");
+  }
+}
+
+function checkTrackedRaw(root, issues) {
+  try {
+    const out = execFileSync("git", ["ls-files", ".codex-context/raw"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+    const tracked = out.split(/\r?\n/).filter(Boolean);
+    const unsafe = tracked.filter((file) => !file.endsWith("/.gitkeep") && !file.endsWith("\\.gitkeep"));
+    if (unsafe.length) {
+      issues.push(`Tracked raw runtime file(s): ${unsafe.join(", ")}`);
+    }
+  } catch {
+    // Non-git projects are allowed; hooks still work with filesystem state.
+  }
+}
+
+function checkContext(root, issues) {
+  const ctx = path.join(root, ".codex-context");
+  for (const name of REQUIRED_CONTEXT_FILES) {
+    if (!fs.existsSync(path.join(ctx, name))) issues.push(`Missing .codex-context/${name}`);
+  }
+
+  const handoff = readText(path.join(ctx, "handoff-summary.md"));
+  for (const heading of REQUIRED_HANDOFF_SECTIONS) {
+    if (!handoff.includes(`## ${heading}`)) {
+      issues.push(`handoff-summary.md missing section: ${heading}`);
+    }
+  }
+
+  const checkpoint = sectionContent(handoff, "Git Checkpoint");
+  for (const field of REQUIRED_CHECKPOINT_FIELDS) {
+    if (!checkpoint.includes(`${field}:`)) {
+      issues.push(`handoff-summary.md Git Checkpoint missing field label: ${field}`);
+    }
+  }
+}
+
+function checkAssetParity(root, warnings) {
+  const pairs = [
+    [
+      path.join(root, ".codex", "hooks", "project-ops.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks", "project-ops.mjs")
+    ],
+    [
+      path.join(root, "AGENTS.project-ops.snippet.md"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "AGENTS.project-ops.snippet.md")
+    ],
+    [
+      path.join(root, "scripts", "instincts.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "instincts.mjs")
+    ],
+    [
+      path.join(root, "scripts", "project-ops-health.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "project-ops-health.mjs")
+    ],
+    [
+      path.join(root, "scripts", "release-check.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "release-check.mjs")
+    ]
+  ];
+
+  for (const [rootFile, assetFile] of pairs) {
+    if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) continue;
+    if (sha256(rootFile) !== sha256(assetFile)) {
+      warnings.push(`Bootstrap asset differs from root file: ${path.relative(root, assetFile).replace(/\\/g, "/")}`);
+    }
+  }
+}
+
+function run(root) {
+  const issues = [];
+  const warnings = [];
+
+  if (!fs.existsSync(path.join(root, ".codex", "hooks", "project-ops.mjs"))) {
+    issues.push("Missing .codex/hooks/project-ops.mjs");
+  }
+  if (!fs.existsSync(path.join(root, ".codex", "scripts", "instincts.mjs")) &&
+      !fs.existsSync(path.join(root, "scripts", "instincts.mjs"))) {
+    issues.push("Missing project ops instincts script");
+  }
+
+  checkHooksJson(root, issues);
+  checkRuntimeGitignore(root, issues);
+  checkTrackedRaw(root, issues);
+  checkContext(root, issues);
+  checkAssetParity(root, warnings);
+
+  const lines = [
+    "Dong Skills health check",
+    `Root: ${root}`,
+    ""
+  ];
+
+  if (issues.length) {
+    lines.push("Issues:");
+    for (const issue of issues) lines.push(`- ${issue}`);
+  } else {
+    lines.push("Issues: none");
+  }
+
+  if (warnings.length) {
+    lines.push("", "Warnings:");
+    for (const warning of warnings) lines.push(`- ${warning}`);
+  }
+
+  lines.push("", issues.length ? "Result: fail" : "Result: pass");
+  return { ok: issues.length === 0, text: lines.join("\n") };
+}
+
+const root = gitRoot(process.argv[2] || process.cwd());
+const result = run(root);
+console.log(result.text);
+process.exit(result.ok ? 0 : 1);

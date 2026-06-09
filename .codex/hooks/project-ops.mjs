@@ -205,6 +205,12 @@ Keep this file as a compact index. Store individual instincts under \`.codex-con
 ## Verification Evidence
 
 ## Git Checkpoint
+- Latest commit:
+- Push state:
+- Files included:
+- Files intentionally left uncommitted:
+- Deferred reason:
+- Next checkpoint:
 
 ## Learned Instincts To Preserve
 
@@ -366,12 +372,17 @@ function gitCheckpointStatus(root, ctx, latest) {
   const handoff = readText(handoffFile);
   const checkpoint = sectionContent(handoff, "Git Checkpoint");
   const checkpointFresh = latest ? mtimeMs(handoffFile) >= latest - 1000 : true;
-  const checkpointRecorded = meaningful(checkpoint) && checkpointFresh;
+  const checkpointValidation = validateGitCheckpointSection(checkpoint);
+  const checkpointRecorded = meaningful(checkpoint) && checkpointFresh && checkpointValidation.ok;
+  if (needsCheckpoint && checkpointValidation.missing.length) {
+    issues.push(`Git Checkpoint missing field(s): ${checkpointValidation.missing.join(", ")}`);
+  }
 
   return {
     ok: !needsCheckpoint || checkpointRecorded,
     needsCheckpoint,
     checkpointRecorded,
+    checkpointValidation,
     statusFiles,
     issues,
     summary: needsCheckpoint
@@ -421,6 +432,42 @@ function sectionContent(markdown, heading) {
     body.push(lines[i]);
   }
   return body.join("\n").trim();
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function checkpointField(checkpoint, labels) {
+  for (const label of labels) {
+    const pattern = new RegExp(`^\\s*(?:[-*]\\s*)?${escapeRegex(label)}\\s*:\\s*(.*)$`, "im");
+    const match = checkpoint.match(pattern);
+    if (match) return match[1].trim();
+  }
+  return "";
+}
+
+function validateGitCheckpointSection(checkpoint) {
+  const fields = {
+    latestCommit: checkpointField(checkpoint, ["Latest commit", "Latest functional commit"]),
+    pushState: checkpointField(checkpoint, ["Push state"]),
+    filesIncluded: checkpointField(checkpoint, ["Files included"]),
+    filesLeft: checkpointField(checkpoint, ["Files intentionally left uncommitted", "Files left uncommitted"]),
+    deferredReason: checkpointField(checkpoint, ["Deferred reason"]),
+    nextCheckpoint: checkpointField(checkpoint, ["Next checkpoint"])
+  };
+
+  const missing = [];
+  if (!meaningful(fields.pushState)) missing.push("Push state");
+  if (!meaningful(fields.filesIncluded) && !meaningful(fields.filesLeft)) {
+    missing.push("Files included or Files intentionally left uncommitted");
+  }
+  if (!meaningful(fields.latestCommit) && !meaningful(fields.deferredReason)) {
+    missing.push("Latest commit or Deferred reason");
+  }
+  if (!meaningful(fields.nextCheckpoint)) missing.push("Next checkpoint");
+
+  return { ok: missing.length === 0, missing, fields };
 }
 
 function meaningful(text) {
@@ -518,7 +565,7 @@ function containsPotentialSecret(text) {
 
 function sanitizeLearningExcerpt(text) {
   let value = normalizeWhitespace(text);
-  value = value.replace(/-----BEGIN [\s\S]*?PRIVATE KEY-----/gi, "[redacted-private-key]");
+  value = value.replace(/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/gi, "[redacted-private-key]");
   value = value.replace(/\b((?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*)\S+/gi, "$1[redacted]");
   value = value.replace(/\bbearer\s+[A-Za-z0-9._~+/-]{12,}/gi, "Bearer [redacted]");
   value = value.replace(/\bsk-[A-Za-z0-9_-]{20,}/g, "[redacted-openai-key]");
@@ -530,6 +577,8 @@ function sanitizeLearningExcerpt(text) {
   value = value.replace(/https?:\/\/\S+/gi, (url) => {
     try {
       const parsed = new URL(url);
+      parsed.username = "";
+      parsed.password = "";
       parsed.search = parsed.search ? "?[redacted-query]" : "";
       parsed.hash = "";
       return parsed.toString();
@@ -717,6 +766,32 @@ function excerpt(ctx, name, max) {
   return text ? text.slice(0, max) : "";
 }
 
+function sectionExcerpt(markdown, heading, max) {
+  const body = sectionContent(markdown, heading);
+  if (!meaningful(body)) return "";
+  const clipped = body.length > max ? `${body.slice(0, max - 3)}...` : body;
+  return `## ${heading}\n${clipped}`;
+}
+
+function handoffRecoveryExcerpt(ctx) {
+  const markdown = readText(path.join(ctx, REQUIRED_FILES.handoff));
+  const sections = [
+    ["Objective", 280],
+    ["Latest User Instruction", 360],
+    ["Plan Status", 360],
+    ["Git Checkpoint", 520],
+    ["Next Action", 320],
+    ["Files To Re-read First", 420],
+    ["Open Questions And Assumptions", 360],
+    ["Verification Evidence", 420]
+  ];
+  const selected = sections
+    .map(([heading, max]) => sectionExcerpt(markdown, heading, max))
+    .filter(Boolean);
+  if (selected.length) return selected.join("\n\n");
+  return excerpt(ctx, REQUIRED_FILES.handoff, 1800);
+}
+
 function sessionRecoveryContext(root, ctx, eventName) {
   const learning = learningStatus(ctx);
   const learningSummary = learning.ok
@@ -732,7 +807,7 @@ function sessionRecoveryContext(root, ctx, eventName) {
     checkpointSummary,
     "",
     "Handoff excerpt:",
-    excerpt(ctx, REQUIRED_FILES.handoff, 1800),
+    handoffRecoveryExcerpt(ctx),
     "",
     "Current state excerpt:",
     excerpt(ctx, REQUIRED_FILES.current, 1000),
@@ -975,6 +1050,15 @@ function findInstinctScript(root) {
   return candidates.find((file) => fs.existsSync(file));
 }
 
+function findProjectOpsScript(root, scriptName) {
+  const candidates = [
+    path.join(root, ".codex", "scripts", scriptName),
+    path.resolve(hookDir(), "..", "scripts", scriptName),
+    path.resolve(hookDir(), "..", "..", "scripts", scriptName)
+  ];
+  return candidates.find((file) => fs.existsSync(file));
+}
+
 function runInstinctCommand(root, command, extraArgs) {
   const script = findInstinctScript(root);
   if (!script) {
@@ -983,6 +1067,26 @@ function runInstinctCommand(root, command, extraArgs) {
   }
   try {
     const out = execFileSync(process.execPath, [script, command, root, ...extraArgs], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    process.stdout.write(out);
+  } catch (error) {
+    if (error.stdout) process.stdout.write(error.stdout);
+    if (error.stderr) process.stderr.write(error.stderr);
+    process.exit(error.status || 1);
+  }
+}
+
+function runProjectOpsScript(root, scriptName, extraArgs) {
+  const script = findProjectOpsScript(root, scriptName);
+  if (!script) {
+    process.stderr.write(`Cannot find ${scriptName}. Reinstall Codex Project Ops Kit.\n`);
+    process.exit(1);
+  }
+  try {
+    const out = execFileSync(process.execPath, [script, root, ...extraArgs], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
@@ -1016,6 +1120,20 @@ if (cliMode && cliMode.startsWith("instinct-")) {
   const command = cliMode.replace(/^instinct-/, "");
   const mapped = command === "promotion" ? "promotion-candidates" : command;
   runInstinctCommand(root, mapped, extraArgs);
+  process.exit(0);
+}
+if (cliMode === "health-check") {
+  const rootArg = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : process.cwd();
+  const extraArgs = rootArg === process.cwd() ? process.argv.slice(3) : process.argv.slice(4);
+  const root = gitRoot(rootArg);
+  runProjectOpsScript(root, "project-ops-health.mjs", extraArgs);
+  process.exit(0);
+}
+if (cliMode === "release-check") {
+  const rootArg = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : process.cwd();
+  const extraArgs = rootArg === process.cwd() ? process.argv.slice(3) : process.argv.slice(4);
+  const root = gitRoot(rootArg);
+  runProjectOpsScript(root, "release-check.mjs", extraArgs);
   process.exit(0);
 }
 

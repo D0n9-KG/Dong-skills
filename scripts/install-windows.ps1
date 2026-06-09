@@ -7,12 +7,20 @@ $ErrorActionPreference = "Stop"
 
 $kitRoot = Split-Path -Parent $PSScriptRoot
 $sourceSkillsRoot = Join-Path $kitRoot ".agents\skills"
-$sourceContext = Join-Path $kitRoot ".codex-context"
-$sourceCodex = Join-Path $kitRoot ".codex"
-$sourceAgentsSnippet = Join-Path $kitRoot "AGENTS.project-ops.snippet.md"
+$projectOpsAssets = Join-Path $sourceSkillsRoot "codex-codebase-onboarding\assets\project-ops"
+$sourceContext = Join-Path $projectOpsAssets ".codex-context"
+$sourceCodex = Join-Path $projectOpsAssets ".codex"
+$sourceProjectScripts = Join-Path $projectOpsAssets "scripts"
+$sourceAgentsSnippet = Join-Path $projectOpsAssets "AGENTS.project-ops.snippet.md"
 
 if (!(Test-Path -LiteralPath $sourceSkillsRoot)) {
   throw "Source skills not found: $sourceSkillsRoot"
+}
+
+foreach ($required in @($sourceContext, $sourceCodex, $sourceProjectScripts, $sourceAgentsSnippet)) {
+  if (!(Test-Path -LiteralPath $required)) {
+    throw "Missing project ops install resource: $required"
+  }
 }
 
 if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
@@ -57,6 +65,120 @@ function Copy-MissingTreeFiles {
     if ($relative) {
       New-Item -ItemType Directory -Force -Path (Join-Path $To $relative) | Out-Null
     }
+  }
+}
+
+function Get-MarkdownSections {
+  param(
+    [string]$File
+  )
+
+  $content = Get-Content -LiteralPath $File -Raw
+  $lines = $content -split "\r?\n"
+  $sections = @()
+  $heading = $null
+  $body = @()
+
+  foreach ($line in $lines) {
+    if ($line -match "^##\s+(.+?)\s*$") {
+      if ($heading) {
+        $sections += [pscustomobject]@{
+          Heading = $heading
+          Body = (($body -join [Environment]::NewLine).Trim())
+        }
+      }
+      $heading = $Matches[1]
+      $body = @()
+    } elseif ($heading) {
+      $body += $line
+    }
+  }
+
+  if ($heading) {
+    $sections += [pscustomobject]@{
+      Heading = $heading
+      Body = (($body -join [Environment]::NewLine).Trim())
+    }
+  }
+
+  return $sections
+}
+
+function Update-ContextTemplateSections {
+  param(
+    [string]$From,
+    [string]$To
+  )
+
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+  Get-ChildItem -LiteralPath $From -File -Filter "*.md" | ForEach-Object {
+    $target = Join-Path $To $_.Name
+    if (!(Test-Path -LiteralPath $target)) {
+      return
+    }
+
+    $targetContent = Get-Content -LiteralPath $target -Raw
+    $updated = $targetContent.TrimEnd()
+    $changed = $false
+
+    foreach ($section in Get-MarkdownSections -File $_.FullName) {
+      $pattern = "(?m)^##\s+" + [regex]::Escape($section.Heading) + "\s*$"
+      if (-not [regex]::IsMatch($targetContent, $pattern)) {
+        $updated += "`n`n## $($section.Heading)"
+        if ($section.Body) {
+          $updated += "`n$($section.Body)"
+        }
+        $updated += "`n"
+        $changed = $true
+      }
+    }
+
+    if ($changed) {
+      [System.IO.File]::WriteAllText($target, $updated + [Environment]::NewLine, $utf8NoBom)
+    }
+  }
+}
+
+function Ensure-RuntimeGitignore {
+  param(
+    [string]$ProjectRoot
+  )
+
+  $gitignore = Join-Path $ProjectRoot ".gitignore"
+  $markerStart = "# codex-project-ops-runtime:start"
+  $markerEnd = "# codex-project-ops-runtime:end"
+  $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n$markerEnd"
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+  if (Test-Path -LiteralPath $gitignore) {
+    $content = Get-Content -LiteralPath $gitignore -Raw
+  } else {
+    $content = ""
+  }
+
+  $hasStart = $content -like "*$markerStart*"
+  $hasEnd = $content -like "*$markerEnd*"
+  if ($hasStart -xor $hasEnd) {
+    throw ".gitignore contains an incomplete codex-project-ops runtime marker block. Fix the marker pair before reinstalling."
+  }
+
+  if ($hasStart -and $hasEnd) {
+    $pattern = "(?s)" + [regex]::Escape($markerStart) + ".*?" + [regex]::Escape($markerEnd)
+    $updated = [regex]::Replace($content, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $block })
+  } elseif ($content.Contains(".codex-context/raw/*") -and $content.Contains("!.codex-context/raw/.gitkeep")) {
+    return
+  } else {
+    $updated = $content.TrimEnd()
+    if ($updated) {
+      $updated += "`n`n$block"
+    } else {
+      $updated = $block
+    }
+  }
+
+  if ($updated -ne $content) {
+    [System.IO.File]::WriteAllText($gitignore, $updated + [Environment]::NewLine, $utf8NoBom)
   }
 }
 
@@ -143,6 +265,8 @@ function Merge-HooksJson {
 
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
 Copy-MissingTreeFiles -From $sourceContext -To $targetContext
+Update-ContextTemplateSections -From $sourceContext -To $targetContext
+Ensure-RuntimeGitignore -ProjectRoot $TargetProjectRoot
 
 $targetCodex = Join-Path $TargetProjectRoot ".codex"
 $targetHookDir = Join-Path $targetCodex "hooks"
@@ -150,7 +274,9 @@ $targetScriptDir = Join-Path $targetCodex "scripts"
 New-Item -ItemType Directory -Force -Path $targetHookDir | Out-Null
 New-Item -ItemType Directory -Force -Path $targetScriptDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\project-ops.mjs") -Destination (Join-Path $targetHookDir "project-ops.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $kitRoot "scripts\instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"
@@ -184,6 +310,7 @@ Write-Host "Installed curated skills to $TargetSkillsRoot"
 Write-Host "Installed project context templates to $targetContext"
 Write-Host "Installed project ops hooks to $targetCodex"
 Write-Host "Installed project ops scripts to $targetScriptDir"
+Write-Host "Ensured .gitignore protects .codex-context/raw runtime data"
 Write-Host "Merged AGENTS.md project ops snippet into $agentsFile"
 Write-Host "Restart Codex or start a new thread so skills and hooks are discovered."
 Write-Host "Open /hooks in Codex and trust the new project hooks if prompted."
