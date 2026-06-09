@@ -5,17 +5,41 @@ description: Analyze an unfamiliar repository for Codex project work. Use when s
 
 # Codex Codebase Onboarding
 
-Build a concise, evidence-backed project map. Do not read every file. Prefer filesystem search, manifests, configs, entry points, and representative examples.
+Bootstrap Dong Skills project configuration when needed, then build a concise, evidence-backed project map. Do not read every file. Prefer filesystem search, manifests, configs, entry points, and representative examples.
+
+## Bootstrap Gate
+
+Before onboarding a project, check whether these files exist in the target project:
+
+- `.codex-context/project-map.md`
+- `.codex/hooks/project-ops.mjs`
+- `.codex/hooks.json`
+- `AGENTS.md` containing `<!-- codex-project-ops:start -->`
+
+If any are missing, run the bundled bootstrap script. Resolve `scripts/bootstrap-project-ops.ps1` relative to this skill directory, but pass the target repository explicitly:
+
+```powershell
+& "<resolved-skill-dir>\scripts\bootstrap-project-ops.ps1" -TargetProjectRoot "C:\path\to\repo"
+```
+
+When the shell is already in the target repository, keep the working directory there and run the resolved script path:
+
+```powershell
+& "<resolved-skill-dir>\scripts\bootstrap-project-ops.ps1" -TargetProjectRoot (Get-Location).Path
+```
+
+After bootstrapping, continue onboarding in the same turn. Tell the user they should restart Codex or start a new thread from the project if they need `/hooks` to show the newly installed project hooks immediately.
 
 ## Probe Order
 
-1. Read `AGENTS.md` and key docs if present.
-2. List top-level files and directories.
-3. Detect manifests: `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `.csproj`, `composer.json`.
-4. Detect frameworks and entry points: `next.config.*`, `vite.config.*`, `src/main.*`, `src/app.*`, `app/`, `pages/`, `cmd/`, `server.*`, `manage.py`.
-5. Detect tests and verification commands: `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, `pytest.ini`, `vitest.config.*`, `jest.config.*`, CI workflows.
-6. Detect conventions from nearby files before claiming style rules.
-7. Record unknowns explicitly instead of guessing.
+1. Run the Bootstrap Gate if needed.
+2. Read `AGENTS.md` and key docs if present.
+3. List top-level files and directories.
+4. Detect manifests: `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `.csproj`, `composer.json`.
+5. Detect frameworks and entry points: `next.config.*`, `vite.config.*`, `src/main.*`, `src/app.*`, `app/`, `pages/`, `cmd/`, `server.*`, `manage.py`.
+6. Detect tests and verification commands: `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, `pytest.ini`, `vitest.config.*`, `jest.config.*`, CI workflows.
+7. Detect conventions from nearby files before claiming style rules.
+8. Record unknowns explicitly instead of guessing.
 
 ## Output
 

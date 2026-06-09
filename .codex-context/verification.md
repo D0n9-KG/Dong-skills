@@ -1,7 +1,54 @@
 # Verification
 
 ## Commands Run
-- None yet.
+- `node --check` on `scripts/context-budget.mjs`, `scripts/instincts.mjs`, `.codex/hooks/project-ops.mjs`, onboarding bootstrap hook asset, and onboarding bootstrap instincts asset.
+  - Result: pass
+  - Evidence: all checked JavaScript files returned exit code 0.
+  - Date: 2026-06-09 16:05 +08:00
+- `rg --files -uuu -g '!.git/**'`
+  - Result: pass
+  - Evidence: release file list contains skills, hooks, context templates, scripts, README, licenses, and no smoke-test project.
+  - Date: 2026-06-09 16:05 +08:00
+- Personal-path scan for local user, local workspace, and dated local work directory markers.
+  - Result: pass
+  - Evidence: no matches outside `.git`.
+  - Date: 2026-06-09 16:06 +08:00
+- Exact credential-pattern scan for GitHub/OpenAI-style tokens, bearer values, and key/value secrets.
+  - Result: pass
+  - Evidence: no matches outside `.git`.
+  - Date: 2026-06-09 16:06 +08:00
+- Broad security-word scan excluding README examples.
+  - Result: pass with reviewed false positives
+  - Evidence: matches were intentional detector/redaction regexes in `project-ops.mjs` and security wording in skill docs; no actual credential values were found.
+  - Date: 2026-06-09 16:06 +08:00
+- Installed-skill/global-hook check.
+  - Result: pass
+  - Evidence: global `hooks.json` and global dispatcher were absent; installed onboarding bootstrap script and hook asset were present.
+  - Date: 2026-06-09 16:07 +08:00
+- Temporary-project bootstrap smoke test.
+  - Result: pass
+  - Evidence: bootstrap generated required `.codex-context`, `.codex/hooks/project-ops.mjs`, `.codex/hooks.json`, `.codex/scripts/instincts.mjs`, and `AGENTS.md`; second run kept exactly one Dong Skills hook group per event; AGENTS marker count was 2; no `observations.jsonl` was created; simulated `SessionStart` returned the expected active-hooks message.
+  - Date: 2026-06-09 16:07 +08:00
+- PowerShell parse check on `scripts/install-windows.ps1` and onboarding `bootstrap-project-ops.ps1`.
+  - Result: pass
+  - Evidence: PowerShell parser returned no syntax errors.
+  - Date: 2026-06-09 16:07 +08:00
+- Obsolete global-hook artifact scan.
+  - Result: pass
+  - Evidence: no matches in the release tree or installed onboarding skill.
+  - Date: 2026-06-09 16:07 +08:00
+- README UTF-8/content check.
+  - Result: pass
+  - Evidence: Node UTF-8 read found the Chinese project-level-hook statement and English `codex-codebase-onboarding` startup wording.
+  - Date: 2026-06-09 16:07 +08:00
+- `git diff --check`
+  - Result: pass
+  - Evidence: no whitespace errors.
+  - Date: 2026-06-09 16:07 +08:00
+- Runtime-artifact scan for backups, temp/log files, raw observations, and smoke-test leftovers.
+  - Result: pass
+  - Evidence: no matches outside `.git`.
+  - Date: 2026-06-09 16:07 +08:00
 
 ## Not Yet Verified
-- None yet.
+- Codex UI hook trust display is not programmatically verified here. After a fresh bootstrap, restart Codex or open a new thread from the target repository and trust project hooks through `/hooks` if prompted.

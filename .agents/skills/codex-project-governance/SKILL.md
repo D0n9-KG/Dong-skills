@@ -30,7 +30,7 @@ If those files conflict with the latest user instruction, the latest user instru
 
 - `using-superpowers`: choose the relevant workflow skill.
 - `brainstorming`: unclear requirements, creative work, behavior changes.
-- `codex-codebase-onboarding`: first pass through an unfamiliar repo.
+- `codex-codebase-onboarding`: bootstrap Dong Skills project config when needed, then map an unfamiliar repo.
 - `writing-plans`: approved spec or multi-step implementation.
 - `executing-plans`: execute a written plan task by task.
 - `systematic-debugging`: bug, test failure, build failure, unexpected behavior.
@@ -45,7 +45,7 @@ Load only the skill needed for the current phase.
 
 ## Lifecycle
 
-1. Discover: read instructions, state files, project map, relevant docs, and relevant code.
+1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, project map, relevant docs, and relevant code.
 2. Scope: if intent is unclear or behavior-changing, use `brainstorming`; update `spec.md`.
 3. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`.
 4. Implement: follow the plan and existing codebase patterns; keep `artifact-index.md` fresh.

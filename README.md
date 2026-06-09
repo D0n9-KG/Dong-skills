@@ -60,7 +60,7 @@ Windows PowerShell:
 .\scripts\install-windows.ps1
 ```
 
-安装器会做四件事：
+安装器会做这些事：
 
 - 把 bundled skills 安装到用户的 `.agents\skills` 目录。
 - 在目标项目创建或补齐 `.codex-context/` 模板。
@@ -71,15 +71,19 @@ Windows PowerShell:
 
 安装后，重启 Codex 或开启新 thread。如果 Codex 提示信任 hooks，打开 `/hooks` 并信任项目 hooks。
 
+Dong Skills 使用项目级 hooks，不安装全局 hooks。这样每个项目可以独立选择是否启用治理规则。
+
 ### 新项目如何启动
 
-1. 运行安装脚本。
-2. 开一个新 Codex thread。
-3. 对 Codex 说：`使用 codex-project-governance 启动这个项目，先做 codebase onboarding。`
-4. 让 Codex 更新 `.codex-context/project-map.md`、`current-state.md` 和 `spec.md`。
-5. 需求不清时先用 `brainstorming`，不要直接实现。
-6. 多步骤任务先用 `writing-plans`，再用 `executing-plans`。
-7. 每次阶段结束前刷新 `verification.md` 和 `handoff-summary.md`。
+首次安装 Dong Skills 后，后续新项目不需要手动运行安装脚本。进入目标项目，开一个 Codex thread，然后说：
+
+```text
+使用 codex-codebase-onboarding 启动这个项目。
+```
+
+`codex-codebase-onboarding` 会先检查项目是否已有 Dong Skills 配置；如果没有，会运行它自带的 bootstrap 脚本，写入 `.codex-context/`、`.codex/hooks/`、`.codex/hooks.json` 和 `AGENTS.md` marker block，然后继续建立 `project-map.md`。
+
+如果刚刚 bootstrap 了项目级 hooks，重启 Codex 或从该项目重新开一个 thread，再用 `/hooks` 信任项目 hooks。
 
 ### 常用命令
 
@@ -196,16 +200,19 @@ The installer:
 
 After installation, restart Codex or start a new thread. If Codex asks to trust hooks, open `/hooks` and trust the project hooks.
 
+Dong Skills uses project-level hooks only. It does not install global hooks, so each repository can opt into project governance independently.
+
 ### Starting A New Project
 
-1. Install the kit into the target repository.
-2. Start a fresh Codex thread.
-3. Ask Codex: `Use codex-project-governance to start this project and run codebase onboarding first.`
-4. Let Codex update `.codex-context/project-map.md`, `current-state.md`, and `spec.md`.
-5. Use `brainstorming` when scope is unclear.
-6. Use `writing-plans` before multi-step implementation.
-7. Use `executing-plans` to work through the plan.
-8. Refresh `verification.md` and `handoff-summary.md` before delivery, compaction, or a long pause.
+After Dong Skills has been installed once, a new project does not need a manual installer run. Start Codex from the target repository and ask:
+
+```text
+Use codex-codebase-onboarding to start this project.
+```
+
+`codex-codebase-onboarding` checks whether Dong Skills project configuration exists. If it is missing, the skill runs its bundled bootstrap script to install `.codex-context/`, `.codex/hooks/`, `.codex/hooks.json`, and the managed `AGENTS.md` block, then continues onboarding and updates `project-map.md`.
+
+After a fresh bootstrap, restart Codex or open a new thread from that repository, then use `/hooks` to trust the project hooks.
 
 ### Commands
 

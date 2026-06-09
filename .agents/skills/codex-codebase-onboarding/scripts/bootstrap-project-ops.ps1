@@ -1,32 +1,24 @@
 param(
-  [string]$TargetProjectRoot = (Get-Location).Path,
-  [string]$TargetSkillsRoot = "$env:USERPROFILE\.agents\skills"
+  [string]$TargetProjectRoot = (Get-Location).Path
 )
 
 $ErrorActionPreference = "Stop"
 
-$kitRoot = Split-Path -Parent $PSScriptRoot
-$sourceSkillsRoot = Join-Path $kitRoot ".agents\skills"
-$sourceContext = Join-Path $kitRoot ".codex-context"
-$sourceCodex = Join-Path $kitRoot ".codex"
-$sourceAgentsSnippet = Join-Path $kitRoot "AGENTS.project-ops.snippet.md"
-
-if (!(Test-Path -LiteralPath $sourceSkillsRoot)) {
-  throw "Source skills not found: $sourceSkillsRoot"
-}
+$skillRoot = Split-Path -Parent $PSScriptRoot
+$assetsRoot = Join-Path $skillRoot "assets\project-ops"
+$sourceContext = Join-Path $assetsRoot ".codex-context"
+$sourceCodex = Join-Path $assetsRoot ".codex"
+$sourceScripts = Join-Path $assetsRoot "scripts"
+$sourceAgentsSnippet = Join-Path $assetsRoot "AGENTS.project-ops.snippet.md"
 
 if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
   throw "Target project root not found: $TargetProjectRoot"
 }
 
-New-Item -ItemType Directory -Force -Path $TargetSkillsRoot | Out-Null
-
-Get-ChildItem -LiteralPath $sourceSkillsRoot -Directory | ForEach-Object {
-  $target = Join-Path $TargetSkillsRoot $_.Name
-  if (Test-Path -LiteralPath $target) {
-    Remove-Item -LiteralPath $target -Recurse -Force
+foreach ($required in @($sourceContext, $sourceCodex, $sourceScripts, $sourceAgentsSnippet)) {
+  if (!(Test-Path -LiteralPath $required)) {
+    throw "Missing bootstrap resource: $required"
   }
-  Copy-Item -LiteralPath $_.FullName -Destination $target -Recurse
 }
 
 function Copy-MissingTreeFiles {
@@ -34,10 +26,6 @@ function Copy-MissingTreeFiles {
     [string]$From,
     [string]$To
   )
-
-  if (!(Test-Path -LiteralPath $From)) {
-    throw "Source directory not found: $From"
-  }
 
   New-Item -ItemType Directory -Force -Path $To | Out-Null
 
@@ -150,7 +138,7 @@ $targetScriptDir = Join-Path $targetCodex "scripts"
 New-Item -ItemType Directory -Force -Path $targetHookDir | Out-Null
 New-Item -ItemType Directory -Force -Path $targetScriptDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\project-ops.mjs") -Destination (Join-Path $targetHookDir "project-ops.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $kitRoot "scripts\instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"
@@ -175,15 +163,12 @@ if ($agentsContent -like "*$markerStart*" -and $agentsContent -like "*$markerEnd
     [System.IO.File]::WriteAllText($agentsFile, $updatedAgentsContent, $utf8NoBom)
   }
 } elseif ($agentsContent -like "*$markerStart*" -or $agentsContent -like "*$markerEnd*") {
-  throw "AGENTS.md contains an incomplete codex-project-ops marker block. Fix the marker pair before reinstalling."
+  throw "AGENTS.md contains an incomplete codex-project-ops marker block. Fix the marker pair before bootstrapping."
 } else {
   [System.IO.File]::WriteAllText($agentsFile, $agentsContent + "`n" + $snippetBlock + "`n", $utf8NoBom)
 }
 
-Write-Host "Installed curated skills to $TargetSkillsRoot"
-Write-Host "Installed project context templates to $targetContext"
-Write-Host "Installed project ops hooks to $targetCodex"
-Write-Host "Installed project ops scripts to $targetScriptDir"
+Write-Host "Bootstrapped Dong Skills project context to $targetContext"
+Write-Host "Installed project-level Dong Skills hooks to $targetCodex"
 Write-Host "Merged AGENTS.md project ops snippet into $agentsFile"
-Write-Host "Restart Codex or start a new thread so skills and hooks are discovered."
-Write-Host "Open /hooks in Codex and trust the new project hooks if prompted."
+Write-Host "Restart Codex or start a new thread from this project. Open /hooks and trust project hooks if prompted."

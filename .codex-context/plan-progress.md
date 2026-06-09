@@ -1,13 +1,18 @@
 # Plan Progress
 
 ## Active Plan
-[Path to detailed plan/spec, or "No formal plan yet".]
+Inline plan for project-level bootstrap release.
 
 ## Tasks
-- [ ] Task 1: [status and evidence]
+- [x] Remove global hook installation artifacts from the kit.
+- [x] Add onboarding-skill bootstrap script and project-ops assets.
+- [x] Update README and skill guidance for skill-based new-project startup.
+- [x] Run release verification: syntax checks, privacy scan, runtime-artifact scan, installed-skill checks.
+- [ ] Regenerate release zip and push the updated repository.
 
 ## Current Step
-[Exactly one active step, or "None".]
+Regenerate release zip and push repository update.
 
 ## Out Of Scope
-- [Explicit non-goals.]
+- Global hook installation.
+- Optional governance module split.
