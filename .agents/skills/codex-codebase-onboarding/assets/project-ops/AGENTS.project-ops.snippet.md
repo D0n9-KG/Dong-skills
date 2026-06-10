@@ -83,7 +83,7 @@ Use `codex-session-history` only when project files are insufficient or the user
 
 ## Compaction
 
-Write a fresh handoff at phase boundaries and before long pauses. The `PreCompact` hook may block manual or automatic compaction when the handoff, core state files, or learning review are stale.
+Write a fresh handoff at phase boundaries and before long pauses. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it writes an emergency `handoff-summary.md` snapshot and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled.
 
 After compaction, recover in this order:
 

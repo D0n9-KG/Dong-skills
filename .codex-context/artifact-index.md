@@ -1,6 +1,7 @@
 # Artifact Index
 
 ## Created
+- `.codex-context/instincts/project/precompact-auto-writes-emergency-handoff.md`: project instinct preventing future automatic PreCompact hard-block regressions.
 - `.agents/skills/codex-solution-memory/`: structured solution memory workflow and references.
 - `.agents/skills/codex-review-panel/SKILL.md`: CE-inspired persona review workflow.
 - `.agents/skills/codex-session-history/SKILL.md`: safe prior-session metadata workflow.
@@ -12,6 +13,15 @@
 - `licenses/COMPOUND-ENGINEERING-LICENSE`: CE MIT attribution.
 
 ## Modified
+- `.codex/scripts/lib/events.mjs`: `preCompact` now detects manual vs automatic triggers; automatic or unknown triggers write an emergency handoff and return `continue: true`, while explicit manual triggers still hard-block stale state.
+- `.codex/hooks/project-ops.mjs`: passes raw hook input into `preCompact`.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: synced the automatic PreCompact fallback into bootstrap assets.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`: synced the input-passing hook entrypoint into bootstrap assets.
+- `tests/project-ops.test.mjs`: added explicit manual PreCompact block coverage and automatic PreCompact emergency handoff coverage.
+- `README.md`: documents that automatic PreCompact writes an emergency handoff and allows compaction instead of hard-blocking.
+- `AGENTS.project-ops.snippet.md` and onboarding asset snippet: updated compaction governance language for manual vs automatic behavior.
+- `.agents/skills/codex-project-governance/SKILL.md`: updated hook summary to reflect automatic PreCompact fallback behavior.
+- `.codex-context/learned-instincts.md`: indexed the new automatic PreCompact fallback instinct.
 - `.codex/hooks.json`: changed Windows hook commands to `-EncodedCommand` so outer PowerShell cannot expand `$root` / `$null` before the hook runs.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`: synced the fixed Windows hook commands for newly bootstrapped or repaired projects.
 - `scripts/project-ops-health.mjs`: decodes Windows `-EncodedCommand`, verifies it invokes `project-ops.mjs`, and rejects unsafe inline command patterns.
@@ -38,6 +48,8 @@
 - `.codex-context/*.md`: refreshed active state, project map, plan, risks, decisions, artifact index, verification, and solution index.
 
 ## Read / Inspected
+- Official Codex manual hook sections in the local OpenAI docs cache, including default hooks, project trust, `commandWindows`, and `PreCompact` matcher values.
+- Local Codex app-server hook schema files under `%TEMP%\codex-schema-ts` for hook run status/output summary fields.
 - Existing hook, install/bootstrap scripts, release/health scripts, tests, README, AGENTS snippet, skill docs, and state files.
 - CE source at temporary clone commit `b625049`: `ce-compound`, `ce-compound-refresh`, `ce-code-review`, `ce-doc-review`, `ce-sessions`, `ce-strategy`, `ce-demo-reel`, plugin README, and related references.
 - Recovery constraints across AGENTS snippet, project governance skill, hook recovery module, onboarding asset tree, health/release scripts, docs scan, architecture scan, solution status, and learning status.

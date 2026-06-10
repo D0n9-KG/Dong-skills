@@ -86,7 +86,7 @@ switch (input.hook_event_name) {
     postToolUse(root, ctx);
     break;
   case "PreCompact":
-    preCompact(root, ctx);
+    preCompact(input, root, ctx);
     break;
   case "PostCompact":
     postCompact(root, ctx);

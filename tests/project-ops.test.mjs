@@ -381,10 +381,29 @@ test("PreCompact blocks when handoff is missing or stale", () => {
   git(project, ["init"]);
   write(path.join(project, "work.txt"), "changed\n");
 
-  const output = runHook(project, { hook_event_name: "PreCompact" });
+  const output = runHook(project, { hook_event_name: "PreCompact", trigger: "manual" });
   assert.equal(output.continue, false);
   assert.equal(output.stopReason, "codex-project-ops-handoff-not-ready");
   assert.match(output.systemMessage, /handoff-summary\.md/);
+});
+
+test("PreCompact writes emergency handoff and allows automatic compaction", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  write(path.join(project, "work.txt"), "changed\n");
+
+  const output = runHook(project, { hook_event_name: "PreCompact", trigger: "auto" });
+  assert.equal(output.continue, true);
+  assert.match(output.systemMessage, /allowed automatic compaction/);
+
+  const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
+  assert.match(handoff, /Emergency recovery snapshot before automatic compaction/);
+  assert.match(handoff, /Automatic compaction was about to run/);
+  assert.match(handoff, /## PreCompact Issues/);
+  assert.match(handoff, /work\.txt/);
+
+  const rawFiles = fs.readdirSync(path.join(project, ".codex-context", "raw"));
+  assert.equal(rawFiles.some((name) => /^precompact-auto-.*\.md$/.test(name)), true);
 });
 
 test("state-prune archives old verification commands and keeps recent evidence", () => {

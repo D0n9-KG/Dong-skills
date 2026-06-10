@@ -97,6 +97,30 @@
   - Result: pass
   - Evidence: `git push origin main` pushed `d40fc94ac0e1edbadc61fd741de9e42b0f61d214`; `git ls-remote origin refs/heads/main` returned the same SHA.
   - Date: 2026-06-10 15:49 +08:00
+- PreCompact fallback syntax checks.
+  - Result: pass
+  - Evidence: `node --check .codex\scripts\lib\events.mjs`, asset `events.mjs`, `.codex\hooks\project-ops.mjs`, and asset hook entrypoint all returned exit code 0.
+  - Date: 2026-06-10 16:38 +08:00
+- PreCompact fallback regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 13/13 tests, including explicit manual PreCompact blocking and automatic PreCompact emergency handoff allow behavior.
+  - Date: 2026-06-10 16:38 +08:00
+- PreCompact fallback health and release checks.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` reported `Issues: none`; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan; `git diff --check` passed.
+  - Date: 2026-06-10 16:38 +08:00
+- PreCompact fallback learning and global install checks.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs learning-status` reported 0 raw observations, 0 pending observations, 0 candidate instincts, and fresh index; `scripts\install-windows.ps1` synced global skills, and global `codex-project-governance`, onboarding asset `events.mjs`, and onboarding AGENTS snippet contain the automatic PreCompact emergency handoff behavior.
+  - Date: 2026-06-10 16:38 +08:00
+- Final PreCompact fallback release check before commit.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after global sync and state refresh.
+  - Date: 2026-06-10 16:44 +08:00
+- PreCompact fallback local checkpoint.
+  - Result: pass
+  - Evidence: local commit `407ddec1454ca83fef15dc2f230e740530926ef1` was created with subject `fix(hooks): allow automatic precompact recovery`; final state files will be amended before push.
+  - Date: 2026-06-10 16:44 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

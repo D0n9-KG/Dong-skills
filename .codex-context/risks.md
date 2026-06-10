@@ -7,11 +7,13 @@
 - `.codex-context/archive/` must stay on-demand; do not add it to recovery order.
 - Full `docs/solutions/` bodies and session histories must stay on-demand; active recovery should use `solution-index.md` and targeted reads.
 - Automatic recovery now injects a compact `solution-index.md` excerpt; keep that file short enough to remain useful after compaction.
+- Automatic PreCompact emergency handoff is a fallback, not a substitute for deliberate phase-boundary handoffs; after recovery, state files still need review.
 
 ## Technical Risks
 - Project-level hook trust is still per repository; users may need to approve hooks through `/hooks`.
-- `PreCompact` can request blocking and refresh state, but it should not be treated as a hard guarantee against every automatic compaction edge case.
+- `PreCompact` manual blocking is still useful, but automatic compaction is allowed after emergency handoff because blocking under context pressure can stall without reliable visible feedback.
 - Existing repositories with stale `.codex/hooks.json` may still show `hook exited with code 1` until `codex-codebase-onboarding` reruns bootstrap or the project hooks file is replaced.
+- Existing repositories with the older PreCompact runtime may still hard-block automatic compaction until onboarding/bootstrap updates `.codex/hooks/project-ops.mjs` and `.codex/scripts/lib/events.mjs`.
 - Windows hook commands must continue to be tested through an outer PowerShell invocation; direct `node .codex/hooks/project-ops.mjs` tests do not cover the quoting failure shown in Codex `/hooks`.
 - Hook Git status checks must not require a GitHub remote for non-GitHub or local-only repositories.
 - Installer/bootstrap now copy split hook libraries; asset parity must stay fresh.

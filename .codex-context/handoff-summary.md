@@ -1,24 +1,27 @@
 # Handoff Summary
 
 ## Objective
-Fix Dong Skills Windows hook invocation so project hooks run correctly in Codex `/hooks`, especially PreCompact/PostCompact.
+Fix Dong Skills `PreCompact` behavior so automatic compaction does not silently hard-stop when recovery state is stale.
 
 ## Latest User Instruction
-User provided `/hooks` error details showing PowerShell parser failures for UserPromptSubmit, PreCompact, PostCompact, PostToolUse, and Stop.
+User reported that hooks appear problematic, especially the pre-compaction hook: automatic compaction stops, but no hook feedback is shown.
 
 ## Approved Scope / Spec
-Keep project-level hooks as the main mechanism. Fix the Windows command invocation in the released kit and onboarding bootstrap assets, add regression checks, make onboarding repair stale installed configs, sync global skills, and checkpoint the verified change to GitHub.
+Keep project-level hooks as the main mechanism. Change only Dong Skills hook behavior, docs, tests, and governance state. Manual compaction should still be strict; automatic compaction should preserve recovery state and continue.
 
 ## Plan Status
-Implementation, bootstrap asset sync, tests, health check, release check, privacy scan, global install, learning-memory update, functional commit, push, and state refresh are complete.
+Implementation, asset sync, docs update, regression tests, health check, release check, diff check, learning instinct capture, global sync, and local checkpoint commit are complete. Push and final user report remain.
 
 ## Files Modified
-- `.codex/hooks.json`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
-- `scripts/project-ops-health.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
+- `.codex/scripts/lib/events.mjs`
+- `.codex/hooks/project-ops.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
 - `tests/project-ops.test.mjs`
+- `README.md`
+- `AGENTS.project-ops.snippet.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
 - `.codex-context/current-state.md`
 - `.codex-context/plan-progress.md`
 - `.codex-context/artifact-index.md`
@@ -26,62 +29,62 @@ Implementation, bootstrap asset sync, tests, health check, release check, privac
 - `.codex-context/risks.md`
 - `.codex-context/verification.md`
 - `.codex-context/learned-instincts.md`
-- `.codex-context/instincts/project/windows-hooks-use-encoded-command.md`
+- `.codex-context/instincts/project/precompact-auto-writes-emergency-handoff.md`
 - `.codex-context/handoff-summary.md`
 
 ## Files Read But Not Changed
-- User-provided `/hooks` screenshot showing PowerShell parser errors.
-- `scripts/install-windows.ps1`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- `codex-project-governance`, `systematic-debugging`, `codex-verification-loop`, `verification-before-completion`, `codex-docs-stewardship`, `codex-learning-memory`, and `codex-git-checkpoint` skill docs
+- Official Codex manual hook sections in `%TEMP%\openai-docs-cache\codex-manual.md`
+- Local Codex hook schema files under `%TEMP%\codex-schema-ts`
+- Existing hook runtime, health/release scripts, tests, README, AGENTS snippet, skill docs, and state files
 
 ## Decisions Made
-- Use `powershell.exe ... -EncodedCommand` for all Windows hook wrappers to prevent outer PowerShell from expanding `$root` / `$null`.
-- Health check must decode Windows encoded commands and confirm the payload invokes `project-ops.mjs`.
-- Onboarding must run health check even when all bootstrap gate files exist, and rerun bootstrap once if installed config is stale.
-- Save a project instinct for Windows hook quoting because this is a reusable, verified project convention.
+- Explicit `manual` PreCompact still returns `continue: false` when governance state is stale.
+- `auto` or unknown-trigger PreCompact writes an emergency handoff, archives the previous handoff under `.codex-context/raw/precompact-auto-*.md`, and returns `continue: true`.
+- Unknown trigger defaults to the automatic path to avoid hard-blocking at context pressure.
+- Docs now describe manual vs automatic behavior explicitly.
+- A project instinct records this behavior to prevent regression.
 
 ## Open Questions And Assumptions
-- No open questions.
-- Assumption: the other project shown in the screenshot still has stale `.codex/hooks.json` until repaired or re-bootstrapped.
+- Assumption: the user's latest screenshot shows hooks are invoked but the automatic PreCompact block is not chat-visible.
+- Assumption: Codex may ignore `systemMessage` or not render it prominently in some automatic compaction flows; durable filesystem recovery is more reliable.
+- Open question: affected projects must rerun onboarding/bootstrap or receive copied `.codex` assets before this change takes effect.
 
 ## Risks
-- Existing stale projects need repair; publishing this kit does not mutate already-open project hook config automatically.
-- Codex UI hook trust state is per project and may require restarting Codex or opening a new thread after bootstrap.
-- `PreCompact` can request/block based on hook output, but it cannot guarantee recovery if the hook command itself is stale or failing.
+- Emergency handoff is intentionally less complete than a deliberate handoff and must be reviewed after recovery.
+- Already-open Codex sessions may need restart/new thread and `/hooks` trust review after project hook files change.
+- Existing projects with stale hook runtime still have the old behavior until repaired.
 
 ## Verification Evidence
-- `node --check scripts\project-ops-health.mjs`, asset health script, and `tests\project-ops.test.mjs` passed.
-- `node --test tests\project-ops.test.mjs` passed 12/12 tests.
+- `node --check` passed for root and asset `events.mjs` plus root and asset `project-ops.mjs`.
+- `node --test tests\project-ops.test.mjs` passed 13/13 tests.
 - `node scripts\project-ops-health.mjs .` reported `Issues: none`.
-- `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
 - `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
 - `git diff --check` passed.
-- Temporary-target `scripts\install-windows.ps1` synced global skills; global onboarding now includes the health-check repair rule.
-- `git push origin main` pushed `d40fc94ac0e1edbadc61fd741de9e42b0f61d214`; `git ls-remote origin refs/heads/main` returned the same SHA.
+- `scripts\install-windows.ps1` synced global skills; global project governance and onboarding assets contain the new automatic PreCompact fallback behavior.
 
 ## Git Checkpoint
-- Latest commit: `chore(state): refresh Windows hook hardening handoff` (this state refresh commit). Latest functional commit: `d40fc94ac0e1edbadc61fd741de9e42b0f61d214` (`fix(hooks): harden Windows command invocation`).
-- Push state: pushed to `origin/main` after this state refresh commit.
-- Files included: Windows hook hardening, health/test regression coverage, onboarding repair guidance, global skill sync evidence, project instinct, and refreshed `.codex-context` state.
-- Files intentionally left uncommitted: none expected.
-- Deferred reason: none.
-- Next checkpoint: next meaningful Dong Skills change.
+- Latest commit: `407ddec1454ca83fef15dc2f230e740530926ef1` (`fix(hooks): allow automatic precompact recovery`), to be amended with this final state refresh before push
+- Push state: local branch ahead of origin by 1 commit
+- Files included: PreCompact fallback code, tests, docs, state, and instinct files
+- Files intentionally left uncommitted: none intended
+- Deferred reason: none after amend and push
+- Next checkpoint: push and verify remote SHA
 
 ## Learned Instincts To Preserve
 - Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
+- Automatic PreCompact must write emergency handoff and allow compaction instead of hard-blocking silently.
 - Bootstrap assets must stay in parity with root hook/scripts/templates.
 - Recovery output must stay aligned with AGENTS recovery order.
-- New verification evidence should be appended, not prepended, before state pruning.
 
 ## Next Action
-Tell the user that the screenshot shows hooks were running but failing due to the old Windows command, and that the affected project should be repaired by rerunning onboarding/bootstrap or replacing `.codex/hooks.json`.
+Amend final state refresh into the local commit, push, verify remote SHA, then tell the user the root cause and how to repair affected projects.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
 - `.codex-context/current-state.md`
-- `.codex/hooks.json`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
-- `scripts/project-ops-health.mjs`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
+- `.codex/scripts/lib/events.mjs`
+- `.codex/hooks/project-ops.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
 - `tests/project-ops.test.mjs`
+- `.codex-context/verification.md`

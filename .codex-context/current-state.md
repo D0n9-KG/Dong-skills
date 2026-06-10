@@ -1,25 +1,25 @@
 # Current State
 
 ## Objective
-Fix Dong Skills Windows hook invocation so project hooks run correctly in Codex `/hooks`, especially PreCompact/PostCompact.
+Fix Dong Skills `PreCompact` behavior so automatic compaction does not silently hard-stop when recovery state is stale.
 
 ## Latest User Instruction
-User provided `/hooks` error details showing PowerShell parser failures for UserPromptSubmit, PreCompact, PostCompact, PostToolUse, and Stop.
+User reported that hooks appear problematic, especially the pre-compaction hook: automatic compaction stops, but no hook feedback is shown.
 
 ## Current Phase
 delivery
 
 ## Active Assumptions
-- Project-level hooks remain the default; global hooks stay out of scope.
-- The screenshot indicates hooks were installed and invoked; the failure was Windows command parsing, not missing hook registration.
-- Existing affected projects need bootstrap repair or `.codex/hooks.json` replacement to pick up the fixed `commandWindows`.
-- New projects should be protected by onboarding health-check repair and release regression tests.
+- The latest screenshot indicates hooks are now invoked; the current failure mode is PreCompact behavior, not the earlier Windows command parser failure.
+- Official Codex manual confirms `PreCompact` supports `manual` and `auto` matcher values, but does not guarantee chat-visible feedback when automatic compaction is blocked.
+- Treating unknown compact trigger input as `auto` is safer than hard-blocking at context pressure.
+- Existing projects need bootstrap repair or updated `.codex` project assets to receive the new behavior.
 
 ## Blockers
 - None.
 
 ## Next Action
-Report the hook failure root cause, the pushed Dong Skills fix, and how to repair the affected project.
+Push the verified commit to GitHub, verify remote SHA, then report the root cause and repair path.
 
 ## Last Updated
-2026-06-10 15:49 +08:00
+2026-06-10 16:38 +08:00
