@@ -19,7 +19,7 @@ delivery
 - None.
 
 ## Next Action
-Commit and push Dong Skills, then report the hook schema fix and Science Evo runtime sync to user.
+Report the hook schema fix, GitHub push, and Science Evo runtime sync to user.
 
 ## Last Updated
 2026-06-10 21:04 +08:00

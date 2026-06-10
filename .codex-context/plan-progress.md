@@ -16,11 +16,11 @@ PostCompact hook output schema repair.
 - [x] Sync global skills.
 - [x] Sync Science Evo project hook runtime.
 - [x] Commit local Dong Skills checkpoint.
-- [ ] Push Dong Skills to GitHub.
+- [x] Push Dong Skills to GitHub.
 - [ ] Report result to user.
 
 ## Current Step
-Push Dong Skills to GitHub and verify remote SHA.
+Report result to user.
 
 ## Out Of Scope
 - Changing Codex internal compaction behavior.

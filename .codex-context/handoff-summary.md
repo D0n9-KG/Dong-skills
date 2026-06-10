@@ -10,7 +10,7 @@ User showed `/hooks` reporting `hook returned invalid PostCompact hook JSON outp
 Keep project-level hooks. Change Dong Skills hook runtime, tests, docs, bootstrap assets, global skills, and the active Science Evo project's hook runtime. Do not edit Science Evo business/source/docs files beyond hook repair.
 
 ## Plan Status
-Implementation, bootstrap asset sync, docs update, regression tests, health check, release check, global sync, Science Evo project sync, and local functional commit are complete. State refresh, push, and final user report remain.
+Implementation, bootstrap asset sync, docs update, regression tests, health check, release check, global sync, Science Evo project sync, local commits, and push are complete. Final user report remains.
 
 ## Files Modified
 - `.codex/scripts/lib/events.mjs`
@@ -58,11 +58,11 @@ Implementation, bootstrap asset sync, docs update, regression tests, health chec
 
 ## Git Checkpoint
 - Latest functional commit: `b01c78737d97430806911ba036b672565889d74a` (`fix(hooks): use common postcompact output`)
-- Push state: not pushed yet; local branch is ahead of origin
+- Push state: pushed to `origin/main`; verify remote head with `git ls-remote origin refs/heads/main` if resuming later
 - Files included: hook output schema repair, tests, docs, bootstrap assets, and state files
 - Files intentionally left uncommitted: none intended in Dong Skills
-- Deferred reason: state refresh is being prepared before push
-- Next checkpoint: commit this state refresh, push, and verify remote SHA
+- Deferred reason: none
+- Next checkpoint: next meaningful Dong Skills change
 
 ## Learned Instincts To Preserve
 - Hook output schema is event-specific; do not reuse `SessionStart` `hookSpecificOutput.additionalContext` for `PostCompact`.
@@ -71,7 +71,7 @@ Implementation, bootstrap asset sync, docs update, regression tests, health chec
 - Bootstrap assets must stay in parity with root hook/scripts/templates.
 
 ## Next Action
-Commit this state refresh, push Dong Skills, verify remote SHA, then report the result.
+Report the result to user.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
