@@ -77,6 +77,22 @@
   - Result: pass
   - Evidence: `node .codex/hooks/project-ops.mjs health-check` reported `Issues: none`; simulated `SessionStart` returned `Codex Project Ops hooks are active`, the full recovery order, and a `solution-index.md` excerpt.
   - Date: 2026-06-10 15:14 +08:00
+- Windows hook hardening syntax checks.
+  - Result: pass
+  - Evidence: `node --check scripts\project-ops-health.mjs`, `node --check .agents\skills\codex-codebase-onboarding\assets\project-ops\scripts\project-ops-health.mjs`, and `node --check tests\project-ops.test.mjs` returned exit code 0.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 12/12 tests, including encoded Windows hook contents, outer PowerShell invocation, and bad encoded-command health-check rejection.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening health and release checks.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` and `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan; `git diff --check` passed.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening global install check.
+  - Result: pass
+  - Evidence: temporary-target `scripts\install-windows.ps1` synced global skills to `%USERPROFILE%\.agents\skills`; global onboarding skill now contains the stale-config health-check repair rule and its asset health check decodes Windows hook commands.
+  - Date: 2026-06-10 15:41 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

@@ -31,6 +31,14 @@ When the shell is already in the target repository, keep the working directory t
 
 The bootstrap script installs project hooks and split hook libraries, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data.
 
+If all Bootstrap Gate files exist, run a health check before assuming the installed project configuration is current:
+
+```powershell
+node .codex/hooks/project-ops.mjs health-check
+```
+
+If the health check fails or reports `Result: fail`, run the bundled bootstrap script once to repair stale hooks, helper scripts, context templates, or managed guidance, then rerun the health check. This is required for older projects that already have all files present but need updated hook commands or state-file schema.
+
 After bootstrapping, continue onboarding in the same turn. Tell the user they should restart Codex or start a new thread from the project if they need `/hooks` to show the newly installed project hooks immediately.
 
 ## Probe Order

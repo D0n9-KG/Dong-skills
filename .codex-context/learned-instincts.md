@@ -8,7 +8,7 @@ Keep this file as a compact index. Store individual instincts under `.codex-cont
 - Review rule: convert useful events into instincts, absorb duplicates into existing docs, or record a deliberate drop.
 
 ## Active Project Instincts
-- None yet.
+- `windows-hooks-use-encoded-command`: use `-EncodedCommand` for Windows hook wrappers and verify through an outer PowerShell invocation before release.
 
 ## Candidate Instincts
 - None yet.
@@ -22,3 +22,4 @@ Keep this file as a compact index. Store individual instincts under `.codex-cont
 ## Maintenance Log
 - 2026-06-09: Learning status checked after governance optimization; no raw observations or candidate instincts were pending.
 - 2026-06-10: Observed that `state-prune` keeps later `Commands Run` entries as newer; absorbed the rule into `codex-verification-loop` and `codex-docs-stewardship` instead of creating a separate instinct.
+- 2026-06-10: Saved verified project instinct for Windows hook command quoting after `/hooks` surfaced PowerShell parser failures.

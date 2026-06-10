@@ -13,6 +13,16 @@ const statePrune = path.join(root, "scripts", "state-prune.mjs");
 const solutions = path.join(root, "scripts", "solutions.mjs");
 const health = path.join(root, "scripts", "project-ops-health.mjs");
 
+function decodePowerShellEncodedCommand(command) {
+  const match = String(command).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
+  assert.ok(match, "commandWindows should use -EncodedCommand");
+  return Buffer.from(match[1], "base64").toString("utf16le");
+}
+
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "dong-skills-test-"));
 }
@@ -161,6 +171,61 @@ Continue.
 - .codex-context/handoff-summary.md
 `);
 }
+
+test("published Windows hook commands are encoded project hook invocations", () => {
+  const hookJsonFiles = [
+    path.join(root, ".codex", "hooks.json"),
+    path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks.json")
+  ];
+
+  for (const file of hookJsonFiles) {
+    const config = readJson(file);
+    for (const groups of Object.values(config.hooks)) {
+      for (const group of groups) {
+        for (const hookConfig of group.hooks || []) {
+          const command = hookConfig.commandWindows || hookConfig.command_windows;
+          assert.ok(command, `${file} hook should define commandWindows`);
+          assert.doesNotMatch(command, /\$root|2>\$null/);
+          const decoded = decodePowerShellEncodedCommand(command);
+          assert.match(decoded, /git rev-parse --show-toplevel/);
+          assert.match(decoded, /Join-Path/);
+          assert.match(decoded, /\.codex\/hooks\/project-ops\.mjs/);
+        }
+      }
+    }
+  }
+});
+
+test("Windows hook command survives outer PowerShell invocation", () => {
+  const project = tempProject();
+  execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    bootstrap,
+    "-TargetProjectRoot",
+    project
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  const config = readJson(path.join(project, ".codex", "hooks.json"));
+  const command = config.hooks.SessionStart[0].hooks[0].commandWindows;
+  const out = execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    command
+  ], {
+    cwd: project,
+    input: JSON.stringify({ cwd: project, hook_event_name: "SessionStart" }),
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"]
+  }).trim();
+
+  const parsed = JSON.parse(out);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /Codex Project Ops hooks are active/);
+});
 
 test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const project = tempProject();
@@ -377,6 +442,36 @@ test("health check fails when bootstrap assets drift from root files", () => {
       stdio: ["ignore", "pipe", "pipe"]
     });
   }, /Command failed/);
+});
+
+test("health check rejects Windows encoded commands that do not invoke project hook", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const hooksFile = path.join(project, ".codex", "hooks.json");
+  const config = readJson(hooksFile);
+  const badCommand = `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${Buffer.from("Write-Output 'not a project hook'", "utf16le").toString("base64")}`;
+
+  for (const groups of Object.values(config.hooks)) {
+    for (const group of groups) {
+      for (const hookConfig of group.hooks || []) {
+        hookConfig.commandWindows = badCommand;
+      }
+    }
+  }
+  write(hooksFile, JSON.stringify(config, null, 2));
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [health, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /encoded command does not invoke project-ops\.mjs/);
+  }
+  assert.equal(failed, true);
 });
 
 test("solutions validator accepts structured docs and rejects missing frontmatter", () => {

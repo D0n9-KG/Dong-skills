@@ -96,13 +96,43 @@ function sectionContent(markdown, heading) {
   return body.join("\n").trim();
 }
 
+function decodePowerShellEncodedCommand(value) {
+  const match = String(value).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
+  if (!match) return "";
+  try {
+    return Buffer.from(match[1], "base64").toString("utf16le");
+  } catch {
+    return "";
+  }
+}
+
 function hookCommandMentionsProjectOps(group) {
   for (const hook of group.hooks || []) {
     for (const field of ["command", "commandWindows", "command_windows"]) {
-      if (String(hook[field] || "").includes("project-ops.mjs")) return true;
+      const value = String(hook[field] || "");
+      if (value.includes("project-ops.mjs")) return true;
+      if ((field === "commandWindows" || field === "command_windows") &&
+          decodePowerShellEncodedCommand(value).includes("project-ops.mjs")) {
+        return true;
+      }
     }
   }
   return false;
+}
+
+function checkWindowsHookCommand(group, eventName, issues) {
+  for (const hook of group.hooks || []) {
+    const value = String(hook.commandWindows || hook.command_windows || "");
+    if (!value) continue;
+    if (!value.includes("-EncodedCommand")) {
+      issues.push(`.codex/hooks.json ${eventName} commandWindows must use -EncodedCommand to avoid PowerShell variable expansion`);
+    } else if (!decodePowerShellEncodedCommand(value).includes("project-ops.mjs")) {
+      issues.push(`.codex/hooks.json ${eventName} commandWindows encoded command does not invoke project-ops.mjs`);
+    }
+    if (value.includes('-Command "$root') || value.includes("2>$null")) {
+      issues.push(`.codex/hooks.json ${eventName} commandWindows contains unsafe inline PowerShell variable syntax`);
+    }
+  }
 }
 
 function checkHooksJson(root, issues) {
@@ -125,6 +155,7 @@ function checkHooksJson(root, issues) {
     if (!groups.some(hookCommandMentionsProjectOps)) {
       issues.push(`.codex/hooks.json is missing Dong Skills hook for ${eventName}`);
     }
+    for (const group of groups) checkWindowsHookCommand(group, eventName, issues);
   }
 }
 

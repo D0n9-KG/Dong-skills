@@ -16,6 +16,8 @@
 - Automatic recovery output includes `.codex-context/solution-index.md` as active context.
 - `STRATEGY.md`, `CONCEPTS.md`, and full `docs/solutions/` bodies remain on-demand recovery inputs.
 - Bootstrap asset parity drift is a health/release failure, not a warning.
+- Windows `commandWindows` hook invocations use PowerShell `-EncodedCommand`; inline nested `-Command "$root = ... 2>$null"` is rejected because Codex may execute the configured command through an outer PowerShell layer that expands variables first.
+- `codex-codebase-onboarding` runs a health check even when all bootstrap files exist, then reruns bootstrap once if stale hook commands, helper scripts, templates, or managed guidance are detected.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -23,3 +25,4 @@
 - Automatic commits without diff review and scope confirmation.
 - Treating architecture/docs cleanup as only a final manual tidy-up step.
 - Wholesale import of CE platform-specific skills such as Slack, Rails/Xcode, image generation, promotion/social copy, and fully autonomous workflows.
+- Inline Windows hook commands containing PowerShell variables in `.codex/hooks.json`.

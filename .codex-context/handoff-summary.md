@@ -1,91 +1,86 @@
 # Handoff Summary
 
 ## Objective
-Align Dong Skills recovery constraints across sessions and after compaction, then check nearby governance omissions.
+Fix Dong Skills Windows hook invocation so project hooks run correctly in Codex `/hooks`, especially PreCompact/PostCompact.
 
 ## Latest User Instruction
-User asked how to confirm project hooks are actually working.
+User provided `/hooks` error details showing PowerShell parser failures for UserPromptSubmit, PreCompact, PostCompact, PostToolUse, and Stop.
 
 ## Approved Scope / Spec
-Keep the existing Dong Skills architecture. Align automatic hook recovery with AGENTS recovery rules, ensure bootstrap assets carry the same behavior, strengthen checks so asset drift fails health/release validation, and update state/handoff.
+Keep project-level hooks as the main mechanism. Fix the Windows command invocation in the released kit and onboarding bootstrap assets, add regression checks, make onboarding repair stale installed configs, sync global skills, and checkpoint the verified change to GitHub.
 
 ## Plan Status
-Implementation, asset sync, regression tests, health check, release check, architecture/docs/budget/solution/learning checks, state updates, global install, checkpoint commit, push, and remote verification are complete.
+Implementation, bootstrap asset sync, tests, health check, release check, privacy scan, global install, learning-memory update, and state refresh are complete. Commit and push are the remaining checkpoint steps.
 
 ## Files Modified
-- `.codex/scripts/lib/recovery.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`
+- `.codex/hooks.json`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
 - `scripts/project-ops-health.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
-- `.agents/skills/codex-verification-loop/SKILL.md`
-- `.agents/skills/codex-docs-stewardship/SKILL.md`
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`
 - `tests/project-ops.test.mjs`
-- `.codex-context/*.md`
+- `.codex-context/current-state.md`
+- `.codex-context/plan-progress.md`
+- `.codex-context/artifact-index.md`
+- `.codex-context/decisions.md`
+- `.codex-context/risks.md`
+- `.codex-context/verification.md`
+- `.codex-context/learned-instincts.md`
+- `.codex-context/instincts/project/windows-hooks-use-encoded-command.md`
+- `.codex-context/handoff-summary.md`
 
 ## Files Read But Not Changed
-- `AGENTS.project-ops.snippet.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/codex-docs-stewardship/SKILL.md`
-- `.agents/skills/codex-verification-loop/SKILL.md`
-- `.codex/scripts/lib/events.mjs`
-- `.codex/scripts/lib/templates.mjs`
-- existing `.codex-context/*.md`
+- User-provided `/hooks` screenshot showing PowerShell parser errors.
+- `scripts/install-windows.ps1`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `codex-project-governance`, `systematic-debugging`, `codex-verification-loop`, `verification-before-completion`, `codex-docs-stewardship`, `codex-learning-memory`, and `codex-git-checkpoint` skill docs
 
 ## Decisions Made
-- Automatic `SessionStart` / `PostCompact` recovery should state the same order as AGENTS, including `.codex-context/solution-index.md`.
-- Automatic recovery should include a compact `solution-index.md` excerpt.
-- `STRATEGY.md`, `CONCEPTS.md`, and full `docs/solutions/` entries remain on-demand.
-- Bootstrap asset parity drift should fail `project-ops-health` and therefore `release-check`.
-- Verification evidence should be appended to the end of `verification.md` because `state-prune` keeps later command entries as newer.
+- Use `powershell.exe ... -EncodedCommand` for all Windows hook wrappers to prevent outer PowerShell from expanding `$root` / `$null`.
+- Health check must decode Windows encoded commands and confirm the payload invokes `project-ops.mjs`.
+- Onboarding must run health check even when all bootstrap gate files exist, and rerun bootstrap once if installed config is stale.
+- Save a project instinct for Windows hook quoting because this is a reusable, verified project convention.
 
 ## Open Questions And Assumptions
 - No open questions.
-- Assumption: Codex still needs a fresh thread/restart for updated global skill files to be reflected in the skill list.
+- Assumption: the other project shown in the screenshot still has stale `.codex/hooks.json` until repaired or re-bootstrapped.
 
 ## Risks
-- Compact solution-index injection depends on `solution-index.md` staying short.
-- Full solution docs and session history remain on-demand to avoid context bloat and privacy risk.
-- `tests/project-ops.test.mjs` is now over the architecture-scan large-file threshold, but it is still a coherent integration test surface.
-- Fresh project hooks still require user trust through `/hooks` when Codex prompts.
+- Existing stale projects need repair; publishing this kit does not mutate already-open project hook config automatically.
+- Codex UI hook trust state is per project and may require restarting Codex or opening a new thread after bootstrap.
+- `PreCompact` can request/block based on hook output, but it cannot guarantee recovery if the hook command itself is stale or failing.
 
 ## Verification Evidence
-- `node --test tests/project-ops.test.mjs` passed 9/9 tests.
-- `node scripts/project-ops-health.mjs .` reported `Issues: none`.
-- `node .codex/hooks/project-ops.mjs health-check` reported `Issues: none`.
-- `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+- `node --check scripts\project-ops-health.mjs`, asset health script, and `tests\project-ops.test.mjs` passed.
+- `node --test tests\project-ops.test.mjs` passed 12/12 tests.
+- `node scripts\project-ops-health.mjs .` reported `Issues: none`.
+- `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
+- `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
 - `git diff --check` passed.
-- Temporary-target `scripts/install-windows.ps1` run synced global skills; global onboarding asset recovery includes `solution-index.md` and on-demand knowledge guidance.
-- Final rerun after verification-order skill updates passed 9/9 tests, health check, release check, and `git diff --check`.
-- Final temporary-target install synced global skill copies after the verification-order skill updates.
-- `node .codex/hooks/project-ops.mjs health-check` reported `Issues: none`.
-- Simulated `SessionStart` returned `Codex Project Ops hooks are active` plus the full recovery order and `solution-index.md` excerpt.
-- Architecture scan reported only `tests/project-ops.test.mjs` as a large-file review candidate.
-- Docs scan reported no hard issue.
-- Context budget estimated ~28,130 tokens across 44 active files.
-- `solution-status` found 0 invalid docs; `learning-status` found no pending observations.
+- Temporary-target `scripts\install-windows.ps1` synced global skills; global onboarding now includes the health-check repair rule.
 
 ## Git Checkpoint
-- Latest commit: `chore(state): refresh hook verification handoff` (this state refresh commit)
-- Push state: pushed to `origin/main` after this state refresh commit.
-- Files included: refreshed `.codex-context` state; latest functional commit is `3f41b5b775ac9306cc5759b50d9e8d79ad11fc3c` (`fix(skills): align recovery context`).
-- Files intentionally left uncommitted: none.
-- Deferred reason: none.
-- Next checkpoint: next meaningful Dong Skills change.
+- Latest commit: pending.
+- Push state: not pushed yet.
+- Files included: pending checkpoint for Windows hook hardening and state refresh.
+- Files intentionally left uncommitted: none expected.
+- Deferred reason: none; checkpoint is next.
+- Next checkpoint: commit and push `fix(hooks): harden Windows command invocation`.
 
 ## Learned Instincts To Preserve
+- Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
 - Bootstrap assets must stay in parity with root hook/scripts/templates.
 - Recovery output must stay aligned with AGENTS recovery order.
-- Solution docs and session histories remain targeted, on-demand context.
 - New verification evidence should be appended, not prepended, before state pruning.
 
 ## Next Action
-Report hook verification methods and current result.
+Commit and push the verified Windows hook hardening, then tell the user that the screenshot shows hooks were running but failing due to the old command, and that the affected project should be repaired by rerunning onboarding/bootstrap or replacing `.codex/hooks.json`.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
 - `.codex-context/current-state.md`
-- `.codex-context/project-map.md`
-- `.codex/scripts/lib/recovery.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`
+- `.codex/hooks.json`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
 - `scripts/project-ops-health.mjs`
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`
 - `tests/project-ops.test.mjs`

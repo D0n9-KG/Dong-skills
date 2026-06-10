@@ -1,21 +1,21 @@
 # Plan Progress
 
 ## Active Plan
-Recovery-order alignment and governance omission check.
+Windows hook invocation hardening.
 
 ## Tasks
-- [x] Compare AGENTS recovery order with `SessionStart` / `PostCompact` hook recovery output.
-- [x] Add `.codex-context/solution-index.md` and on-demand `STRATEGY.md` / `CONCEPTS.md` / `docs/solutions/` guidance to hook recovery output.
-- [x] Include a compact `solution-index.md` excerpt in automatic recovery context.
-- [x] Sync the onboarding bootstrap asset copy.
-- [x] Promote bootstrap asset parity drift from warning to health-check failure.
-- [x] Add regression coverage for installed bootstrap hook recovery output and asset parity failure.
-- [x] Run tests, health, release, docs, architecture, budget, solution, and learning checks.
+- [x] Identify `/hooks` failures as outer PowerShell expansion of inline `$root` / `$null`.
+- [x] Replace root and onboarding asset `commandWindows` with `-EncodedCommand`.
+- [x] Strengthen health check to reject unsafe or wrong Windows hook commands.
+- [x] Add regression tests for encoded command contents and outer PowerShell execution.
+- [x] Update onboarding bootstrap gate so stale installed projects rerun bootstrap after health-check failure.
+- [x] Sync global skills from the verified kit.
+- [ ] Commit, push, and verify remote.
 
 ## Current Step
-Push amended checkpoint and verify remote.
+Checkpoint and remote verification.
 
 ## Out Of Scope
 - Global hooks.
-- Raw session transcript ingestion.
-- Loading full `docs/solutions/` bodies automatically after compaction.
+- Changing Codex's automatic compaction implementation.
+- Programmatic inspection of another project's live `/hooks` UI trust state.

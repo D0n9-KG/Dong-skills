@@ -12,6 +12,13 @@
 - `licenses/COMPOUND-ENGINEERING-LICENSE`: CE MIT attribution.
 
 ## Modified
+- `.codex/hooks.json`: changed Windows hook commands to `-EncodedCommand` so outer PowerShell cannot expand `$root` / `$null` before the hook runs.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`: synced the fixed Windows hook commands for newly bootstrapped or repaired projects.
+- `scripts/project-ops-health.mjs`: decodes Windows `-EncodedCommand`, verifies it invokes `project-ops.mjs`, and rejects unsafe inline command patterns.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`: synced the stricter health check into bootstrap assets.
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`: requires a health check even when bootstrap gate files already exist, and reruns bootstrap once if stale config is detected.
+- `tests/project-ops.test.mjs`: added regression coverage for encoded Windows hook commands, outer PowerShell invocation, and bad encoded-command detection.
+- `.codex-context/instincts/project/windows-hooks-use-encoded-command.md`: records the project instinct for future hook edits.
 - `.codex/scripts/lib/recovery.mjs`: now emits the full AGENTS recovery order, includes `solution-index.md`, keeps `STRATEGY.md` / `CONCEPTS.md` / `docs/solutions/` on-demand, and injects a compact solution-index excerpt.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`: synced bootstrap copy of the recovery changes.
 - `scripts/project-ops-health.mjs`: bootstrap asset parity drift is now a health-check failure, not a warning.

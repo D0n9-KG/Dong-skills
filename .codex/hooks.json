@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.codex/hooks/project-ops.mjs\"",
-            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; node (Join-Path $root '.codex/hooks/project-ops.mjs')\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JAByAG8AbwB0ACAAPQAgAGcAaQB0ACAAcgBlAHYALQBwAGEAcgBzAGUAIAAtAC0AcwBoAG8AdwAtAHQAbwBwAGwAZQB2AGUAbAAgADIAPgAkAG4AdQBsAGwAOwAgAGkAZgAgACgALQBuAG8AdAAgACQAcgBvAG8AdAApACAAewAgACQAcgBvAG8AdAAgAD0AIAAoAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuACkALgBQAGEAdABoACAAfQA7ACAAbgBvAGQAZQAgACgASgBvAGkAbgAtAFAAYQB0AGgAIAAkAHIAbwBvAHQAIAAnAC4AYwBvAGQAZQB4AC8AaABvAG8AawBzAC8AcAByAG8AagBlAGMAdAAtAG8AcABzAC4AbQBqAHMAJwApAA==",
             "timeout": 30,
             "statusMessage": "Loading project ops state"
           }
@@ -21,7 +21,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.codex/hooks/project-ops.mjs\"",
-            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; node (Join-Path $root '.codex/hooks/project-ops.mjs')\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JAByAG8AbwB0ACAAPQAgAGcAaQB0ACAAcgBlAHYALQBwAGEAcgBzAGUAIAAtAC0AcwBoAG8AdwAtAHQAbwBwAGwAZQB2AGUAbAAgADIAPgAkAG4AdQBsAGwAOwAgAGkAZgAgACgALQBuAG8AdAAgACQAcgBvAG8AdAApACAAewAgACQAcgBvAG8AdAAgAD0AIAAoAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuACkALgBQAGEAdABoACAAfQA7ACAAbgBvAGQAZQAgACgASgBvAGkAbgAtAFAAYQB0AGgAIAAkAHIAbwBvAHQAIAAnAC4AYwBvAGQAZQB4AC8AaABvAG8AawBzAC8AcAByAG8AagBlAGMAdAAtAG8AcABzAC4AbQBqAHMAJwApAA==",
             "timeout": 30,
             "statusMessage": "Checking artifact index freshness"
           }
@@ -34,7 +34,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.codex/hooks/project-ops.mjs\"",
-            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; node (Join-Path $root '.codex/hooks/project-ops.mjs')\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JAByAG8AbwB0ACAAPQAgAGcAaQB0ACAAcgBlAHYALQBwAGEAcgBzAGUAIAAtAC0AcwBoAG8AdwAtAHQAbwBwAGwAZQB2AGUAbAAgADIAPgAkAG4AdQBsAGwAOwAgAGkAZgAgACgALQBuAG8AdAAgACQAcgBvAG8AdAApACAAewAgACQAcgBvAG8AdAAgAD0AIAAoAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuACkALgBQAGEAdABoACAAfQA7ACAAbgBvAGQAZQAgACgASgBvAGkAbgAtAFAAYQB0AGgAIAAkAHIAbwBvAHQAIAAnAC4AYwBvAGQAZQB4AC8AaABvAG8AawBzAC8AcAByAG8AagBlAGMAdAAtAG8AcABzAC4AbQBqAHMAJwApAA==",
             "timeout": 10,
             "statusMessage": "Scanning for learning cues"
           }
@@ -48,7 +48,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.codex/hooks/project-ops.mjs\"",
-            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; node (Join-Path $root '.codex/hooks/project-ops.mjs')\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JAByAG8AbwB0ACAAPQAgAGcAaQB0ACAAcgBlAHYALQBwAGEAcgBzAGUAIAAtAC0AcwBoAG8AdwAtAHQAbwBwAGwAZQB2AGUAbAAgADIAPgAkAG4AdQBsAGwAOwAgAGkAZgAgACgALQBuAG8AdAAgACQAcgBvAG8AdAApACAAewAgACQAcgBvAG8AdAAgAD0AIAAoAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuACkALgBQAGEAdABoACAAfQA7ACAAbgBvAGQAZQAgACgASgBvAGkAbgAtAFAAYQB0AGgAIAAkAHIAbwBvAHQAIAAnAC4AYwBvAGQAZQB4AC8AaABvAG8AawBzAC8AcAByAG8AagBlAGMAdAAtAG8AcABzAC4AbQBqAHMAJwApAA==",
             "timeout": 30,
             "statusMessage": "Checking handoff before compaction"
           }
@@ -62,7 +62,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.codex/hooks/project-ops.mjs\"",
-            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; node (Join-Path $root '.codex/hooks/project-ops.mjs')\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JAByAG8AbwB0ACAAPQAgAGcAaQB0ACAAcgBlAHYALQBwAGEAcgBzAGUAIAAtAC0AcwBoAG8AdwAtAHQAbwBwAGwAZQB2AGUAbAAgADIAPgAkAG4AdQBsAGwAOwAgAGkAZgAgACgALQBuAG8AdAAgACQAcgBvAG8AdAApACAAewAgACQAcgBvAG8AdAAgAD0AIAAoAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuACkALgBQAGEAdABoACAAfQA7ACAAbgBvAGQAZQAgACgASgBvAGkAbgAtAFAAYQB0AGgAIAAkAHIAbwBvAHQAIAAnAC4AYwBvAGQAZQB4AC8AaABvAG8AawBzAC8AcAByAG8AagBlAGMAdAAtAG8AcABzAC4AbQBqAHMAJwApAA==",
             "timeout": 30,
             "statusMessage": "Recovering project ops state"
           }
@@ -75,7 +75,7 @@
           {
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.codex/hooks/project-ops.mjs\"",
-            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel 2>$null; if (-not $root) { $root = (Get-Location).Path }; node (Join-Path $root '.codex/hooks/project-ops.mjs')\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand JAByAG8AbwB0ACAAPQAgAGcAaQB0ACAAcgBlAHYALQBwAGEAcgBzAGUAIAAtAC0AcwBoAG8AdwAtAHQAbwBwAGwAZQB2AGUAbAAgADIAPgAkAG4AdQBsAGwAOwAgAGkAZgAgACgALQBuAG8AdAAgACQAcgBvAG8AdAApACAAewAgACQAcgBvAG8AdAAgAD0AIAAoAEcAZQB0AC0ATABvAGMAYQB0AGkAbwBuACkALgBQAGEAdABoACAAfQA7ACAAbgBvAGQAZQAgACgASgBvAGkAbgAtAFAAYQB0AGgAIAAkAHIAbwBvAHQAIAAnAC4AYwBvAGQAZQB4AC8AaABvAG8AawBzAC8AcAByAG8AagBlAGMAdAAtAG8AcABzAC4AbQBqAHMAJwApAA==",
             "timeout": 30,
             "statusMessage": "Checking project ops state before stop"
           }

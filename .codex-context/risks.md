@@ -11,6 +11,8 @@
 ## Technical Risks
 - Project-level hook trust is still per repository; users may need to approve hooks through `/hooks`.
 - `PreCompact` can request blocking and refresh state, but it should not be treated as a hard guarantee against every automatic compaction edge case.
+- Existing repositories with stale `.codex/hooks.json` may still show `hook exited with code 1` until `codex-codebase-onboarding` reruns bootstrap or the project hooks file is replaced.
+- Windows hook commands must continue to be tested through an outer PowerShell invocation; direct `node .codex/hooks/project-ops.mjs` tests do not cover the quoting failure shown in Codex `/hooks`.
 - Hook Git status checks must not require a GitHub remote for non-GitHub or local-only repositories.
 - Installer/bootstrap now copy split hook libraries; asset parity must stay fresh.
 - Bootstrap asset parity drift is now release-blocking through `project-ops-health.mjs`; future helper/script changes must sync root and asset copies together.
