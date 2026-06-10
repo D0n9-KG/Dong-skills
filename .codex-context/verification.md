@@ -141,6 +141,10 @@
   - Result: pass
   - Evidence: `git diff --check` passed; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after state refresh.
   - Date: 2026-06-10 21:04 +08:00
+- PostCompact schema repair local checkpoint.
+  - Result: pass
+  - Evidence: local functional commit `b01c78737d97430806911ba036b672565889d74a` was created with subject `fix(hooks): use common postcompact output`; a state-refresh commit will be pushed with it.
+  - Date: 2026-06-10 21:04 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 
