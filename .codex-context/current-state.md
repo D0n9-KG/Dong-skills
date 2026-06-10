@@ -19,7 +19,7 @@ delivery
 - None.
 
 ## Next Action
-Push the verified commit to GitHub, verify remote SHA, then report the root cause and repair path.
+Report the root cause, fix, verification, and affected-project repair path to user.
 
 ## Last Updated
 2026-06-10 16:38 +08:00

@@ -10,7 +10,7 @@ User reported that hooks appear problematic, especially the pre-compaction hook:
 Keep project-level hooks as the main mechanism. Change only Dong Skills hook behavior, docs, tests, and governance state. Manual compaction should still be strict; automatic compaction should preserve recovery state and continue.
 
 ## Plan Status
-Implementation, asset sync, docs update, regression tests, health check, release check, diff check, learning instinct capture, global sync, and local functional commit are complete. State-refresh commit, push, and final user report remain.
+Implementation, asset sync, docs update, regression tests, health check, release check, diff check, learning instinct capture, global sync, local commits, and push are complete. Final user report remains.
 
 ## Files Modified
 - `.codex/scripts/lib/events.mjs`
@@ -64,11 +64,11 @@ Implementation, asset sync, docs update, regression tests, health check, release
 
 ## Git Checkpoint
 - Latest functional commit: `e063b22bc7f62ee775b02b3421cf06e4983dc168` (`fix(hooks): allow automatic precompact recovery`)
-- Push state: not pushed yet; local branch has unpushed PreCompact fallback work
+- Push state: pushed to `origin/main`; verify with `git ls-remote origin refs/heads/main` if resuming from another clone
 - Files included: PreCompact fallback code, tests, docs, state, and instinct files
-- Files intentionally left uncommitted: none intended
-- Deferred reason: state-refresh commit is being prepared before push
-- Next checkpoint: commit state refresh, push, and verify remote SHA
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: next meaningful Dong Skills change
 
 ## Learned Instincts To Preserve
 - Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
@@ -77,7 +77,7 @@ Implementation, asset sync, docs update, regression tests, health check, release
 - Recovery output must stay aligned with AGENTS recovery order.
 
 ## Next Action
-Commit this final state refresh, push, verify remote SHA, then tell the user the root cause and how to repair affected projects.
+Tell the user the root cause, what changed, verification result, and how to repair affected projects.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`

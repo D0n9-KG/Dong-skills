@@ -16,11 +16,11 @@ PreCompact automatic compaction fallback hardening.
 - [x] Run syntax checks, targeted tests, health check, release check, and diff whitespace check.
 - [x] Sync global skills.
 - [x] Commit local checkpoint.
-- [ ] Push to GitHub.
+- [x] Push to GitHub.
 - [ ] Report outcome and affected-project repair path to user.
 
 ## Current Step
-Push the verified PreCompact fallback change to GitHub and verify remote SHA.
+Report outcome and affected-project repair path to user.
 
 ## Out Of Scope
 - Changing Codex's internal automatic compaction implementation.
