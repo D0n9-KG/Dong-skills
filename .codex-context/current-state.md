@@ -4,7 +4,7 @@
 Align Dong Skills cross-session and post-compaction recovery constraints, then check for nearby governance omissions.
 
 ## Latest User Instruction
-After confirming recovery-file constraints, fix the missing hook recovery order and check whether other parts are missing.
+User asked how to confirm hooks are actually working.
 
 ## Current Phase
 delivery
@@ -19,7 +19,7 @@ delivery
 - None.
 
 ## Next Action
-Push the amended checkpoint, verify remote, and report verified state.
+Report hook verification methods and current local verification result.
 
 ## Last Updated
-2026-06-10 01:18 +08:00
+2026-06-10 15:14 +08:00

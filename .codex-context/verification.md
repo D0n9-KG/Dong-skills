@@ -73,6 +73,10 @@
   - Result: pass
   - Evidence: local checkpoint commit created with subject `fix(skills): align recovery context`; it will be amended with final handoff state before push.
   - Date: 2026-06-10 01:18 +08:00
+- Hook activation static and simulated checks.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs health-check` reported `Issues: none`; simulated `SessionStart` returned `Codex Project Ops hooks are active`, the full recovery order, and a `solution-index.md` excerpt.
+  - Date: 2026-06-10 15:14 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

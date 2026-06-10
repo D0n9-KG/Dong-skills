@@ -4,13 +4,13 @@
 Align Dong Skills recovery constraints across sessions and after compaction, then check nearby governance omissions.
 
 ## Latest User Instruction
-Fix the missing hook recovery order and check whether other parts have omissions.
+User asked how to confirm project hooks are actually working.
 
 ## Approved Scope / Spec
 Keep the existing Dong Skills architecture. Align automatic hook recovery with AGENTS recovery rules, ensure bootstrap assets carry the same behavior, strengthen checks so asset drift fails health/release validation, and update state/handoff.
 
 ## Plan Status
-Implementation, asset sync, regression tests, health check, release check, architecture/docs/budget/solution/learning checks, state updates, global install, and checkpoint commit are complete. Push and remote verification are pending.
+Implementation, asset sync, regression tests, health check, release check, architecture/docs/budget/solution/learning checks, state updates, global install, checkpoint commit, push, and remote verification are complete.
 
 ## Files Modified
 - `.codex/scripts/lib/recovery.mjs`
@@ -57,15 +57,17 @@ Implementation, asset sync, regression tests, health check, release check, archi
 - Temporary-target `scripts/install-windows.ps1` run synced global skills; global onboarding asset recovery includes `solution-index.md` and on-demand knowledge guidance.
 - Final rerun after verification-order skill updates passed 9/9 tests, health check, release check, and `git diff --check`.
 - Final temporary-target install synced global skill copies after the verification-order skill updates.
+- `node .codex/hooks/project-ops.mjs health-check` reported `Issues: none`.
+- Simulated `SessionStart` returned `Codex Project Ops hooks are active` plus the full recovery order and `solution-index.md` excerpt.
 - Architecture scan reported only `tests/project-ops.test.mjs` as a large-file review candidate.
 - Docs scan reported no hard issue.
 - Context budget estimated ~28,130 tokens across 44 active files.
 - `solution-status` found 0 invalid docs; `learning-status` found no pending observations.
 
 ## Git Checkpoint
-- Latest functional commit: `fix(skills): align recovery context`
-- Push state: pushed to `origin/main` after this checkpoint is pushed.
-- Files included: recovery hook, bootstrap asset recovery hook, health script, bootstrap asset health script, verification/docs stewardship skill rules, tests, refreshed `.codex-context` state, and global install verification.
+- Latest commit: `chore(state): refresh hook verification handoff` (this state refresh commit)
+- Push state: pushed to `origin/main` after this state refresh commit.
+- Files included: refreshed `.codex-context` state; latest functional commit is `3f41b5b775ac9306cc5759b50d9e8d79ad11fc3c` (`fix(skills): align recovery context`).
 - Files intentionally left uncommitted: none.
 - Deferred reason: none.
 - Next checkpoint: next meaningful Dong Skills change.
@@ -77,7 +79,7 @@ Implementation, asset sync, regression tests, health check, release check, archi
 - New verification evidence should be appended, not prepended, before state pruning.
 
 ## Next Action
-Push checkpoint, verify remote, then report.
+Report hook verification methods and current result.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
