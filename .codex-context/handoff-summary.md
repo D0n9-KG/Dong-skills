@@ -10,7 +10,7 @@ User provided `/hooks` error details showing PowerShell parser failures for User
 Keep project-level hooks as the main mechanism. Fix the Windows command invocation in the released kit and onboarding bootstrap assets, add regression checks, make onboarding repair stale installed configs, sync global skills, and checkpoint the verified change to GitHub.
 
 ## Plan Status
-Implementation, bootstrap asset sync, tests, health check, release check, privacy scan, global install, learning-memory update, and state refresh are complete. Commit and push are the remaining checkpoint steps.
+Implementation, bootstrap asset sync, tests, health check, release check, privacy scan, global install, learning-memory update, functional commit, push, and state refresh are complete.
 
 ## Files Modified
 - `.codex/hooks.json`
@@ -58,14 +58,15 @@ Implementation, bootstrap asset sync, tests, health check, release check, privac
 - `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
 - `git diff --check` passed.
 - Temporary-target `scripts\install-windows.ps1` synced global skills; global onboarding now includes the health-check repair rule.
+- `git push origin main` pushed `d40fc94ac0e1edbadc61fd741de9e42b0f61d214`; `git ls-remote origin refs/heads/main` returned the same SHA.
 
 ## Git Checkpoint
-- Latest commit: pending.
-- Push state: not pushed yet.
-- Files included: pending checkpoint for Windows hook hardening and state refresh.
+- Latest commit: `chore(state): refresh Windows hook hardening handoff` (this state refresh commit). Latest functional commit: `d40fc94ac0e1edbadc61fd741de9e42b0f61d214` (`fix(hooks): harden Windows command invocation`).
+- Push state: pushed to `origin/main` after this state refresh commit.
+- Files included: Windows hook hardening, health/test regression coverage, onboarding repair guidance, global skill sync evidence, project instinct, and refreshed `.codex-context` state.
 - Files intentionally left uncommitted: none expected.
-- Deferred reason: none; checkpoint is next.
-- Next checkpoint: commit and push `fix(hooks): harden Windows command invocation`.
+- Deferred reason: none.
+- Next checkpoint: next meaningful Dong Skills change.
 
 ## Learned Instincts To Preserve
 - Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
@@ -74,7 +75,7 @@ Implementation, bootstrap asset sync, tests, health check, release check, privac
 - New verification evidence should be appended, not prepended, before state pruning.
 
 ## Next Action
-Commit and push the verified Windows hook hardening, then tell the user that the screenshot shows hooks were running but failing due to the old command, and that the affected project should be repaired by rerunning onboarding/bootstrap or replacing `.codex/hooks.json`.
+Tell the user that the screenshot shows hooks were running but failing due to the old Windows command, and that the affected project should be repaired by rerunning onboarding/bootstrap or replacing `.codex/hooks.json`.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`

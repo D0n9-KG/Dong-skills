@@ -10,10 +10,10 @@ Windows hook invocation hardening.
 - [x] Add regression tests for encoded command contents and outer PowerShell execution.
 - [x] Update onboarding bootstrap gate so stale installed projects rerun bootstrap after health-check failure.
 - [x] Sync global skills from the verified kit.
-- [ ] Commit, push, and verify remote.
+- [x] Commit, push, and verify remote.
 
 ## Current Step
-Checkpoint and remote verification.
+Report outcome to user.
 
 ## Out Of Scope
 - Global hooks.

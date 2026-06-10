@@ -7,7 +7,7 @@ Fix Dong Skills Windows hook invocation so project hooks run correctly in Codex 
 User provided `/hooks` error details showing PowerShell parser failures for UserPromptSubmit, PreCompact, PostCompact, PostToolUse, and Stop.
 
 ## Current Phase
-checkpoint
+delivery
 
 ## Active Assumptions
 - Project-level hooks remain the default; global hooks stay out of scope.
@@ -19,7 +19,7 @@ checkpoint
 - None.
 
 ## Next Action
-Commit and push the verified Windows hook hardening, then tell the user how to repair the affected project and confirm hook behavior.
+Report the hook failure root cause, the pushed Dong Skills fix, and how to repair the affected project.
 
 ## Last Updated
-2026-06-10 15:41 +08:00
+2026-06-10 15:49 +08:00

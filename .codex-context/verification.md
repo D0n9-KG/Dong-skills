@@ -93,6 +93,10 @@
   - Result: pass
   - Evidence: temporary-target `scripts\install-windows.ps1` synced global skills to `%USERPROFILE%\.agents\skills`; global onboarding skill now contains the stale-config health-check repair rule and its asset health check decodes Windows hook commands.
   - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening GitHub push verification.
+  - Result: pass
+  - Evidence: `git push origin main` pushed `d40fc94ac0e1edbadc61fd741de9e42b0f61d214`; `git ls-remote origin refs/heads/main` returned the same SHA.
+  - Date: 2026-06-10 15:49 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 
