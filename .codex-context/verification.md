@@ -119,7 +119,7 @@
   - Date: 2026-06-10 16:44 +08:00
 - PreCompact fallback local checkpoint.
   - Result: pass
-  - Evidence: local commit `407ddec1454ca83fef15dc2f230e740530926ef1` was created with subject `fix(hooks): allow automatic precompact recovery`; final state files will be amended before push.
+  - Evidence: local functional commit `e063b22bc7f62ee775b02b3421cf06e4983dc168` was created with subject `fix(hooks): allow automatic precompact recovery`; a state-refresh commit will record this handoff before push.
   - Date: 2026-06-10 16:44 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.

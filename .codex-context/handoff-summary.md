@@ -10,7 +10,7 @@ User reported that hooks appear problematic, especially the pre-compaction hook:
 Keep project-level hooks as the main mechanism. Change only Dong Skills hook behavior, docs, tests, and governance state. Manual compaction should still be strict; automatic compaction should preserve recovery state and continue.
 
 ## Plan Status
-Implementation, asset sync, docs update, regression tests, health check, release check, diff check, learning instinct capture, global sync, and local checkpoint commit are complete. Push and final user report remain.
+Implementation, asset sync, docs update, regression tests, health check, release check, diff check, learning instinct capture, global sync, and local functional commit are complete. State-refresh commit, push, and final user report remain.
 
 ## Files Modified
 - `.codex/scripts/lib/events.mjs`
@@ -63,12 +63,12 @@ Implementation, asset sync, docs update, regression tests, health check, release
 - `scripts\install-windows.ps1` synced global skills; global project governance and onboarding assets contain the new automatic PreCompact fallback behavior.
 
 ## Git Checkpoint
-- Latest commit: `407ddec1454ca83fef15dc2f230e740530926ef1` (`fix(hooks): allow automatic precompact recovery`), to be amended with this final state refresh before push
-- Push state: local branch ahead of origin by 1 commit
+- Latest functional commit: `e063b22bc7f62ee775b02b3421cf06e4983dc168` (`fix(hooks): allow automatic precompact recovery`)
+- Push state: not pushed yet; local branch has unpushed PreCompact fallback work
 - Files included: PreCompact fallback code, tests, docs, state, and instinct files
 - Files intentionally left uncommitted: none intended
-- Deferred reason: none after amend and push
-- Next checkpoint: push and verify remote SHA
+- Deferred reason: state-refresh commit is being prepared before push
+- Next checkpoint: commit state refresh, push, and verify remote SHA
 
 ## Learned Instincts To Preserve
 - Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
@@ -77,7 +77,7 @@ Implementation, asset sync, docs update, regression tests, health check, release
 - Recovery output must stay aligned with AGENTS recovery order.
 
 ## Next Action
-Amend final state refresh into the local commit, push, verify remote SHA, then tell the user the root cause and how to repair affected projects.
+Commit this final state refresh, push, verify remote SHA, then tell the user the root cause and how to repair affected projects.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
