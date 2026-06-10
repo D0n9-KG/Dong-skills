@@ -1,25 +1,25 @@
 # Current State
 
 ## Objective
-Fix Dong Skills `PreCompact` behavior so automatic compaction does not silently hard-stop when recovery state is stale.
+Fix Dong Skills hook JSON output so `PostCompact` no longer returns event-specific fields unsupported by Codex.
 
 ## Latest User Instruction
-User reported that hooks appear problematic, especially the pre-compaction hook: automatic compaction stops, but no hook feedback is shown.
+User showed `/hooks` reporting `hook returned invalid PostCompact hook JSON output`, noted `PreCompact` itself did not show the same error, and asked to fix it.
 
 ## Current Phase
 delivery
 
 ## Active Assumptions
-- The latest screenshot indicates hooks are now invoked; the current failure mode is PreCompact behavior, not the earlier Windows command parser failure.
-- Official Codex manual confirms `PreCompact` supports `manual` and `auto` matcher values, but does not guarantee chat-visible feedback when automatic compaction is blocked.
-- Treating unknown compact trigger input as `auto` is safer than hard-blocking at context pressure.
-- Existing projects need bootstrap repair or updated `.codex` project assets to receive the new behavior.
+- Official Codex hook behavior distinguishes common output fields from event-specific outputs.
+- `PostCompact` should use common hook output only; recovery context should continue to come from `SessionStart` when start source is `compact`.
+- `PreCompact` manual path is not currently failing, but its auto path should avoid event-specific `hookSpecificOutput` to prevent the same schema issue.
+- The active Science Evo project should receive the fixed project hook runtime after the Dong Skills kit is verified.
 
 ## Blockers
 - None.
 
 ## Next Action
-Report the root cause, fix, verification, and affected-project repair path to user.
+Commit and push Dong Skills, then report the hook schema fix and Science Evo runtime sync to user.
 
 ## Last Updated
-2026-06-10 16:38 +08:00
+2026-06-10 21:04 +08:00

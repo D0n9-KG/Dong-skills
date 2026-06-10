@@ -121,6 +121,26 @@
   - Result: pass
   - Evidence: local functional commit `e063b22bc7f62ee775b02b3421cf06e4983dc168` was created with subject `fix(hooks): allow automatic precompact recovery`; a state-refresh commit will record this handoff before push.
   - Date: 2026-06-10 16:44 +08:00
+- PostCompact hook output schema repair syntax checks.
+  - Result: pass
+  - Evidence: `node --check .codex\scripts\lib\events.mjs` and asset `events.mjs` returned exit code 0.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact hook output schema repair regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 14/14 tests, including `PostCompact emits only common hook output fields` and `PreCompact` auto without `hookSpecificOutput`.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact hook output schema repair health and release checks.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` reported `Issues: none`; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact hook output schema repair global and target sync checks.
+  - Result: pass
+  - Evidence: `scripts\install-windows.ps1` synced global skills; Science Evo project hook runtime was refreshed, `node --check .codex\hooks\project-ops.mjs` and `node --check .codex\scripts\lib\events.mjs` passed there, simulated `PostCompact` returned `{"continue":true}`, and `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
+  - Date: 2026-06-10 21:04 +08:00
+- Final PostCompact schema repair release check before commit.
+  - Result: pass
+  - Evidence: `git diff --check` passed; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after state refresh.
+  - Date: 2026-06-10 21:04 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

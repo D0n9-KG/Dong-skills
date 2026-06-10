@@ -14,6 +14,8 @@
 - `PreCompact` manual blocking is still useful, but automatic compaction is allowed after emergency handoff because blocking under context pressure can stall without reliable visible feedback.
 - Existing repositories with stale `.codex/hooks.json` may still show `hook exited with code 1` until `codex-codebase-onboarding` reruns bootstrap or the project hooks file is replaced.
 - Existing repositories with the older PreCompact runtime may still hard-block automatic compaction until onboarding/bootstrap updates `.codex/hooks/project-ops.mjs` and `.codex/scripts/lib/events.mjs`.
+- Existing repositories with the older PostCompact runtime may show `invalid PostCompact hook JSON output` until `.codex/scripts/lib/events.mjs` is refreshed.
+- Event-specific hook output fields are not portable across all hook events; future hook changes should prefer common fields unless the official docs explicitly list event-specific support.
 - Windows hook commands must continue to be tested through an outer PowerShell invocation; direct `node .codex/hooks/project-ops.mjs` tests do not cover the quoting failure shown in Codex `/hooks`.
 - Hook Git status checks must not require a GitHub remote for non-GitHub or local-only repositories.
 - Installer/bootstrap now copy split hook libraries; asset parity must stay fresh.

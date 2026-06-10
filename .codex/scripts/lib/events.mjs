@@ -16,8 +16,8 @@ export function sessionStart(root, ctx) {
   writeJson(sessionRecoveryContext(root, ctx, "SessionStart"));
 }
 
-export function postCompact(root, ctx) {
-  writeJson(sessionRecoveryContext(root, ctx, "PostCompact"));
+export function postCompact() {
+  writeJson({ continue: true });
 }
 
 export function userPromptSubmit(input, root, ctx) {
@@ -236,11 +236,7 @@ export function preCompact(input, root, ctx) {
 
     writeJson({
       continue: true,
-      systemMessage: message,
-      hookSpecificOutput: {
-        hookEventName: "PreCompact",
-        additionalContext: message
-      }
+      systemMessage: message
     });
     return;
   }

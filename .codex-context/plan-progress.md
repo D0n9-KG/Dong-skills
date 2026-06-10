@@ -1,28 +1,27 @@
 # Plan Progress
 
 ## Active Plan
-PreCompact automatic compaction fallback hardening.
+PostCompact hook output schema repair.
 
 ## Tasks
-- [x] Separate this issue from the earlier Windows `commandWindows` parser failure.
-- [x] Verify official Codex hook behavior: `PreCompact` matcher values are `manual` and `auto`; hooks are enabled by default; `commandWindows` is the Windows override.
-- [x] Change `preCompact` to receive hook input and detect compact trigger from compatible fields.
-- [x] Keep strict blocking for explicit manual compaction when handoff/state/learning/checkpoint gates are stale.
-- [x] For automatic or unknown trigger, write an emergency `handoff-summary.md`, archive the previous handoff under `.codex-context/raw/`, and return `continue: true`.
-- [x] Sync onboarding asset hook runtime and hook entrypoint.
-- [x] Update README, AGENTS snippet, and project governance skill docs to describe the new manual-vs-auto behavior.
-- [x] Add regression coverage for manual blocking and automatic emergency handoff.
-- [x] Save a project instinct for automatic PreCompact fallback.
-- [x] Run syntax checks, targeted tests, health check, release check, and diff whitespace check.
+- [x] Reproduce the Science Evo `PostCompact` hook output manually and confirm stdout is valid JSON.
+- [x] Identify root cause as unsupported event-specific `hookSpecificOutput.additionalContext` on `PostCompact`, not JSON syntax corruption.
+- [x] Change `PostCompact` to emit only common hook output: `{ "continue": true }`.
+- [x] Remove `hookSpecificOutput` from `PreCompact` auto path while keeping `continue: true` and `systemMessage`.
+- [x] Keep `SessionStart` recovery context injection unchanged.
+- [x] Sync onboarding asset `events.mjs`.
+- [x] Update README and project governance skill wording for `PostCompact`.
+- [x] Add regression tests for `PostCompact` common-only output and `PreCompact` auto without `hookSpecificOutput`.
+- [x] Run syntax checks, targeted tests, health check, and release check.
 - [x] Sync global skills.
-- [x] Commit local checkpoint.
-- [x] Push to GitHub.
-- [ ] Report outcome and affected-project repair path to user.
+- [x] Sync Science Evo project hook runtime.
+- [ ] Commit and push Dong Skills.
+- [ ] Report result to user.
 
 ## Current Step
-Report outcome and affected-project repair path to user.
+Commit and push Dong Skills.
 
 ## Out Of Scope
-- Changing Codex's internal automatic compaction implementation.
-- Guaranteeing Codex Desktop will always render hook feedback in chat for blocked automatic compaction.
-- Programmatic inspection of another project's live `/hooks` UI trust state.
+- Changing Codex internal compaction behavior.
+- Adding hook-run telemetry logs in this fix.
+- Editing Science Evo business/source/docs files beyond project hook runtime repair.

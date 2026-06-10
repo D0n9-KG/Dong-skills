@@ -360,6 +360,12 @@ Resume final task.
   assert.match(context, /docs\/solutions present: yes/);
 });
 
+test("PostCompact emits only common hook output fields", () => {
+  const project = tempProject();
+  const output = runHook(project, { hook_event_name: "PostCompact", trigger: "auto" });
+  assert.deepEqual(output, { continue: true });
+});
+
 test("PostToolUse blocks when artifact index is stale after project file changes", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -395,6 +401,7 @@ test("PreCompact writes emergency handoff and allows automatic compaction", () =
   const output = runHook(project, { hook_event_name: "PreCompact", trigger: "auto" });
   assert.equal(output.continue, true);
   assert.match(output.systemMessage, /allowed automatic compaction/);
+  assert.equal(Object.hasOwn(output, "hookSpecificOutput"), false);
 
   const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
   assert.match(handoff, /Emergency recovery snapshot before automatic compaction/);

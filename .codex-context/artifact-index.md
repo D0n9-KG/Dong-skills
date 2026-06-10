@@ -13,6 +13,11 @@
 - `licenses/COMPOUND-ENGINEERING-LICENSE`: CE MIT attribution.
 
 ## Modified
+- `.codex/scripts/lib/events.mjs`: `postCompact` now emits only common hook output `{ continue: true }`; `PreCompact` auto no longer includes event-specific `hookSpecificOutput`.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: synced the hook-output schema repair into bootstrap assets.
+- `tests/project-ops.test.mjs`: added regression coverage for common-only `PostCompact` output and `PreCompact` auto without `hookSpecificOutput`.
+- `README.md`: clarified that recovery context is injected by `SessionStart` with compact start source, while `PostCompact` only confirms completion.
+- `.agents/skills/codex-project-governance/SKILL.md`: updated hook summary to avoid telling agents that `PostCompact` injects recovery context.
 - `.codex/scripts/lib/events.mjs`: `preCompact` now detects manual vs automatic triggers; automatic or unknown triggers write an emergency handoff and return `continue: true`, while explicit manual triggers still hard-block stale state.
 - `.codex/hooks/project-ops.mjs`: passes raw hook input into `preCompact`.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: synced the automatic PreCompact fallback into bootstrap assets.
@@ -48,6 +53,8 @@
 - `.codex-context/*.md`: refreshed active state, project map, plan, risks, decisions, artifact index, verification, and solution index.
 
 ## Read / Inspected
+- Science Evo project hook config and runtime under its project-local `.codex/` directory.
+- Official Codex manual hook section confirming `PostCompact` and `PreCompact` are turn-scope hooks and use `manual|auto` matcher values.
 - Official Codex manual hook sections in the local OpenAI docs cache, including default hooks, project trust, `commandWindows`, and `PreCompact` matcher values.
 - Local Codex app-server hook schema files under `%TEMP%\codex-schema-ts` for hook run status/output summary fields.
 - Existing hook, install/bootstrap scripts, release/health scripts, tests, README, AGENTS snippet, skill docs, and state files.

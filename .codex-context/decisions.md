@@ -20,6 +20,7 @@
 - `codex-codebase-onboarding` runs a health check even when all bootstrap files exist, then reruns bootstrap once if stale hook commands, helper scripts, templates, or managed guidance are detected.
 - `PreCompact` uses different behavior for manual and automatic compaction: explicit manual compaction still hard-blocks stale governance state, while automatic or unknown-trigger compaction writes an emergency handoff and returns `continue: true`.
 - Automatic `PreCompact` stores the previous handoff under `.codex-context/raw/precompact-auto-*.md` before overwriting `.codex-context/handoff-summary.md` with the emergency recovery snapshot.
+- `PostCompact` must emit common hook output only. Full recovery context remains owned by `SessionStart` when the start source is `compact`.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -29,3 +30,4 @@
 - Wholesale import of CE platform-specific skills such as Slack, Rails/Xcode, image generation, promotion/social copy, and fully autonomous workflows.
 - Inline Windows hook commands containing PowerShell variables in `.codex/hooks.json`.
 - Hard-blocking automatic `PreCompact` as the default safety mechanism, because it can leave Codex stopped under context pressure without reliable chat-visible feedback.
+- Reusing `SessionStart` `hookSpecificOutput.additionalContext` for `PostCompact`, because Codex rejects event-specific output on `PostCompact`.

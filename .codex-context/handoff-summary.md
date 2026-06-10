@@ -1,26 +1,22 @@
 # Handoff Summary
 
 ## Objective
-Fix Dong Skills `PreCompact` behavior so automatic compaction does not silently hard-stop when recovery state is stale.
+Fix Dong Skills hook JSON output so `PostCompact` no longer returns event-specific fields unsupported by Codex.
 
 ## Latest User Instruction
-User reported that hooks appear problematic, especially the pre-compaction hook: automatic compaction stops, but no hook feedback is shown.
+User showed `/hooks` reporting `hook returned invalid PostCompact hook JSON output`, noted `PreCompact` itself did not show the same error, and asked to fix it.
 
 ## Approved Scope / Spec
-Keep project-level hooks as the main mechanism. Change only Dong Skills hook behavior, docs, tests, and governance state. Manual compaction should still be strict; automatic compaction should preserve recovery state and continue.
+Keep project-level hooks. Change Dong Skills hook runtime, tests, docs, bootstrap assets, global skills, and the active Science Evo project's hook runtime. Do not edit Science Evo business/source/docs files beyond hook repair.
 
 ## Plan Status
-Implementation, asset sync, docs update, regression tests, health check, release check, diff check, learning instinct capture, global sync, local commits, and push are complete. Final user report remains.
+Implementation, bootstrap asset sync, docs update, regression tests, health check, release check, global sync, and Science Evo project sync are complete. Commit, push, and final user report remain.
 
 ## Files Modified
 - `.codex/scripts/lib/events.mjs`
-- `.codex/hooks/project-ops.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
 - `tests/project-ops.test.mjs`
 - `README.md`
-- `AGENTS.project-ops.snippet.md`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
 - `.agents/skills/codex-project-governance/SKILL.md`
 - `.codex-context/current-state.md`
 - `.codex-context/plan-progress.md`
@@ -28,63 +24,59 @@ Implementation, asset sync, docs update, regression tests, health check, release
 - `.codex-context/decisions.md`
 - `.codex-context/risks.md`
 - `.codex-context/verification.md`
-- `.codex-context/learned-instincts.md`
-- `.codex-context/instincts/project/precompact-auto-writes-emergency-handoff.md`
 - `.codex-context/handoff-summary.md`
 
 ## Files Read But Not Changed
-- Official Codex manual hook sections in `%TEMP%\openai-docs-cache\codex-manual.md`
+- Science Evo `.codex/hooks.json`
+- Science Evo `.codex/hooks/project-ops.mjs`
+- Science Evo `.codex/scripts/lib/recovery.mjs`
+- Official Codex manual hook sections in the local OpenAI docs cache
 - Local Codex hook schema files under `%TEMP%\codex-schema-ts`
-- Existing hook runtime, health/release scripts, tests, README, AGENTS snippet, skill docs, and state files
 
 ## Decisions Made
-- Explicit `manual` PreCompact still returns `continue: false` when governance state is stale.
-- `auto` or unknown-trigger PreCompact writes an emergency handoff, archives the previous handoff under `.codex-context/raw/precompact-auto-*.md`, and returns `continue: true`.
-- Unknown trigger defaults to the automatic path to avoid hard-blocking at context pressure.
-- Docs now describe manual vs automatic behavior explicitly.
-- A project instinct records this behavior to prevent regression.
+- `PostCompact` now returns only `{ "continue": true }`.
+- Recovery context injection remains in `SessionStart`, including the `compact` matcher path.
+- `PreCompact` auto path no longer returns `hookSpecificOutput`; it keeps `continue: true` and `systemMessage`.
+- `UserPromptSubmit` and `SessionStart` keep event-specific output because they are not the failing path.
 
 ## Open Questions And Assumptions
-- Assumption: the user's latest screenshot shows hooks are invoked but the automatic PreCompact block is not chat-visible.
-- Assumption: Codex may ignore `systemMessage` or not render it prominently in some automatic compaction flows; durable filesystem recovery is more reliable.
-- Open question: affected projects must rerun onboarding/bootstrap or receive copied `.codex` assets before this change takes effect.
+- Assumption: Codex rejects `hookSpecificOutput.additionalContext` for `PostCompact`; the Science Evo `/hooks` error and official hook output behavior support this.
+- Assumption: Removing event-specific output from `PreCompact` auto is safer even though `PreCompact` did not visibly fail.
+- Open question: whether Codex will render `systemMessage` for `PreCompact` auto consistently remains product-dependent.
 
 ## Risks
-- Emergency handoff is intentionally less complete than a deliberate handoff and must be reviewed after recovery.
-- Already-open Codex sessions may need restart/new thread and `/hooks` trust review after project hook files change.
-- Existing projects with stale hook runtime still have the old behavior until repaired.
+- Existing projects need hook runtime refresh to stop the `PostCompact` invalid JSON output error.
+- `PostCompact` no longer injects recovery context directly; agents must rely on `SessionStart` with compact source.
+- No hook-run telemetry was added in this fix, so future observability remains limited until that is implemented separately.
 
 ## Verification Evidence
-- `node --check` passed for root and asset `events.mjs` plus root and asset `project-ops.mjs`.
-- `node --test tests\project-ops.test.mjs` passed 13/13 tests.
+- `node --check .codex\scripts\lib\events.mjs` and asset `events.mjs` passed.
+- `node --test tests\project-ops.test.mjs` passed 14/14 tests.
 - `node scripts\project-ops-health.mjs .` reported `Issues: none`.
 - `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
-- `git diff --check` passed.
-- `scripts\install-windows.ps1` synced global skills; global project governance and onboarding assets contain the new automatic PreCompact fallback behavior.
+- Science Evo simulated `PostCompact` now returns `{"continue":true}` and Science Evo hook health check reports `Issues: none`.
 
 ## Git Checkpoint
-- Latest functional commit: `e063b22bc7f62ee775b02b3421cf06e4983dc168` (`fix(hooks): allow automatic precompact recovery`)
-- Push state: pushed to `origin/main`; verify with `git ls-remote origin refs/heads/main` if resuming from another clone
-- Files included: PreCompact fallback code, tests, docs, state, and instinct files
-- Files intentionally left uncommitted: none
-- Deferred reason: none
-- Next checkpoint: next meaningful Dong Skills change
+- Latest commit: not yet created for this PostCompact schema repair
+- Push state: not pushed yet
+- Files included: pending hook output schema repair, tests, docs, bootstrap assets, and state files
+- Files intentionally left uncommitted: none intended in Dong Skills
+- Deferred reason: none after commit and push
+- Next checkpoint: commit and push now
 
 ## Learned Instincts To Preserve
-- Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
+- Hook output schema is event-specific; do not reuse `SessionStart` `hookSpecificOutput.additionalContext` for `PostCompact`.
 - Automatic PreCompact must write emergency handoff and allow compaction instead of hard-blocking silently.
+- Windows hook wrappers must use encoded PowerShell and be tested through an outer PowerShell invocation.
 - Bootstrap assets must stay in parity with root hook/scripts/templates.
-- Recovery output must stay aligned with AGENTS recovery order.
 
 ## Next Action
-Tell the user the root cause, what changed, verification result, and how to repair affected projects.
+Commit and push Dong Skills, then report the result.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
 - `.codex-context/current-state.md`
 - `.codex/scripts/lib/events.mjs`
-- `.codex/hooks/project-ops.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
 - `tests/project-ops.test.mjs`
 - `.codex-context/verification.md`

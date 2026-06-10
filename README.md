@@ -22,7 +22,7 @@ Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solution
 ### 核心机制
 
 - 主流程治理：`codex-project-governance` 协调发现、澄清、计划、执行、调试、验证、评审、学习、提交、交接。
-- 上下文恢复：`SessionStart` 和 `PostCompact` hooks 注入恢复顺序。
+- 上下文恢复：`SessionStart` 注入恢复顺序；压缩后由 `SessionStart` 的 `compact` 启动来源恢复上下文，`PostCompact` 只确认压缩事件完成。
 - 压缩前检查：`PreCompact` 检查 handoff、核心状态文件和学习审查是否新鲜。手动压缩不满足条件时会被拦住；自动压缩不硬拦，而是先写入应急 `handoff-summary.md` 再放行，避免上下文压力下静默卡住。
 - 文件变更追踪：`PostToolUse` 在非上下文文件变化后要求刷新 `artifact-index.md`。
 - 完成前闸门：`Stop` 检查状态、产物索引、验证记录、Git checkpoint、交接和学习审查。

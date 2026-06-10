@@ -75,7 +75,7 @@ When `.codex/hooks/project-ops.mjs` and `.codex/hooks.json` are installed and tr
 - `UserPromptSubmit` captures likely learning signals as raw observations, not active memory.
 - `PostToolUse` blocks after non-context file changes until `artifact-index.md` is fresh.
 - `PreCompact` blocks stale manual compaction; for automatic compaction, it writes an emergency handoff snapshot and lets compaction continue.
-- `PostCompact` injects recovery order.
+- `PostCompact` confirms compaction completion with common hook output only; recovery context is injected by `SessionStart` when the start source is `compact`.
 - `Stop` blocks final stopping when state, artifacts, verification, Git checkpoint notes, handoff, or learning review are stale.
 
 If a hook blocks, update the named state files. Do not disable hooks unless the user explicitly asks.
