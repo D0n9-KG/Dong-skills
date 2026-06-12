@@ -209,6 +209,10 @@
   - Result: pass with expected test-fixture hits
   - Evidence: manual `rg` for local paths and secret markers found only test fixture fake private-key/secret strings used by redaction tests; release privacy scan passed.
   - Date: 2026-06-12 20:58 +08:00
+- Dong Skills Git push verification.
+  - Result: pass
+  - Evidence: `git push origin main` advanced `origin/main` to `1cb6bf92edac65cd3cf5709a6fba9842fd3d8253`; `git ls-remote origin refs/heads/main` returned the same SHA.
+  - Date: 2026-06-12 21:02 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

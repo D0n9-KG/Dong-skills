@@ -12,7 +12,7 @@ Implement the three agreed optimizations and clearly distinguish ordinary reusab
 - Dong Skills self-improvement signals should be recorded separately in `docs/improvements/backlog.md`.
 
 ## Plan Status
-Runtime, bootstrap assets, tests, skill docs, README, and state files have been updated. Regression tests, health check, release check, learning-status check, privacy spot check, and global skill parity have passed. Checkpoint commit and push remain.
+Runtime, bootstrap assets, tests, skill docs, README, and state files have been updated. Regression tests, health check, release check, learning-status check, privacy spot check, global skill parity, and Git push verification have passed. Only the final state refresh commit remains.
 
 ## Files Modified
 - `.codex/scripts/lib/events.mjs`
@@ -64,21 +64,22 @@ Runtime, bootstrap assets, tests, skill docs, README, and state files have been 
 - `node .codex\hooks\project-ops.mjs learning-status` reported no pending observations.
 - Global installed changed skill directories match source by SHA-256/file-list parity.
 - Manual privacy keyword spot check found only expected fake secret strings in tests; release privacy scan passed.
+- `git push origin main` advanced `origin/main` to `1cb6bf92edac65cd3cf5709a6fba9842fd3d8253`.
 
 ## Git Checkpoint
-- Latest commit: pending for this task
-- Push state: pending
-- Files included: pending final staging
+- Latest functional commit: `1cb6bf92edac65cd3cf5709a6fba9842fd3d8253` (`fix(hooks): preserve handoff during precompact`)
+- Push state: pushed to `origin/main`
+- Files included: precompact runtime, memory boundary docs, backlog, bootstrap sync, tests, README, and refreshed state files
 - Files intentionally left uncommitted: none intended
-- Deferred reason: waiting for checkpoint commit and push
-- Next checkpoint: commit and push after final checks pass
+- Deferred reason: none
+- Next checkpoint: none
 
 ## Learned Instincts To Preserve
 - Do not turn Dong Skills optimization feedback into ordinary project instincts.
 - Save only reusable behavior that affects future decisions; current progress belongs in state files.
 
 ## Next Action
-Run final release check and global sync/parity, then commit and push the checkpoint.
+No active implementation step. Target projects can rerun `codex-codebase-onboarding` or bootstrap repair to receive these updates.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`

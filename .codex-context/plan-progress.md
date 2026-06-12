@@ -3,8 +3,8 @@
 **Goal:** Preserve useful handoff content during automatic `PreCompact` and clearly separate reusable project memory from Dong Skills meta-learning.
 **Spec:** User-approved inline requirement from 2026-06-12 discussion.
 **Spec Approval:** Approved by user.
-**Current Step:** Final verification and checkpoint.
-**Verification:** `node --test tests\project-ops.test.mjs`, `node .codex/hooks/project-ops.mjs health-check`, `git diff --check`, `node scripts/release-check.mjs .`, global install parity.
+**Current Step:** Final archive.
+**Verification:** `node --test tests\project-ops.test.mjs`, `node .codex/hooks/project-ops.mjs health-check`, `git diff --check`, `node scripts/release-check.mjs .`, global install parity, Git push verification.
 **Execution Approval:** User asked to optimize directly.
 
 ## Tasks
@@ -24,10 +24,10 @@
   - Result: target-project bootstrap copies contain the new `PreCompact`, recovery, AGENTS snippet, and release-check behavior.
   - Verification: health check passed and release check planned after state refresh.
 
-- [ ] Task 4: Final archive.
+- [x] Task 4: Final archive.
   - Files: all changed files in this checkpoint.
-  - Result: release check, learning status, privacy spot check, and global sync/parity passed; commit and push pending.
-  - Verification: final Git checkpoint verification pending.
+  - Result: release check, learning status, privacy spot check, global sync/parity, and Git push verification passed.
+  - Verification: checkpoint commit created and pushed.
 
 ## Risks
 - Hook feedback can still appear orange when it is intentionally blocking stale state; that is not the same as a script error.

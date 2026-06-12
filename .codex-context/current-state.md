@@ -7,7 +7,7 @@ Optimize Dong Skills so automatic `PreCompact` preserves useful handoff context 
 User asked to implement the three agreed optimizations, with an explicit distinction between ordinary learning memory and Dong Skills optimization backlog entries.
 
 ## Current Phase
-checkpoint
+delivery
 
 ## Active Assumptions
 - Orange hook output in the screenshot is hook feedback or blocking guidance, not a Node/runtime crash.
@@ -19,7 +19,7 @@ checkpoint
 - None.
 
 ## Next Action
-Create a checkpoint commit and push after inspecting the final staged scope.
+No active implementation step. The functional checkpoint is pushed; the remaining work is the final state refresh commit.
 
 ## Last Updated
-2026-06-12 20:58 +08:00
+2026-06-12 21:02 +08:00

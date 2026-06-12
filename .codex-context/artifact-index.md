@@ -17,6 +17,7 @@
 - `scripts/release-check.mjs` and onboarding asset copy: exclude `.codegraph/` from release scans because it is local indexing state.
 - `.gitignore`: ignores local `.codegraph/` index data.
 - `.codex-context/plan-progress.md`, `current-state.md`, `artifact-index.md`, `verification.md`, and `handoff-summary.md`: refreshed for this Dong Skills memory and `PreCompact` optimization task.
+- `.codex-context/verification.md` and `handoff-summary.md`: refreshed after final release, learning-status, parity, and Git push verification.
 
 ## Read / Inspected
 - Hook runtime `events.mjs` and `recovery.mjs`.
