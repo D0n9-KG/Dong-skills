@@ -177,6 +177,10 @@
   - Result: pass
   - Evidence: SHA-256 hashes and file lists matched between source and global installed skill directories for `codex-codebase-onboarding`, `codex-git-checkpoint`, `codex-project-governance`, `executing-plans`, `using-superpowers`, and `codex-worktree-governance`.
   - Date: 2026-06-12 19:14 +08:00
+- Worktree governance GitHub push verification.
+  - Result: pass
+  - Evidence: `git push origin main` pushed functional commit `a0533c3e88f84f4fc53868ccfc8a5c9383cb0218`; `git ls-remote origin refs/heads/main` returned the same SHA before this state-only handoff refresh.
+  - Date: 2026-06-12 19:20 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

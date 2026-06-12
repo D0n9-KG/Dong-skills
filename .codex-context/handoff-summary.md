@@ -10,7 +10,7 @@ User approved the adapted Superpowers-style worktree governance approach and ask
 Add a mainline `codex-worktree-governance` skill, `worktree-state.md`, worktree-aware hook launcher, health diagnostics, bootstrap propagation, routing updates, tests, global sync, and GitHub push. Do not import the full heavy Superpowers worktree workflow.
 
 ## Plan Status
-Implementation and verification are complete. Active step is Git checkpoint and push.
+Implementation, verification, global sync, commit, and push are complete.
 
 ## Files Modified
 - New worktree governance skill: `.agents/skills/codex-worktree-governance/SKILL.md`
@@ -45,14 +45,15 @@ Implementation and verification are complete. Active step is Git checkpoint and 
 - `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none` and printed primary-checkout diagnostics.
 - `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
 - Source and global installed changed skill directories match by SHA-256/file list.
+- `git ls-remote origin refs/heads/main` confirmed the functional commit was present on GitHub.
 
 ## Git Checkpoint
-- Latest commit: pending this checkpoint
-- Push state: pending push to `origin/main`
+- Latest functional commit: `a0533c3e88f84f4fc53868ccfc8a5c9383cb0218` (`feat(skills): add worktree governance`)
+- Push state: pushed to `origin/main`
 - Files included: worktree governance skill, launcher, worktree detection helpers, bootstrap assets, routing docs, tests, README/AGENTS guidance, and refreshed state files
 - Files intentionally left uncommitted: none intended
 - Deferred reason: none
-- Next checkpoint: verify remote `origin/main` after push
+- Next checkpoint: none
 
 ## Learned Instincts To Preserve
 - Worktree state is a workspace boundary, not just a Git convenience.
@@ -60,7 +61,7 @@ Implementation and verification are complete. Active step is Git checkpoint and 
 - Cleanup ownership must be explicit before removing any linked worktree.
 
 ## Next Action
-Stage the scoped files, commit, push to `origin/main`, then verify remote branch state.
+No active implementation step. For existing target projects, rerun `codex-codebase-onboarding` or bootstrap repair so project-local hooks receive `launch-project-ops.mjs` and `worktree-state.md`.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`

@@ -7,7 +7,7 @@ Add lightweight, Codex-aware worktree governance to Dong Skills.
 User approved the adapted Superpowers-style worktree governance approach and asked to implement it for Dong Skills.
 
 ## Current Phase
-checkpoint
+delivery
 
 ## Active Assumptions
 - Dong Skills should detect and record worktree state, but should not force worktree creation.
@@ -19,7 +19,7 @@ checkpoint
 - None.
 
 ## Next Action
-Commit and push the verified worktree governance update to `origin/main`.
+No active implementation step. Worktree governance update has been committed and pushed; future target projects should refresh via `codex-codebase-onboarding` / bootstrap repair to receive the new project-local files.
 
 ## Last Updated
 2026-06-12 19:14 +08:00
