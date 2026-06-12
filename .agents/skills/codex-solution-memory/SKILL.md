@@ -21,6 +21,8 @@ The rule is the Compound Engineering rule: each solved unit of work should make 
 
 Do not save unverified speculation, raw chat, secrets, one-off typo fixes, or generic advice that is already obvious from `AGENTS.md`.
 
+Do not use this skill for Dong Skills hook, skill, README, installer, or governance improvement proposals. Record those in `docs/improvements/backlog.md` as Dong Skills meta-learning unless the user explicitly asks to implement the optimization immediately.
+
 ## Knowledge Stores
 
 - `docs/solutions/<category>/<slug>.md`: one solved problem or reusable guidance.

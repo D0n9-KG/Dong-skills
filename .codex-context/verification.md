@@ -181,6 +181,34 @@
   - Result: pass
   - Evidence: `git push origin main` pushed functional commit `a0533c3e88f84f4fc53868ccfc8a5c9383cb0218`; `git ls-remote origin refs/heads/main` returned the same SHA before this state-only handoff refresh.
   - Date: 2026-06-12 19:20 +08:00
+- Dong Skills memory and PreCompact optimization regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 17/17 tests, including `PreCompact preserves existing handoff below emergency notice`.
+  - Date: 2026-06-12 20:55 +08:00
+- Dong Skills memory and PreCompact optimization health check.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
+  - Date: 2026-06-12 20:55 +08:00
+- Dong Skills memory and PreCompact optimization diff whitespace check.
+  - Result: pass
+  - Evidence: `git diff --check` returned exit code 0.
+  - Date: 2026-06-12 20:55 +08:00
+- Dong Skills memory and PreCompact optimization release check.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-12 20:58 +08:00
+- Dong Skills learning review status.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs learning-status` reported 0 raw observations, 0 pending observations, 0 candidate instincts, and fresh index.
+  - Date: 2026-06-12 20:58 +08:00
+- Dong Skills global installed skill parity.
+  - Result: pass
+  - Evidence: SHA-256 hash and file-list parity matched for changed global skills: `codex-codebase-onboarding`, `codex-learning-memory`, `codex-project-governance`, and `codex-solution-memory`.
+  - Date: 2026-06-12 20:58 +08:00
+- Dong Skills privacy keyword spot check.
+  - Result: pass with expected test-fixture hits
+  - Evidence: manual `rg` for local paths and secret markers found only test fixture fake private-key/secret strings used by redaction tests; release privacy scan passed.
+  - Date: 2026-06-12 20:58 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-const EXCLUDED_DIRS = new Set([".git", "node_modules", "dist", "build", ".next", "__pycache__"]);
+const EXCLUDED_DIRS = new Set([".git", ".codegraph", "node_modules", "dist", "build", ".next", "__pycache__"]);
 
 function gitRoot(cwd) {
   try {

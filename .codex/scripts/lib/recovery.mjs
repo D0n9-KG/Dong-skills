@@ -36,6 +36,8 @@ function sectionExcerpt(markdown, heading, max) {
 function handoffRecoveryExcerpt(ctx) {
   const markdown = readText(path.join(ctx, REQUIRED_FILES.handoff));
   const sections = [
+    ["PreCompact Emergency Notice", 520],
+    ["PreCompact Issues", 420],
     ["Objective", 280],
     ["Latest User Instruction", 360],
     ["Plan Status", 360],

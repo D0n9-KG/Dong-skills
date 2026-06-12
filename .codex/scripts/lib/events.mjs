@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileFresh, latestChangedMtime, readText, shortList, writeJson } from "./core.mjs";
 import { gitChangedFiles, gitCheckpointStatus, gitStatusFiles } from "./git.mjs";
-import { handoffStatus, markdownStatus, verificationStatus } from "./markdown.mjs";
+import { handoffStatus, markdownStatus, meaningful, sectionContent, verificationStatus } from "./markdown.mjs";
 import {
   appendLearningObservation,
   classifyLearningCue,
@@ -95,6 +95,67 @@ function markdownList(items, fallback = "- None reported.") {
   return items.map((item) => `- ${item}`).join("\n");
 }
 
+function stripHandoffTitle(markdown) {
+  return String(markdown || "")
+    .trim()
+    .replace(/^# Handoff Summary[ \t]*\r?\n+/i, "")
+    .trim();
+}
+
+function hasMeaningfulHandoff(markdown) {
+  return ["Objective", "Latest User Instruction", "Next Action"]
+    .some((heading) => meaningful(sectionContent(markdown, heading)));
+}
+
+function emergencyFallbackSections(statusFiles) {
+  return `## Objective
+Emergency recovery snapshot before automatic compaction.
+
+## Latest User Instruction
+Automatic compaction was about to run while Codex Project Ops state had unresolved freshness issues.
+
+## Approved Scope / Spec
+Allow automatic compaction after writing this emergency handoff. On recovery, inspect the listed files and refresh normal project state before continuing substantive work.
+
+## Plan Status
+Emergency PreCompact fallback. This is not a normal milestone handoff.
+
+## Files Modified
+${markdownList(statusFiles)}
+
+## Files Read But Not Changed
+- No previous handoff content was available.
+
+## Decisions Made
+- Automatic compaction was allowed to avoid a silent hard stop at context pressure.
+- Manual compaction should still refresh project state before compacting.
+
+## Open Questions And Assumptions
+- Assumption: preserving a recoverable handoff is safer than blocking automatic compaction without reliable chat feedback.
+- Open question: after recovery, verify whether any project-specific state files need richer updates.
+
+## Risks
+- This emergency handoff may be less complete than a deliberate handoff.
+- Some state files listed in the issues above may still be stale after compaction.
+
+## Verification Evidence
+- Not verified in this emergency PreCompact path. Review \`.codex-context/verification.md\` after recovery.
+
+## Git Checkpoint
+- Latest commit: not checked during automatic PreCompact
+- Push state: not checked during automatic PreCompact
+- Files included: none during automatic PreCompact
+- Files intentionally left uncommitted: ${statusFiles.length ? shortList(statusFiles, 20) : "none reported"}
+- Deferred reason: automatic compaction was allowed after emergency handoff to avoid a silent block
+- Next checkpoint: run codex-git-checkpoint after recovery if work should be archived
+
+## Learned Instincts To Preserve
+- Review \`.codex-context/learned-instincts.md\` and pending raw observations after recovery.
+
+## Next Action
+After compaction, re-read this handoff, inspect the unresolved issues, then refresh current-state.md, plan-progress.md, artifact-index.md, verification.md, learned-instincts.md, and Git Checkpoint as applicable.`;
+}
+
 function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues, trigger) {
   const timestamp = new Date().toISOString();
   const safeTimestamp = timestamp.replace(/[:.]/g, "-");
@@ -135,61 +196,29 @@ function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues
   ];
   const uniqueReread = [...new Set(reread)].filter(Boolean);
   const rawRel = path.relative(root, rawFile).replace(/\\/g, "/");
+  const preservedHandoff = stripHandoffTitle(previousHandoff);
+  const continuation = hasMeaningfulHandoff(previousHandoff)
+    ? preservedHandoff
+    : emergencyFallbackSections(statusFiles);
 
   fs.writeFileSync(handoffFile, `# Handoff Summary
 
-## Objective
-Emergency recovery snapshot before automatic compaction.
-
-## Latest User Instruction
-Automatic compaction was about to run while Codex Project Ops state had unresolved freshness issues.
-
-## Approved Scope / Spec
-Allow automatic compaction after writing this emergency handoff. On recovery, inspect the listed files and refresh normal project state before continuing substantive work.
-
-## Plan Status
-Emergency PreCompact fallback. This is not a normal milestone handoff.
-
-## Files Modified
-${markdownList(statusFiles)}
-
-## Files Read But Not Changed
-- Previous handoff snapshot was copied to \`${rawRel}\`.
-
-## Decisions Made
-- Automatic compaction was allowed to avoid a silent hard stop at context pressure.
-- Manual compaction should still refresh project state before compacting.
-
-## Open Questions And Assumptions
-- Assumption: preserving a recoverable handoff is safer than blocking automatic compaction without reliable chat feedback.
-- Open question: after recovery, verify whether any project-specific state files need richer updates.
-
-## Risks
-- This emergency handoff may be less complete than a deliberate handoff.
-- Some state files listed in the issues below may still be stale after compaction.
-
-## Verification Evidence
-- Not verified in this emergency PreCompact path. Review \`.codex-context/verification.md\` after recovery.
-
-## Git Checkpoint
-- Latest commit: not checked during automatic PreCompact
-- Push state: not checked during automatic PreCompact
-- Files included: none during automatic PreCompact
-- Files intentionally left uncommitted: ${statusFiles.length ? shortList(statusFiles, 20) : "none reported"}
-- Deferred reason: automatic compaction was allowed after emergency handoff to avoid a silent block
-- Next checkpoint: run codex-git-checkpoint after recovery if work should be archived
-
-## Learned Instincts To Preserve
-- Review \`.codex-context/learned-instincts.md\` and pending raw observations after recovery.
-
-## Next Action
-After compaction, re-read this handoff, inspect the unresolved issues, then refresh current-state.md, plan-progress.md, artifact-index.md, verification.md, learned-instincts.md, and Git Checkpoint as applicable.
-
-## Files To Re-read First
-${markdownList(uniqueReread)}
+## PreCompact Emergency Notice
+- Created: ${timestamp}
+- Trigger: ${trigger}
+- Raw snapshot: \`${rawRel}\`
+- Previous handoff: preserved below this emergency notice.
+- Recovery rule: resolve the PreCompact issues first, then continue from the preserved handoff sections below.
 
 ## PreCompact Issues
 ${markdownList(issues)}
+
+## PreCompact Files To Re-read First
+${markdownList(uniqueReread)}
+
+---
+
+${continuation}
 `, "utf8");
 
   return rawRel;
@@ -228,7 +257,7 @@ export function preCompact(input, root, ctx) {
   if (trigger === "auto") {
     const rawRel = writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues, trigger);
     const message = [
-      "Codex Project Ops allowed automatic compaction after writing an emergency handoff.",
+      "Codex Project Ops allowed automatic compaction after preserving the existing handoff with an emergency notice.",
       "Recovery file: .codex-context/handoff-summary.md.",
       `Previous handoff snapshot: ${rawRel}.`,
       `Issues captured: ${issues.join("; ")}.`

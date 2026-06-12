@@ -92,13 +92,15 @@ Before compaction, final delivery, or a long pause, review pending observations 
 
 For non-trivial verified fixes or reusable solutions, use `codex-solution-memory` instead of saving a loose instinct. Refresh `docs/solutions/`, `CONCEPTS.md`, and `.codex-context/solution-index.md` as needed.
 
+If the signal is about improving Dong Skills itself, such as hooks, skills, README, installer, bootstrap, recovery, or governance behavior, record it in `docs/improvements/backlog.md` in the Dong Skills repo. Do not mix Dong Skills meta-learning with project instincts or project solution memory.
+
 ## Session History
 
 Use `codex-session-history` only when project files are insufficient or the user references previous sessions. Search metadata/keyword counts first, never paste full transcripts, and move durable findings into `.codex-context/` or `docs/solutions/`.
 
 ## Compaction
 
-Write a fresh handoff at phase boundaries and before long pauses. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it writes an emergency `handoff-summary.md` snapshot and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled.
+Write a fresh handoff at phase boundaries and before long pauses. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled.
 
 After compaction, recover in this order:
 

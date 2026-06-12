@@ -9,6 +9,8 @@ Capture reusable experience as curated instincts, not loose notes. This skill ad
 
 Use `codex-solution-memory` instead when the learning needs a full problem/solution document, examples, cross-references, or `CONCEPTS.md` vocabulary. This skill is for short trigger/action instincts.
 
+If the signal is about Dong Skills itself, do not turn it into a project instinct. Record it in the global Dong Skills improvement backlog instead of active project memory.
+
 ## Capture Mode
 
 Learning is curated, not fully automatic.
@@ -36,22 +38,32 @@ Use global scope only as a candidate unless the user explicitly asks for a globa
 
 ## What To Capture
 
-Capture only if at least one is true:
+Capture only when the pattern is likely to be used again and would reduce future trial-and-error. At least one must be true:
 
 - The user corrected a misunderstanding, boundary, workflow, style, or priority.
 - A verified fix revealed a reusable project convention.
 - Review feedback exposed a repeatable risk.
 - A repeated workflow saved time and has evidence.
 - A failed assumption should be avoided in future work.
+- A cross-project environment or tooling fact will affect future Codex behavior, such as Windows paths, PowerShell command shape, encoding, line endings, or hook/worktree behavior.
 
 Do not capture:
 
 - secrets, private raw chat, credentials, or long excerpts
 - unverified fixes
 - simple typos or one-off tool failures
+- one-time status, progress, or file-change summaries that belong in `current-state.md`, `plan-progress.md`, or `handoff-summary.md`
 - vague preferences with no trigger
 - duplicate guidance already present in `AGENTS.md`, `.codex-context/`, or a skill
 - material that belongs as a structured `docs/solutions/` entry
+
+## Dong Skills Meta-Learning
+
+If the observation is about hooks, skills, docs, installation, recovery flow, or other Dong Skills behavior:
+
+- record it in `docs/improvements/backlog.md`
+- classify it as a skill optimization candidate, not a project instinct
+- keep it separate from reusable project behavior and from solution memory
 
 ## Quality Gate
 

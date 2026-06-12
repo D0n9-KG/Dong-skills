@@ -179,9 +179,10 @@ It helps with:
 - `STRATEGY.md` anchors product/project direction when adopted.
 - `docs/solutions/` stores verified reusable solutions.
 - `CONCEPTS.md` stores stable project vocabulary.
+- `docs/improvements/backlog.md` stores Dong Skills improvement candidates; it is for skill, hook, installer, bootstrap, README, and governance improvements, not project memory.
 - `.codex-context/solution-index.md` keeps the active recovery pointer compact.
 - `.codex-context/worktree-state.md` records whether Codex is operating in the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, or an unknown workspace.
-- Project hooks inject recovery context, check compaction readiness, track changed artifacts, and block final stopping when state is stale.
+- Project hooks inject recovery context, check compaction readiness, track changed artifacts, and block final stopping when state is stale. Automatic PreCompact prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, and writes a raw snapshot as backup.
 - `codex-review-panel` adds persona-based review.
 - `codex-evidence-capture` records real behavior evidence for observable changes.
 - `release-check` runs syntax, tests, privacy, and runtime-artifact checks.
@@ -245,6 +246,8 @@ node scripts/release-check.mjs "."
 ### Privacy And Safety
 
 Do not publish private runtime data with this kit. A clean release should not include personal local paths, credentials, cookies, private headers, raw observations, logs, backups, customer data, or private project files.
+
+Keep memory stores distinct: reusable project behavior belongs in `codex-learning-memory`, verified project solutions belong in `docs/solutions/`, current progress belongs in `.codex-context/`, and Dong Skills optimization ideas belong in `docs/improvements/backlog.md`.
 
 Before release:
 

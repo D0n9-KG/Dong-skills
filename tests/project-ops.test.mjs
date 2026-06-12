@@ -493,6 +493,70 @@ test("PreCompact writes emergency handoff and allows automatic compaction", () =
   assert.equal(rawFiles.some((name) => /^precompact-auto-.*\.md$/.test(name)), true);
 });
 
+test("PreCompact preserves existing handoff below emergency notice", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  const handoffFile = path.join(project, ".codex-context", "handoff-summary.md");
+  write(handoffFile, `# Handoff Summary
+
+## Objective
+Preserve the original objective.
+
+## Latest User Instruction
+Continue the original task.
+
+## Approved Scope / Spec
+Original scope.
+
+## Plan Status
+Original plan status.
+
+## Files Modified
+- original.txt
+
+## Decisions Made
+- Original decision.
+
+## Verification Evidence
+- Original evidence.
+
+## Git Checkpoint
+- Latest commit: abc123
+- Push state: pushed
+- Files included: original.txt
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: later
+
+## Next Action
+Continue original next action.
+
+## Files To Re-read First
+- original.txt
+`);
+  const old = new Date(Date.now() - 20_000);
+  fs.utimesSync(handoffFile, old, old);
+  write(path.join(project, "work.txt"), "changed\n");
+
+  const output = runHook(project, { hook_event_name: "PreCompact", trigger: "auto" });
+  assert.equal(output.continue, true);
+  assert.match(output.systemMessage, /preserving the existing handoff/);
+
+  const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
+  assert.match(handoff, /## PreCompact Emergency Notice/);
+  assert.match(handoff, /## PreCompact Issues/);
+  assert.match(handoff, /## Objective\nPreserve the original objective\./);
+  assert.ok(handoff.indexOf("## PreCompact Emergency Notice") < handoff.indexOf("## Objective\nPreserve the original objective."));
+  assert.doesNotMatch(handoff, /## Objective\nEmergency recovery snapshot before automatic compaction\./);
+
+  const rawFile = fs.readdirSync(path.join(project, ".codex-context", "raw"))
+    .find((name) => /^precompact-auto-.*\.md$/.test(name));
+  assert.ok(rawFile);
+  const raw = fs.readFileSync(path.join(project, ".codex-context", "raw", rawFile), "utf8");
+  assert.match(raw, /## Previous Handoff/);
+  assert.match(raw, /Preserve the original objective/);
+});
+
 test("state-prune archives old verification commands and keeps recent evidence", () => {
   const project = tempProject();
   const ctx = path.join(project, ".codex-context");

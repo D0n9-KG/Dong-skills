@@ -1,74 +1,91 @@
 # Handoff Summary
 
 ## Objective
-Add lightweight, Codex-aware worktree governance to Dong Skills.
+Optimize Dong Skills memory and compaction governance so recovery is safer and learning stores stay clean.
 
 ## Latest User Instruction
-User approved the adapted Superpowers-style worktree governance approach and asked to implement it for Dong Skills.
+Implement the three agreed optimizations and clearly distinguish ordinary reusable memory from Dong Skills optimization backlog entries.
 
 ## Approved Scope / Spec
-Add a mainline `codex-worktree-governance` skill, `worktree-state.md`, worktree-aware hook launcher, health diagnostics, bootstrap propagation, routing updates, tests, global sync, and GitHub push. Do not import the full heavy Superpowers worktree workflow.
+- Automatic `PreCompact` must not overwrite useful `handoff-summary.md` content.
+- Learning memory should capture only future-useful, reusable patterns that reduce later trial-and-error.
+- Dong Skills self-improvement signals should be recorded separately in `docs/improvements/backlog.md`.
 
 ## Plan Status
-Implementation, verification, global sync, commit, and push are complete.
+Runtime, bootstrap assets, tests, skill docs, README, and state files have been updated. Regression tests, health check, release check, learning-status check, privacy spot check, and global skill parity have passed. Checkpoint commit and push remain.
 
 ## Files Modified
-- New worktree governance skill: `.agents/skills/codex-worktree-governance/SKILL.md`
-- New state and hook runtime: `.codex-context/worktree-state.md`, `.codex/hooks/launch-project-ops.mjs`, `.codex/scripts/lib/worktree.mjs`
-- Bootstrap assets: onboarding `.codex-context`, `.codex/hooks`, `.codex/scripts/lib`, `AGENTS.project-ops.snippet.md`, and health script copies
-- Routing skills: `using-superpowers`, `codex-project-governance`, `executing-plans`, `codex-git-checkpoint`, `codex-codebase-onboarding`
-- Project scripts/docs/tests: `scripts/project-ops-health.mjs`, `scripts/install-windows.ps1`, `tests/project-ops.test.mjs`, `README.md`, `AGENTS.project-ops.snippet.md`
-- State files: `.codex-context/spec.md`, `plan-progress.md`, `artifact-index.md`, `current-state.md`, `verification.md`, `handoff-summary.md`
+- `.codex/scripts/lib/events.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
+- `.codex/scripts/lib/recovery.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`
+- `tests/project-ops.test.mjs`
+- `.agents/skills/codex-learning-memory/SKILL.md`
+- `.agents/skills/codex-solution-memory/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
+- `AGENTS.project-ops.snippet.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
+- `README.md`
+- `docs/improvements/backlog.md`
+- `scripts/release-check.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`
+- `.gitignore`
+- `.codex-context/artifact-index.md`
+- `.codex-context/current-state.md`
+- `.codex-context/plan-progress.md`
+- `.codex-context/verification.md`
+- `.codex-context/handoff-summary.md`
 
 ## Files Read But Not Changed
-- Upstream Superpowers `using-git-worktrees`, `finishing-a-development-branch`, and worktree design docs
-- Existing Dong Skills hook, recovery, template, bootstrap, health, release, and test files
+- Existing verification history and previous handoff state.
+- Hook feedback screenshot showing orange PostToolUse/Stop guidance.
 
 ## Decisions Made
-- Add `codex-worktree-governance` as a main curated Dong Skills skill.
-- Use detect-and-defer: detect current Git/worktree state first, defer to Codex App/native worktrees, and only allow manual fallback creation with user approval.
-- Treat Codex App `.codex/worktrees/...` cleanup as host-owned, not Dong-owned.
-- Add `worktree-state.md` to recovery order immediately after `handoff-summary.md`.
-- Route hooks through `launch-project-ops.mjs`, which uses hook input `cwd` to dispatch to the actual Git root's `project-ops.mjs`.
+- Automatic `PreCompact` now prepends `PreCompact Emergency Notice` and `PreCompact Issues` to the main handoff, while preserving a meaningful previous handoff below the notice.
+- If previous handoff content is empty or template-like, the hook writes emergency fallback sections instead of pretending useful prior context exists.
+- Recovery excerpts prioritize the emergency notice and issues after compaction.
+- Ordinary learning memory is limited to reusable future behavior, not one-time progress or loose notes.
+- Dong Skills self-improvement belongs in `docs/improvements/backlog.md`, not `.codex-context/instincts` or `docs/solutions`.
 
 ## Open Questions And Assumptions
-- Assumption: existing projects should rerun `codex-codebase-onboarding` or bootstrap repair to receive `worktree-state.md` and the launcher.
-- Assumption: Codex UI may still display hook registration source paths, but runtime diagnostics now expose actual Git root and role.
+- Assumption: existing target projects need rerunning `codex-codebase-onboarding` or bootstrap repair to receive these project-local hook/runtime updates.
+- Assumption: orange hook output in Codex UI can be acceptable governance feedback when `continue:false` or stale-state guidance is intentional.
 
 ## Risks
-- Codex UI hook trust display is still controlled by Codex, not Dong Skills.
-- Existing sessions may keep using old trusted hook commands until restarted or hooks are re-trusted.
-- Worktree cleanup remains intentionally conservative; agents must not delete host-managed worktrees.
+- Automatic compaction can still happen at context pressure; the hook cannot make the model perform a full semantic summary at that moment.
+- Target projects running old installed assets will not get this behavior until refreshed.
+- The new backlog must be reviewed periodically, or it can become another stale document.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs` passed 16/16 tests.
-- `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none` and printed primary-checkout diagnostics.
+- `node --test tests\project-ops.test.mjs` passed 17/17 tests.
+- `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
+- `git diff --check` passed.
 - `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
-- Source and global installed changed skill directories match by SHA-256/file list.
-- `git ls-remote origin refs/heads/main` confirmed the functional commit was present on GitHub.
+- `node .codex\hooks\project-ops.mjs learning-status` reported no pending observations.
+- Global installed changed skill directories match source by SHA-256/file-list parity.
+- Manual privacy keyword spot check found only expected fake secret strings in tests; release privacy scan passed.
 
 ## Git Checkpoint
-- Latest functional commit: `a0533c3e88f84f4fc53868ccfc8a5c9383cb0218` (`feat(skills): add worktree governance`)
-- Push state: pushed to `origin/main`
-- Files included: worktree governance skill, launcher, worktree detection helpers, bootstrap assets, routing docs, tests, README/AGENTS guidance, and refreshed state files
+- Latest commit: pending for this task
+- Push state: pending
+- Files included: pending final staging
 - Files intentionally left uncommitted: none intended
-- Deferred reason: none
-- Next checkpoint: none
+- Deferred reason: waiting for checkpoint commit and push
+- Next checkpoint: commit and push after final checks pass
 
 ## Learned Instincts To Preserve
-- Worktree state is a workspace boundary, not just a Git convenience.
-- Hook UI source paths can differ from actual Git roots; trust hook input `cwd` and health diagnostics for runtime root.
-- Cleanup ownership must be explicit before removing any linked worktree.
+- Do not turn Dong Skills optimization feedback into ordinary project instincts.
+- Save only reusable behavior that affects future decisions; current progress belongs in state files.
 
 ## Next Action
-No active implementation step. For existing target projects, rerun `codex-codebase-onboarding` or bootstrap repair so project-local hooks receive `launch-project-ops.mjs` and `worktree-state.md`.
+Run final release check and global sync/parity, then commit and push the checkpoint.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
-- `.codex-context/worktree-state.md`
 - `.codex-context/current-state.md`
 - `.codex-context/plan-progress.md`
-- `.agents/skills/codex-worktree-governance/SKILL.md`
-- `.codex/hooks/launch-project-ops.mjs`
-- `.codex/scripts/lib/worktree.mjs`
-- `scripts/project-ops-health.mjs`
+- `.codex-context/artifact-index.md`
+- `.codex-context/verification.md`
+- `.agents/skills/codex-learning-memory/SKILL.md`
+- `docs/improvements/backlog.md`
+- `.codex/scripts/lib/events.mjs`

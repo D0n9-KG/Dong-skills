@@ -77,7 +77,7 @@ Load only the skill needed for the current phase.
 9. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.
 10. Review: use `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings.
 11. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
-12. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions.
+12. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions. If the signal is about improving Dong Skills hooks, skills, docs, installers, or governance behavior, record it in `docs/improvements/backlog.md` instead of project memory.
 13. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
 14. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
 
@@ -104,7 +104,7 @@ Before any completion claim:
 4. If in a linked worktree or branch state matters, refresh `worktree-state.md` before checkpoint, PR, merge, discard, or cleanup.
 5. Use `codex-git-checkpoint` to commit/push a checkpoint, or record the deferred reason in `handoff-summary.md`.
 6. If `.codex-context/raw/observations.jsonl` has pending learning events, use `codex-learning-memory` to save, absorb, or drop them, then refresh `learned-instincts.md`.
-7. If verified work produced a durable solution or stale learning signal, use `codex-solution-memory` or record why it is not worth capturing.
+7. If verified work produced a durable solution or stale learning signal, use `codex-solution-memory` or record why it is not worth capturing. If the learning is about Dong Skills itself, update `docs/improvements/backlog.md` instead.
 8. Refresh `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed.
 9. Refresh `handoff-summary.md`.
 10. Then answer the user with verified state and remaining gaps.

@@ -1,25 +1,25 @@
 # Current State
 
 ## Objective
-Add lightweight, Codex-aware worktree governance to Dong Skills.
+Optimize Dong Skills so automatic `PreCompact` preserves useful handoff context and memory capture clearly separates reusable project knowledge from Dong Skills improvement feedback.
 
 ## Latest User Instruction
-User approved the adapted Superpowers-style worktree governance approach and asked to implement it for Dong Skills.
+User asked to implement the three agreed optimizations, with an explicit distinction between ordinary learning memory and Dong Skills optimization backlog entries.
 
 ## Current Phase
-delivery
+checkpoint
 
 ## Active Assumptions
-- Dong Skills should detect and record worktree state, but should not force worktree creation.
-- Codex App managed worktrees must be detected and left to Codex App for cleanup.
-- Project-level hooks should resolve actual work from hook input `cwd` where available.
-- New and existing projects should receive `worktree-state.md` through bootstrap/health repair.
+- Orange hook output in the screenshot is hook feedback or blocking guidance, not a Node/runtime crash.
+- Automatic `PreCompact` should keep compaction moving under context pressure, but must not erase the useful existing handoff from the main recovery file.
+- Ordinary memory should capture only future-useful patterns that reduce later trial-and-error.
+- Dong Skills hook, skill, README, installer, bootstrap, recovery, or governance improvement signals belong in `docs/improvements/backlog.md`, not project instincts or solution memory.
 
 ## Blockers
 - None.
 
 ## Next Action
-No active implementation step. Worktree governance update has been committed and pushed; future target projects should refresh via `codex-codebase-onboarding` / bootstrap repair to receive the new project-local files.
+Create a checkpoint commit and push after inspecting the final staged scope.
 
 ## Last Updated
-2026-06-12 19:14 +08:00
+2026-06-12 20:58 +08:00
