@@ -1,27 +1,39 @@
 ---
 name: using-superpowers
-description: Use when starting work with this kit to choose the relevant project workflow skill before acting.
+description: Use at the start of any non-trivial project task, new session, resumed session, or explicit `$using-superpowers` request to route Dong Skills before acting. Decides whether to brainstorm, plan, execute, debug, verify, review, checkpoint, or clean up; process skills must be loaded before implementation work.
 ---
 
 # Using Project Ops Skills
 
-This kit keeps Codex from improvising past the user's intent. Use the smallest relevant skill for the current phase, then keep durable state in `.codex-context/`.
+Use this as the lightweight router for Dong Skills. It should prevent improvising past the user's intent without turning every task into a heavy ritual.
 
-## Priority
+## Routing Gate
 
-1. User instructions and `AGENTS.md`.
-2. Active skill instructions.
-3. Default agent behavior.
+Before any non-trivial action, choose the relevant process skill and use it. A non-trivial action includes code edits, config changes, multi-file docs, architecture choices, UX/API behavior, debugging, verification claims, commits, or project state updates.
 
-If a skill conflicts with the latest user instruction, follow the user and update `.codex-context/current-state.md`.
+Direct execution is allowed only for tiny mechanical edits with clear acceptance criteria.
+
+## Phase Order
+
+For project work, keep this order:
+
+1. **Scope:** use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction work.
+2. **Plan:** use `writing-plans` after the design/spec is approved or requirements are explicitly clear.
+3. **Execute:** use `executing-plans` only after a written plan exists and execution is approved.
+4. **Debug:** use `systematic-debugging` for bugs, failures, regressions, or unexpected behavior.
+5. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
+6. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
+7. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
+
+Do not jump from scope directly to implementation for multi-step or behavior-changing work.
 
 ## Skill Selection
 
-- Unclear or behavior-changing request: `brainstorming`.
 - New repo or unclear structure: `codex-codebase-onboarding`.
-- Existing spec, multi-step task: `writing-plans`.
+- Unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction: `brainstorming`.
+- Approved spec or clear multi-step requirements: `writing-plans`.
 - Written plan to execute: `executing-plans`.
-- Bug, failing test, unexpected behavior: `systematic-debugging`.
+- Bug, failing test, build failure, regression, or unexpected behavior: `systematic-debugging`.
 - Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
 - Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
 - Prior session context needed beyond project files: `codex-session-history`.
@@ -37,6 +49,13 @@ If a skill conflicts with the latest user instruction, follow the user and updat
 
 Do not load every skill. Read only the one needed now, plus directly referenced files if required.
 
+## Approval Semantics
+
+- A design/spec is not approved until the user explicitly approves the presented design/spec or explicitly asks to skip brainstorming.
+- A plan is not execution-approved until the user chooses execution or explicitly asked earlier to plan-then-execute.
+- If the user says "continue" after a question, treat it as continuing the current phase, not approval to skip later gates.
+- If there is doubt, ask one short question and wait.
+
 ## State Discipline
 
 - Before edits: know the relevant files and update `artifact-index.md` when they matter.
@@ -47,4 +66,4 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 
 ## Tool Mapping
 
-If a retained upstream note mentions another agent harness, translate it through `references/codex-tools.md`. Prefer Codex-native tools and the current workspace.
+If a retained upstream note mentions another agent harness, translate it through `references/codex-tools.md` when present. Prefer Codex-native tools and the current workspace.

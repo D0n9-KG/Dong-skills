@@ -1,28 +1,37 @@
 # Plan Progress
 
 ## Active Plan
-PostCompact hook output schema repair.
+Lightweight workflow gate hardening for Dong Skills.
+
+## Spec Approval
+Approved by user through iterative direction: keep Dong Skills lighter than Superpowers, but add basic constraints so Codex does not drift.
+
+## Execution Approval
+Approved by user; current instruction is to commit the completed changes.
 
 ## Tasks
-- [x] Reproduce the Science Evo `PostCompact` hook output manually and confirm stdout is valid JSON.
-- [x] Identify root cause as unsupported event-specific `hookSpecificOutput.additionalContext` on `PostCompact`, not JSON syntax corruption.
-- [x] Change `PostCompact` to emit only common hook output: `{ "continue": true }`.
-- [x] Remove `hookSpecificOutput` from `PreCompact` auto path while keeping `continue: true` and `systemMessage`.
-- [x] Keep `SessionStart` recovery context injection unchanged.
-- [x] Sync onboarding asset `events.mjs`.
-- [x] Update README and project governance skill wording for `PostCompact`.
-- [x] Add regression tests for `PostCompact` common-only output and `PreCompact` auto without `hookSpecificOutput`.
-- [x] Run syntax checks, targeted tests, health check, and release check.
-- [x] Sync global skills.
-- [x] Sync Science Evo project hook runtime.
-- [x] Commit local Dong Skills checkpoint.
-- [x] Push Dong Skills to GitHub.
-- [ ] Report result to user.
+- [x] Compare local `brainstorming`, `writing-plans`, and `using-superpowers` against upstream Superpowers behavior.
+- [x] Strengthen `brainstorming` with explicit design/spec approval before implementation.
+- [x] Strengthen `writing-plans` with execution handoff and approval semantics.
+- [x] Strengthen `using-superpowers` and `codex-project-governance` routing gates.
+- [x] Add execution approval enforcement to `executing-plans`.
+- [x] Add state-update and stop-condition discipline to debugging, review, onboarding, strategy, evidence, context-budget, and solution-memory skills.
+- [x] Rewrite `verification-before-completion` as a concise Dong Skills hard gate.
+- [x] Update project bootstrap templates for spec approval and execution approval.
+- [x] Sync changed files to global `.agents/skills`.
+- [x] Run tests, health check, and release check.
+- [ ] Commit the checkpoint.
 
 ## Current Step
-Report result to user.
+Commit the checkpoint.
+
+## Verification
+- `node --test tests\project-ops.test.mjs`: pass, 14/14.
+- `node scripts\project-ops-health.mjs .`: pass.
+- `node scripts\release-check.mjs .`: pass.
+- Global install hash parity for changed files: pass.
 
 ## Out Of Scope
-- Changing Codex internal compaction behavior.
-- Adding hook-run telemetry logs in this fix.
-- Editing Science Evo business/source/docs files beyond project hook runtime repair.
+- Adding a pre-edit hook that blocks every file edit.
+- Importing the full heavyweight Superpowers workflow.
+- Pushing to GitHub unless explicitly requested.

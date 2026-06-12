@@ -44,12 +44,26 @@ Do not propose a patch until you can state:
 6. If the fix fails, reset the hypothesis.
    Do not stack patches. After three failed fixes, stop and use `codex-architecture-governance` or discuss whether the current design is wrong.
 
+7. Record the debugging state.
+   Update `.codex-context/current-state.md` with the current hypothesis, changed files, and next action. Update `.codex-context/verification.md` with reproduction and verification evidence. If the root cause exposes a durable risk, update `.codex-context/risks.md`.
+
 ## Evidence Discipline
 
-- Prefer real unit/e2e tests or the project’s normal verification commands.
+- Prefer real unit/e2e tests or the project'"'"'s normal verification commands.
 - Do not change tests just to make them pass unless the user explicitly approved that scope.
 - Do not mock away the failure when real behavior can be tested.
 - If no automated reproduction is practical, record the exact manual evidence and the verification gap.
+
+## Stop Conditions
+
+Stop and ask or re-plan when:
+
+- the root cause depends on a user decision, credential, external service, or destructive data change
+- three focused fixes fail for the same symptom
+- evidence shows the approved plan/spec is wrong
+- the next step would require architecture changes beyond the current approved scope
+
+Do not convert debugging into unapproved refactoring. If the fix needs design changes, return to `brainstorming` or `writing-plans`.
 
 ## Multi-Layer Failures
 

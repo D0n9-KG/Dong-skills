@@ -43,3 +43,12 @@ Collect:
 - Push back on incorrect feedback with code, tests, or repo evidence.
 
 Use `requesting-code-review/code-reviewer.md` as an optional prompt or inline checklist.
+
+## State Updates
+
+After review:
+
+- update `.codex-context/risks.md` with unresolved review risks
+- update `.codex-context/decisions.md` for accepted or rejected review findings that affect future work
+- update `.codex-context/verification.md` after fixes or additional checks
+- use `codex-review-panel` when findings are cross-cutting, high-risk, or plan/spec related

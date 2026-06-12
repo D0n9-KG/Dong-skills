@@ -11,6 +11,12 @@ Create and maintain `STRATEGY.md`: a short root-level anchor for what the projec
 
 This is not a backlog, roadmap, spec, or plan. It is upstream grounding for `brainstorming`, `writing-plans`, and `codex-project-governance`.
 
+## Gate
+
+If a major feature, UX direction, architecture direction, or prioritization choice lacks a clear target problem, user/operator, success signal, or non-goal, use this skill before `brainstorming` or `writing-plans`.
+
+Do not invent strategy facts. Ask the user, mark weak sections as revisit candidates, or record the gap in `.codex-context/open-questions.md`.
+
 ## When To Use
 
 - New product or project starts.
@@ -76,3 +82,11 @@ When present, read `STRATEGY.md` before:
 
 Record strategy-driven decisions in `.codex-context/decisions.md` when they affect implementation.
 
+## State Updates
+
+After creating or changing `STRATEGY.md`:
+
+- update `.codex-context/current-state.md` with the active strategy assumption and next action
+- update `.codex-context/decisions.md` for strategy choices that constrain implementation
+- update `.codex-context/open-questions.md` for weak or missing strategy sections
+- update `.codex-context/artifact-index.md` for `STRATEGY.md`

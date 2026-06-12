@@ -145,6 +145,22 @@
   - Result: pass
   - Evidence: local functional commit `b01c78737d97430806911ba036b672565889d74a` was created with subject `fix(hooks): use common postcompact output`; a state-refresh commit will be pushed with it.
   - Date: 2026-06-10 21:04 +08:00
+- Dong Skills lightweight workflow gate regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 14/14 tests after skill gate, template, bootstrap, and verification-rule updates.
+  - Date: 2026-06-12 16:19 +08:00
+- Dong Skills lightweight workflow gate health check.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` reported `Issues: none`.
+  - Date: 2026-06-12 16:19 +08:00
+- Dong Skills lightweight workflow gate release check.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-12 16:19 +08:00
+- Global skill sync parity for lightweight workflow gates.
+  - Result: pass
+  - Evidence: SHA-256 hashes for changed skill files matched between the source repository and `%USERPROFILE%\.agents\skills`.
+  - Date: 2026-06-12 16:19 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

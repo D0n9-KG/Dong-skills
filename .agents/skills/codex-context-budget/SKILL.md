@@ -61,3 +61,14 @@ Report:
 - top three reductions with estimated savings
 
 Do not remove guidance automatically. Recommend deletions or splits, then let the user decide unless they already asked for cleanup.
+
+Do not weaken phase gates, verification gates, privacy rules, or destructive-operation safeguards just to save tokens. If a rule is too verbose, shorten it while preserving the constraint.
+
+## State Updates
+
+When the audit changes project direction or exposes bloat that affects future work:
+
+- update `.codex-context/risks.md` with context-pressure risks
+- update `.codex-context/decisions.md` for accepted guidance removals or splits
+- update `.codex-context/plan-progress.md` if cleanup becomes a task
+- update `.codex-context/handoff-summary.md` before pausing

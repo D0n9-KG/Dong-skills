@@ -44,6 +44,8 @@ Use this when a change has observable behavior: web UI, CLI output, API response
 
 5. Feed evidence gaps back into `codex-verification-loop`.
 
+If evidence is blocked or incomplete, update `.codex-context/risks.md` or `.codex-context/plan-progress.md` when the gap affects delivery confidence or follow-up work.
+
 ## Completion
 
 Before claiming delivery for user-visible changes, report both test verification and product evidence, or explicitly state why product evidence is blocked or not applicable.

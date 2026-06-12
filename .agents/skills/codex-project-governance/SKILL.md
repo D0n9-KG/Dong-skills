@@ -26,6 +26,17 @@ Keep recoverable project truth outside chat:
 
 If those files conflict with the latest user instruction, the latest user instruction wins. Update the files before continuing.
 
+## Phase Gates
+
+Do not skip gates for non-trivial work:
+
+1. **Scope gate:** unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work uses `brainstorming` first.
+2. **Approval gate:** implementation waits until the design/spec is explicitly approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria.
+3. **Plan gate:** multi-step work uses `writing-plans` before implementation.
+4. **Execution gate:** execute a written plan only after the user approves execution or explicitly asked earlier to plan-then-execute.
+
+Tiny mechanical edits can use a compact spec and direct implementation. If the boundary is uncertain, treat it as non-trivial and use the gates.
+
 ## Skill Map
 
 - `using-superpowers`: choose the relevant workflow skill.
@@ -55,9 +66,9 @@ Load only the skill needed for the current phase.
 
 1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
 2. Recover: if the latest context is missing and project files are insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
-3. Scope: if intent is unclear or behavior-changing, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md`.
-4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`.
-5. Implement: follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
+3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with approval status.
+4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; ask for execution approval unless the user explicitly requested plan-then-execute.
+5. Implement: only after the approval and plan gates are satisfied; follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
 6. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
 7. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
 8. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.

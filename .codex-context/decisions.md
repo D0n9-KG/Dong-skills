@@ -21,6 +21,11 @@
 - `PreCompact` uses different behavior for manual and automatic compaction: explicit manual compaction still hard-blocks stale governance state, while automatic or unknown-trigger compaction writes an emergency handoff and returns `continue: true`.
 - Automatic `PreCompact` stores the previous handoff under `.codex-context/raw/precompact-auto-*.md` before overwriting `.codex-context/handoff-summary.md` with the emergency recovery snapshot.
 - `PostCompact` must emit common hook output only. Full recovery context remains owned by `SessionStart` when the start source is `compact`.
+- Dong Skills keeps a lightweight workflow rather than importing the full Superpowers ritual, but non-trivial work now requires explicit scope, design/spec approval, plan, execution approval, verification, and checkpoint boundaries.
+- `executing-plans` treats a written plan as insufficient by itself; execution requires `## Execution Approval` in `.codex-context/plan-progress.md` unless the user explicitly requested plan-then-execute.
+- `verification-before-completion` is a hard gate, but expressed as concise Dong Skills rules instead of the heavier upstream Superpowers wording.
+- The kit will not add a broad pre-edit hook for every file change at this stage; phase boundaries are enforced through skills, project state, and existing PostToolUse/Stop checks.
+- Bootstrap writes managed Markdown with explicit UTF-8 helpers and snippet trimming so Chinese `AGENTS.md` content is preserved and repeated bootstrap runs are idempotent.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -31,3 +36,4 @@
 - Inline Windows hook commands containing PowerShell variables in `.codex/hooks.json`.
 - Hard-blocking automatic `PreCompact` as the default safety mechanism, because it can leave Codex stopped under context pressure without reliable chat-visible feedback.
 - Reusing `SessionStart` `hookSpecificOutput.additionalContext` for `PostCompact`, because Codex rejects event-specific output on `PostCompact`.
+- Treating `continue`, vague acknowledgment, or a written plan as automatic permission to implement.

@@ -6,6 +6,17 @@ Use Chinese by default unless the user asks otherwise or the project requires an
 
 For non-trivial project work, use `codex-project-governance` first. It coordinates discovery, spec, plan, implementation, debugging, verification, review, delivery, learning, and handoff.
 
+## Phase Gates
+
+For non-trivial work, keep the phase boundary explicit:
+
+1. Use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work.
+2. Do not implement until the design/spec is approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria.
+3. Use `writing-plans` before multi-step implementation.
+4. Do not execute the plan until the user approves execution or explicitly requested plan-then-execute.
+
+Record spec approval in `.codex-context/spec.md` and execution approval in `.codex-context/plan-progress.md`.
+
 ## Curated Skills
 
 Use only the bundled curated set by default:

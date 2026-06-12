@@ -117,3 +117,11 @@ Report:
 - whether `AGENTS.md` discoverability is sufficient
 - whether `.codex-context/solution-index.md` was refreshed
 
+## State Updates
+
+After changing solution memory:
+
+- update `.codex-context/solution-index.md`
+- update `.codex-context/artifact-index.md` for solution docs, `CONCEPTS.md`, and `AGENTS.md`
+- update `.codex-context/current-state.md` when the solution affects current work
+- update `.codex-context/handoff-summary.md` before pausing or compacting

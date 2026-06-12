@@ -1,139 +1,71 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: MUST use before claiming work is complete, fixed, passing, ready, delivered, committed, or PR-ready. Requires fresh verification evidence or an explicit recorded gap in `.codex-context/verification.md`; evidence before assertions.
 ---
 
 # Verification Before Completion
 
-## Overview
+## Hard Gate
 
-Claiming work is complete without verification is dishonesty, not efficiency.
+Do not claim work is complete, fixed, passing, ready, delivered, or safe until you have fresh evidence from the current turn.
 
-**Core principle:** Evidence before claims, always.
+If fresh verification cannot be run, say it is unverified and record the blocker or gap. Do not soften this into "should pass" or "looks good".
 
-**Violating the letter of this rule is violating the spirit of this rule.**
+## Required Loop
 
-## The Iron Law
+1. Re-read the relevant spec, plan, and acceptance criteria.
+2. Identify the smallest reliable command or product action that proves the claim.
+3. Run the command/action in the current turn, or record why it is blocked.
+4. Read the full output and exit code.
+5. Update `.codex-context/verification.md` with the command/action, result, short evidence summary, timestamp, and gaps.
+6. If verification fails, use `systematic-debugging` before further fixes.
+7. Only then report the verified state.
 
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
+## Evidence Standards
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+| Claim | Requires |
+| --- | --- |
+| Tests pass | The test command output with exit 0 and failure count reviewed. |
+| Build succeeds | The build command output with exit 0 reviewed. |
+| Type/lint clean | The relevant typecheck/lint command output reviewed. |
+| Bug fixed | The original failing scenario is reproduced or explicitly recorded as not reproducible, then the fixed path is verified. |
+| Requirements met | Each acceptance criterion is mapped to verification evidence or an explicit gap. |
+| User-visible behavior works | Product evidence from UI, CLI, API, generated artifact, or workflow, or a recorded blocker. |
 
-## The Gate Function
+## Not Sufficient
 
-```
-BEFORE claiming any status or expressing satisfaction:
+- previous verification from another turn
+- partial logs without exit status
+- "no errors seen" without running the relevant command
+- tests unrelated to the changed behavior
+- agent or tool claims without independent inspection
+- committing or pushing as a substitute for verification
 
-1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
-4. VERIFY: Does output confirm the claim?
-   - If NO: State actual status with evidence
-   - If YES: State claim WITH evidence
-5. ONLY THEN: Make the claim
+## Verification Record
 
-Skip any step = lying, not verifying
-```
+Append fresh entries to `.codex-context/verification.md`:
 
-## Common Failures
+```markdown
+## Commands Run
+- `[command]`
+  - Result: pass | fail | blocked
+  - Evidence: [short output summary]
+  - Date: [YYYY-MM-DD HH:mm local]
 
-| Claim | Requires | Not Sufficient |
-|-------|----------|----------------|
-| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
-| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
-| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
-| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
-| Regression test works | Red-green cycle verified | Test passes once |
-| Agent completed | VCS diff shows changes | Agent reports "success" |
-| Requirements met | Line-by-line checklist | Tests passing |
+## Product Evidence
+- `[action]`
+  - Result: pass | fail | blocked
+  - Evidence: [path, output summary, or explicit reason not applicable]
+  - Date: [YYYY-MM-DD HH:mm local]
 
-## Red Flags - STOP
-
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-- Thinking "just this once"
-- Tired and wanting work over
-- **ANY wording implying success without having run verification**
-
-## Rationalization Prevention
-
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler |
-| "Agent said success" | Verify independently |
-| "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter |
-
-## Key Patterns
-
-**Tests:**
-```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
-❌ "Should pass now" / "Looks correct"
+## Not Yet Verified
+- [gap and why]
 ```
 
-**Regression tests:**
-```
-✅ Write test → run it against fixed code → prove it would fail without the fix when practical → restore fix → run again
-❌ "I've written a regression test" (without proving it covers the original symptom)
-```
+## Completion Wording
 
-**Build:**
-```
-✅ [Run build] [See: exit 0] "Build passes"
-❌ "Linter passed" (linter doesn't check compilation)
-```
+- If verified: state the command/action and result.
+- If partially verified: state exactly what is verified and what is not.
+- If blocked: state the blocker and the next useful verification step.
 
-**Requirements:**
-```
-✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
-❌ "Tests pass, phase complete"
-```
-
-**Agent delegation:**
-```
-✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
-❌ Trust agent report
-```
-
-## Why This Matters
-
-From 24 failure memories:
-- your human partner said "I don't believe you" - trust broken
-- Undefined functions shipped - would crash
-- Missing requirements shipped - incomplete features
-- Time wasted on false completion → redirect → rework
-- Violates: "Honesty is a core value. If you lie, you'll be replaced."
-
-## When To Apply
-
-**ALWAYS before:**
-- ANY variation of success/completion claims
-- ANY expression of satisfaction
-- ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
-- Delegating to agents
-
-**Rule applies to:**
-- Exact phrases
-- Paraphrases and synonyms
-- Implications of success
-- ANY communication suggesting completion/correctness
-
-## The Bottom Line
-
-**No shortcuts for verification.**
-
-Run the command. Read the output. THEN claim the result.
-
-This is non-negotiable.
+Never let confident wording exceed the evidence.

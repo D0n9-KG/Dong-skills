@@ -54,6 +54,8 @@ Add conditional lenses only when the diff or plan justifies them:
 6. Separate actionable findings from residual risks and test gaps.
 7. If fixes are in scope, apply only scoped fixes, run targeted verification, and update `.codex-context/verification.md`.
 
+If a finding requires scope, architecture, or UX changes beyond the approved spec/plan, stop implementation and route back to `brainstorming` or `writing-plans`. Do not silently expand scope during review cleanup.
+
 ## Severity
 
 - `P0`: critical breakage, exploitable vulnerability, corruption, or destructive risk.
@@ -94,3 +96,11 @@ Then include:
 - Related solution docs or learnings
 - Verdict: Ready, Ready with fixes, or Not ready
 
+## State Updates
+
+After a meaningful review:
+
+- update `.codex-context/risks.md` with accepted residual risks
+- update `.codex-context/decisions.md` for accepted or rejected review decisions that affect future work
+- update `.codex-context/plan-progress.md` when review creates follow-up tasks
+- update `.codex-context/verification.md` when fixes or evidence are produced

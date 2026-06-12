@@ -11,6 +11,25 @@ $sourceCodex = Join-Path $assetsRoot ".codex"
 $sourceCodexScripts = Join-Path $sourceCodex "scripts"
 $sourceScripts = Join-Path $assetsRoot "scripts"
 $sourceAgentsSnippet = Join-Path $assetsRoot "AGENTS.project-ops.snippet.md"
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
+
+function Read-Utf8Text {
+  param(
+    [string]$File
+  )
+
+  return [System.IO.File]::ReadAllText($File, $utf8Strict)
+}
+
+function Write-Utf8Text {
+  param(
+    [string]$File,
+    [string]$Content
+  )
+
+  [System.IO.File]::WriteAllText($File, $Content, $utf8NoBom)
+}
 
 if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
   throw "Target project root not found: $TargetProjectRoot"
@@ -54,7 +73,7 @@ function Get-MarkdownSections {
     [string]$File
   )
 
-  $content = Get-Content -LiteralPath $File -Raw
+  $content = Read-Utf8Text -File $File
   $lines = $content -split "\r?\n"
   $sections = @()
   $heading = $null
@@ -91,15 +110,13 @@ function Update-ContextTemplateSections {
     [string]$To
   )
 
-  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-
   Get-ChildItem -LiteralPath $From -File -Filter "*.md" | ForEach-Object {
     $target = Join-Path $To $_.Name
     if (!(Test-Path -LiteralPath $target)) {
       return
     }
 
-    $targetContent = Get-Content -LiteralPath $target -Raw
+    $targetContent = Read-Utf8Text -File $target
     $updated = $targetContent.TrimEnd()
     $changed = $false
 
@@ -116,7 +133,7 @@ function Update-ContextTemplateSections {
     }
 
     if ($changed) {
-      [System.IO.File]::WriteAllText($target, $updated + [Environment]::NewLine, $utf8NoBom)
+      Write-Utf8Text -File $target -Content ($updated + [Environment]::NewLine)
     }
   }
 }
@@ -130,10 +147,8 @@ function Ensure-RuntimeGitignore {
   $markerStart = "# codex-project-ops-runtime:start"
   $markerEnd = "# codex-project-ops-runtime:end"
   $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n$markerEnd"
-  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-
   if (Test-Path -LiteralPath $gitignore) {
-    $content = Get-Content -LiteralPath $gitignore -Raw
+    $content = Read-Utf8Text -File $gitignore
   } else {
     $content = ""
   }
@@ -159,7 +174,7 @@ function Ensure-RuntimeGitignore {
   }
 
   if ($updated -ne $content) {
-    [System.IO.File]::WriteAllText($gitignore, $updated + [Environment]::NewLine, $utf8NoBom)
+    Write-Utf8Text -File $gitignore -Content ($updated + [Environment]::NewLine)
   }
 }
 
@@ -200,10 +215,10 @@ function Merge-HooksJson {
     [string]$TargetFile
   )
 
-  $sourceConfig = Get-Content -LiteralPath $SourceFile -Raw | ConvertFrom-Json
+  $sourceConfig = Read-Utf8Text -File $SourceFile | ConvertFrom-Json
 
   if (Test-Path -LiteralPath $TargetFile) {
-    $targetConfig = Get-Content -LiteralPath $TargetFile -Raw | ConvertFrom-Json
+    $targetConfig = Read-Utf8Text -File $TargetFile | ConvertFrom-Json
   } else {
     $targetConfig = [pscustomobject]@{ hooks = [pscustomobject]@{} }
   }
@@ -240,8 +255,7 @@ function Merge-HooksJson {
   }
 
   $json = $targetConfig | ConvertTo-Json -Depth 30
-  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-  [System.IO.File]::WriteAllText($TargetFile, $json + [Environment]::NewLine, $utf8NoBom)
+  Write-Utf8Text -File $TargetFile -Content ($json + [Environment]::NewLine)
 }
 
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
@@ -269,28 +283,27 @@ Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (J
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"
 $markerStart = "<!-- codex-project-ops:start -->"
 $markerEnd = "<!-- codex-project-ops:end -->"
-$snippet = Get-Content -LiteralPath $sourceAgentsSnippet -Raw
+$snippet = (Read-Utf8Text -File $sourceAgentsSnippet).TrimEnd()
 
 if (Test-Path -LiteralPath $agentsFile) {
-  $agentsContent = Get-Content -LiteralPath $agentsFile -Raw
+  $agentsContent = Read-Utf8Text -File $agentsFile
 } else {
   $agentsContent = ""
 }
 
 $snippetBlock = "$markerStart`n$snippet`n$markerEnd"
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 if ($agentsContent -like "*$markerStart*" -and $agentsContent -like "*$markerEnd*") {
   $pattern = "(?s)" + [regex]::Escape($markerStart) + ".*?" + [regex]::Escape($markerEnd)
   $updatedAgentsContent = [regex]::Replace($agentsContent, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $snippetBlock })
   if ($updatedAgentsContent -ne $agentsContent) {
     Copy-Item -LiteralPath $agentsFile -Destination "$agentsFile.codex-project-ops.bak" -Force
-    [System.IO.File]::WriteAllText($agentsFile, $updatedAgentsContent, $utf8NoBom)
+    Write-Utf8Text -File $agentsFile -Content $updatedAgentsContent
   }
 } elseif ($agentsContent -like "*$markerStart*" -or $agentsContent -like "*$markerEnd*") {
   throw "AGENTS.md contains an incomplete codex-project-ops marker block. Fix the marker pair before bootstrapping."
 } else {
-  [System.IO.File]::WriteAllText($agentsFile, $agentsContent + "`n" + $snippetBlock + "`n", $utf8NoBom)
+  Write-Utf8Text -File $agentsFile -Content ($agentsContent + "`n" + $snippetBlock + "`n")
 }
 
 Write-Host "Bootstrapped Dong Skills project context to $targetContext"

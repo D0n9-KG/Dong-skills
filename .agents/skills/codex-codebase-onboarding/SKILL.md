@@ -69,6 +69,16 @@ Update `.codex-context/project-map.md` with:
 - where to add common changes
 - risks, unknowns, and verification gaps
 
+## State Updates
+
+After onboarding:
+
+- update `.codex-context/current-state.md` with the current understanding and next action
+- update `.codex-context/open-questions.md` with unresolved unknowns
+- update `.codex-context/artifact-index.md` if key files were inspected or created
+- update `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed
+- update `.codex-context/handoff-summary.md` if the session may be resumed later
+
 If the user asked for a repo overview, answer from `project-map.md` after updating it.
 
 ## Rules

@@ -1,25 +1,25 @@
 # Current State
 
 ## Objective
-Fix Dong Skills hook JSON output so `PostCompact` no longer returns event-specific fields unsupported by Codex.
+Tighten Dong Skills so the kit stays lightweight but enforces basic phase boundaries, user approval, plan execution approval, state updates, and verification evidence.
 
 ## Latest User Instruction
-User showed `/hooks` reporting `hook returned invalid PostCompact hook JSON output`, noted `PreCompact` itself did not show the same error, and asked to fix it.
+User asked to commit the reviewed Dong Skills updates after strengthening lightweight workflow constraints.
 
 ## Current Phase
-delivery
+checkpoint
 
 ## Active Assumptions
-- Official Codex hook behavior distinguishes common output fields from event-specific outputs.
-- `PostCompact` should use common hook output only; recovery context should continue to come from `SessionStart` when start source is `compact`.
-- `PreCompact` manual path is not currently failing, but its auto path should avoid event-specific `hookSpecificOutput` to prevent the same schema issue.
-- The active Science Evo project should receive the fixed project hook runtime after the Dong Skills kit is verified.
+- The user does not want upstream Superpowers' heavyweight ritual, but does want minimum hard gates that prevent Codex from drifting.
+- Non-trivial work should flow through `brainstorming` -> `writing-plans` -> `executing-plans`, with explicit design/spec approval and execution approval.
+- Verification and review outcomes should be recorded in `.codex-context/`, not only described in chat.
+- Existing projects may need a bootstrap/onboarding refresh to receive updated project-level templates and AGENTS guidance.
 
 ## Blockers
 - None.
 
 ## Next Action
-Report the hook schema fix, GitHub push, and Science Evo runtime sync to user.
+Create a local checkpoint commit for the Dong Skills source repository. Do not push unless the user asks for GitHub push.
 
 ## Last Updated
-2026-06-10 21:04 +08:00
+2026-06-12 16:19 +08:00

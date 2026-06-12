@@ -13,6 +13,24 @@
 - `licenses/COMPOUND-ENGINEERING-LICENSE`: CE MIT attribution.
 
 ## Modified
+- `.agents/skills/brainstorming/SKILL.md`: tightened lightweight hard gate requiring explicit design/spec approval before implementation, with compact exceptions for tiny mechanical edits.
+- `.agents/skills/writing-plans/SKILL.md`: requires approved spec or explicit skip, writes execution approval state, and pauses for execution choice unless plan-then-execute was requested.
+- `.agents/skills/using-superpowers/SKILL.md`: routes non-trivial work through scope, plan, execution, verification, review, and checkpoint phases.
+- `.agents/skills/codex-project-governance/SKILL.md`: adds explicit scope, approval, plan, and execution gates to the main lifecycle.
+- `.agents/skills/executing-plans/SKILL.md`: now requires `## Execution Approval` in `plan-progress.md` before executing a written plan.
+- `.agents/skills/verification-before-completion/SKILL.md`: rewritten as concise Dong Skills evidence-before-assertions gate with `.codex-context/verification.md` record requirements.
+- `.agents/skills/systematic-debugging/SKILL.md`: adds state recording, stop conditions, and removes mojibake from inherited text.
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`: adds onboarding state update requirements.
+- `.agents/skills/codex-context-budget/SKILL.md`: prevents token-budget cleanup from weakening phase, verification, privacy, or destructive-operation gates.
+- `.agents/skills/codex-evidence-capture/SKILL.md`: feeds blocked product-evidence gaps into risks or plan progress.
+- `.agents/skills/codex-review-panel/SKILL.md` and `.agents/skills/requesting-code-review/SKILL.md`: add review-result state updates and stop scope expansion during review cleanup.
+- `.agents/skills/codex-solution-memory/SKILL.md`: adds state updates after solution memory changes.
+- `.agents/skills/codex-strategy-anchor/SKILL.md`: adds strategy gate and state updates for major direction decisions.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/spec.md`: adds `Approval Status`, `Design`, and `Next Step` fields.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/plan-progress.md`: adds `Spec Approval`, `Execution Approval`, and `Verification` fields.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md` and root `AGENTS.project-ops.snippet.md`: document lightweight phase gates.
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`: uses explicit UTF-8 read/write helpers and trims the snippet before managed block comparison for idempotent bootstrap.
+- `README.md`: documents non-trivial work phase gates in Chinese and English.
 - `.codex/scripts/lib/events.mjs`: `postCompact` now emits only common hook output `{ continue: true }`; `PreCompact` auto no longer includes event-specific `hookSpecificOutput`.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: synced the hook-output schema repair into bootstrap assets.
 - `tests/project-ops.test.mjs`: added regression coverage for common-only `PostCompact` output and `PreCompact` auto without `hookSpecificOutput`.

@@ -1,6 +1,8 @@
 # Risks
 
 ## Context Risks
+- If existing projects are not re-bootstrapped or refreshed through `codex-codebase-onboarding`, their project-local AGENTS/state templates may not show the new phase gates even though global skills are updated.
+- Skill gates rely on Codex using the relevant skills; broad pre-edit enforcement is intentionally not added, so clear user prompting and project `AGENTS.md` still matter.
 - Hooks discovered after a fresh bootstrap may not appear in the current Codex thread until Codex is restarted or a new thread is opened from the project.
 - Git checkpoint reminders can become noisy if every unfinished diff is treated as commit-ready; the design allows documenting a deferred checkpoint in handoff.
 - Session recovery is section-aware, but very large individual handoff sections can still be clipped; keep handoff sections concise.
@@ -10,6 +12,7 @@
 - Automatic PreCompact emergency handoff is a fallback, not a substitute for deliberate phase-boundary handoffs; after recovery, state files still need review.
 
 ## Technical Risks
+- The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
 - Project-level hook trust is still per repository; users may need to approve hooks through `/hooks`.
 - `PreCompact` manual blocking is still useful, but automatic compaction is allowed after emergency handoff because blocking under context pressure can stall without reliable visible feedback.
 - Existing repositories with stale `.codex/hooks.json` may still show `hook exited with code 1` until `codex-codebase-onboarding` reruns bootstrap or the project hooks file is replaced.
@@ -31,6 +34,7 @@
 - Adding CE-inspired skills increases the global skill set; routing docs must stay concise and skill details should remain on demand.
 
 ## Documentation Risks
+- README, skill docs, AGENTS snippets, and bootstrap templates now all describe phase gates; future changes must keep these aligned or agents may receive conflicting workflow instructions.
 - README, AGENTS snippet, project-map, and skill routing can diverge after future changes.
 - Generated context archives may preserve outdated command evidence; keep main `verification.md` current.
 - `docs/solutions/` can accumulate overlapping or stale entries unless `codex-solution-memory` refresh/consolidation is used.

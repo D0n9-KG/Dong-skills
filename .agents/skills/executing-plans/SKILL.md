@@ -7,16 +7,28 @@ description: Use when a written implementation plan exists and Codex should exec
 
 Execute the plan without losing the thread. Keep progress, evidence, and next actions outside chat.
 
+## Hard Gate
+
+Do not execute a plan until `.codex-context/plan-progress.md` records one of these values under `## Execution Approval`:
+
+- `Approved by user`
+- `plan-then-execute requested`
+
+If execution approval is missing or pending, stop and ask the user whether to execute, revise the plan, or pause. Do not treat a written plan as permission to implement.
+
+Also stop if `.codex-context/spec.md` has no approved scope for the current task, unless the user explicitly skipped brainstorming or the task is a tiny mechanical edit.
+
 ## Process
 
 1. Read `.codex-context/plan-progress.md` and any linked detailed plan.
-2. Critique the plan before editing. If it has a blocking gap, stop and ask or revise the plan first.
-3. Mark exactly one task as active.
-4. Implement the task using the repo's existing patterns.
-5. Run the task's verification command or record why it cannot be run.
-6. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, and `.codex-context/current-state.md`.
-7. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
-8. Repeat until the plan is complete or a blocker is reached.
+2. Confirm execution approval and approved scope.
+3. Critique the plan before editing. If it has a blocking gap, stop and ask or revise the plan first.
+4. Mark exactly one task as active.
+5. Implement the task using the repo's existing patterns.
+6. Run the task's verification command or record why it cannot be run.
+7. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, and `.codex-context/current-state.md`.
+8. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
+9. Repeat until the plan is complete or a blocker is reached.
 
 ## Checkpoints
 
