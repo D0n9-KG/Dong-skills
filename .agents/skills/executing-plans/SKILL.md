@@ -22,13 +22,14 @@ Also stop if `.codex-context/spec.md` has no approved scope for the current task
 
 1. Read `.codex-context/plan-progress.md` and any linked detailed plan.
 2. Confirm execution approval and approved scope.
-3. Critique the plan before editing. If it has a blocking gap, stop and ask or revise the plan first.
-4. Mark exactly one task as active.
-5. Implement the task using the repo's existing patterns.
-6. Run the task's verification command or record why it cannot be run.
-7. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, and `.codex-context/current-state.md`.
-8. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
-9. Repeat until the plan is complete or a blocker is reached.
+3. If this is a new/resumed worktree, hook source paths are confusing, or branch cleanup may be needed later, use `codex-worktree-governance` and refresh `.codex-context/worktree-state.md`.
+4. Critique the plan before editing. If it has a blocking gap, stop and ask or revise the plan first.
+5. Mark exactly one task as active.
+6. Implement the task using the repo's existing patterns.
+7. Run the task's verification command or record why it cannot be run.
+8. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
+9. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
+10. Repeat until the plan is complete or a blocker is reached.
 
 ## Checkpoints
 
@@ -52,6 +53,7 @@ Stop and surface the issue when:
 - A plan instruction conflicts with current code reality.
 - A verification fails twice for the same unresolved reason.
 - A dependency, credential, environment, or user decision is missing.
+- The workspace is detached HEAD or a host-managed worktree but the plan assumes a normal branch merge or cleanup.
 - The next step would delete data, rewrite history, force-push, or perform another destructive action without explicit approval.
 
 ## Completion

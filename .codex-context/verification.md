@@ -161,6 +161,22 @@
   - Result: pass
   - Evidence: SHA-256 hashes for changed skill files matched between the source repository and `%USERPROFILE%\.agents\skills`.
   - Date: 2026-06-12 16:19 +08:00
+- Worktree governance regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 16/16 tests, including hook launcher dispatch by input `cwd`, linked worktree health diagnostics, bootstrap `worktree-state.md`, and recovery-order assertions.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance health check.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none` and displayed primary-checkout worktree diagnostics for the source repository.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance release check.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after adding worktree governance and launcher files.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance global skill sync parity.
+  - Result: pass
+  - Evidence: SHA-256 hashes and file lists matched between source and global installed skill directories for `codex-codebase-onboarding`, `codex-git-checkpoint`, `codex-project-governance`, `executing-plans`, `using-superpowers`, and `codex-worktree-governance`.
+  - Date: 2026-06-12 19:14 +08:00
 ## Product Evidence
 - None yet; this kit change updates skills, scripts, templates, and docs rather than a runnable product surface.
 

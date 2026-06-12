@@ -21,6 +21,7 @@ Keep recoverable project truth outside chat:
 - `.codex-context/risks.md`
 - `.codex-context/verification.md`
 - `.codex-context/learned-instincts.md`
+- `.codex-context/worktree-state.md`
 - `.codex-context/handoff-summary.md`
 - `.codex-context/raw/`
 
@@ -44,6 +45,7 @@ Tiny mechanical edits can use a compact spec and direct implementation. If the b
 - `codex-codebase-onboarding`: bootstrap Dong Skills project config when needed, then map an unfamiliar repo.
 - `writing-plans`: approved spec or multi-step implementation.
 - `executing-plans`: execute a written plan task by task.
+- `codex-worktree-governance`: detect worktree role, branch state, primary/worktree relationship, hook root mismatch, and cleanup ownership.
 - `systematic-debugging`: bug, test failure, build failure, unexpected behavior.
 - `codex-architecture-governance`: structural changes, large files, flat directories, unclear boundaries, refactors, or repeated fixes caused by coupling.
 - `codex-verification-loop`: select build, type, lint, test, security, and diff checks.
@@ -64,19 +66,20 @@ Load only the skill needed for the current phase.
 
 ## Lifecycle
 
-1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
+1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, worktree state, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
 2. Recover: if the latest context is missing and project files are insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
 3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with approval status.
 4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; ask for execution approval unless the user explicitly requested plan-then-execute.
-5. Implement: only after the approval and plan gates are satisfied; follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
-6. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
-7. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
-8. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.
-9. Review: use `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings.
-10. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
-11. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions.
-12. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
-13. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
+5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
+6. Implement: only after the approval and plan gates are satisfied; follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
+7. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
+8. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
+9. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.
+10. Review: use `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings.
+11. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
+12. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions.
+13. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
+14. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
 
 ## Hooks
 
@@ -98,9 +101,10 @@ Before any completion claim:
 1. Re-read `spec.md`, `plan-progress.md`, and `artifact-index.md`.
 2. Run the smallest command that proves the claim, or state why no reliable command exists.
 3. Update `verification.md` with command, result, evidence, date, and gaps.
-4. Use `codex-git-checkpoint` to commit/push a checkpoint, or record the deferred reason in `handoff-summary.md`.
-5. If `.codex-context/raw/observations.jsonl` has pending learning events, use `codex-learning-memory` to save, absorb, or drop them, then refresh `learned-instincts.md`.
-6. If verified work produced a durable solution or stale learning signal, use `codex-solution-memory` or record why it is not worth capturing.
-7. Refresh `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed.
-8. Refresh `handoff-summary.md`.
-9. Then answer the user with verified state and remaining gaps.
+4. If in a linked worktree or branch state matters, refresh `worktree-state.md` before checkpoint, PR, merge, discard, or cleanup.
+5. Use `codex-git-checkpoint` to commit/push a checkpoint, or record the deferred reason in `handoff-summary.md`.
+6. If `.codex-context/raw/observations.jsonl` has pending learning events, use `codex-learning-memory` to save, absorb, or drop them, then refresh `learned-instincts.md`.
+7. If verified work produced a durable solution or stale learning signal, use `codex-solution-memory` or record why it is not worth capturing.
+8. Refresh `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed.
+9. Refresh `handoff-summary.md`.
+10. Then answer the user with verified state and remaining gaps.

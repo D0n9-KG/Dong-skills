@@ -20,10 +20,11 @@ For project work, keep this order:
 1. **Scope:** use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction work.
 2. **Plan:** use `writing-plans` after the design/spec is approved or requirements are explicitly clear.
 3. **Execute:** use `executing-plans` only after a written plan exists and execution is approved.
-4. **Debug:** use `systematic-debugging` for bugs, failures, regressions, or unexpected behavior.
-5. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
-6. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
-7. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
+4. **Workspace:** use `codex-worktree-governance` before execution in a new/resumed worktree, when hook source paths are confusing, or before branch completion/cleanup.
+5. **Debug:** use `systematic-debugging` for bugs, failures, regressions, or unexpected behavior.
+6. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
+7. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
+8. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
 
 Do not jump from scope directly to implementation for multi-step or behavior-changing work.
 
@@ -33,6 +34,7 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction: `brainstorming`.
 - Approved spec or clear multi-step requirements: `writing-plans`.
 - Written plan to execute: `executing-plans`.
+- Starting, resuming, finishing, or debugging path confusion in a Git worktree: `codex-worktree-governance`.
 - Bug, failing test, build failure, regression, or unexpected behavior: `systematic-debugging`.
 - Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
 - Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
@@ -60,6 +62,7 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 
 - Before edits: know the relevant files and update `artifact-index.md` when they matter.
 - During work: keep `plan-progress.md` and `current-state.md` current.
+- In or near a worktree: keep `worktree-state.md` current before execution, checkpoint, merge, PR, discard, or cleanup.
 - Before long pauses, compaction, or final response: refresh `handoff-summary.md`.
 - Before long pauses or final response with meaningful changes: commit/push a Git checkpoint or record the deferred reason in `handoff-summary.md`.
 - Before success claims: run or record verification in `verification.md`.

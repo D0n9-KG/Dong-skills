@@ -4,19 +4,21 @@ import { sectionContent, meaningful } from "./markdown.mjs";
 import { gitCheckpointStatus } from "./git.mjs";
 import { learningStatus } from "./learning.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
+import { detectWorktree, worktreeSummary } from "./worktree.mjs";
 
 const RECOVERY_ORDER = [
   "Recovery order:",
   "1. .codex-context/handoff-summary.md",
-  "2. .codex-context/current-state.md",
-  "3. .codex-context/project-map.md",
-  "4. .codex-context/spec.md",
-  "5. .codex-context/plan-progress.md",
-  "6. .codex-context/artifact-index.md",
-  "7. .codex-context/solution-index.md",
-  "8. .codex-context/learned-instincts.md",
-  "9. STRATEGY.md, CONCEPTS.md, or relevant docs/solutions entries only when the task needs them",
-  "10. latest user instruction"
+  "2. .codex-context/worktree-state.md",
+  "3. .codex-context/current-state.md",
+  "4. .codex-context/project-map.md",
+  "5. .codex-context/spec.md",
+  "6. .codex-context/plan-progress.md",
+  "7. .codex-context/artifact-index.md",
+  "8. .codex-context/solution-index.md",
+  "9. .codex-context/learned-instincts.md",
+  "10. STRATEGY.md, CONCEPTS.md, or relevant docs/solutions entries only when the task needs them",
+  "11. latest user instruction"
 ].join("\n");
 
 function excerpt(ctx, name, max) {
@@ -56,11 +58,13 @@ export function sessionRecoveryContext(root, ctx, eventName) {
     ? "No pending learning review."
     : `Pending learning review: ${learning.issues.join("; ")}.`;
   const checkpointSummary = gitCheckpointStatus(root, ctx, 0).summary;
+  const workspaceSummary = worktreeSummary(detectWorktree(root));
 
   const parts = [
     "Codex Project Ops hooks are active.",
     RECOVERY_ORDER,
     "Before editing, keep artifact-index.md current. Before completion, update verification.md, Git Checkpoint, and handoff-summary.md.",
+    workspaceSummary,
     learningSummary,
     checkpointSummary,
     "",
@@ -69,6 +73,9 @@ export function sessionRecoveryContext(root, ctx, eventName) {
     "",
     "Current state excerpt:",
     excerpt(ctx, REQUIRED_FILES.current, 1000),
+    "",
+    "Worktree state excerpt:",
+    excerpt(ctx, REQUIRED_FILES.worktree, 800),
     "",
     "Plan excerpt:",
     excerpt(ctx, REQUIRED_FILES.plan, 700),

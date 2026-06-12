@@ -180,6 +180,7 @@ It helps with:
 - `docs/solutions/` stores verified reusable solutions.
 - `CONCEPTS.md` stores stable project vocabulary.
 - `.codex-context/solution-index.md` keeps the active recovery pointer compact.
+- `.codex-context/worktree-state.md` records whether Codex is operating in the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, or an unknown workspace.
 - Project hooks inject recovery context, check compaction readiness, track changed artifacts, and block final stopping when state is stale.
 - `codex-review-panel` adds persona-based review.
 - `codex-evidence-capture` records real behavior evidence for observable changes.
@@ -210,6 +211,8 @@ Use codex-codebase-onboarding to start this project.
 ```
 
 The onboarding skill bootstraps missing project files and then maps the repository.
+
+When working in Codex App worktrees, Dong Skills uses detect-and-defer governance: it records the actual Git root and branch state, but leaves Codex-managed worktree cleanup to Codex App.
 
 ### Commands
 

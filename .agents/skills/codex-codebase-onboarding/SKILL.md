@@ -13,6 +13,7 @@ Before onboarding a project, check whether these files exist in the target proje
 
 - `.codex-context/project-map.md`
 - `.codex-context/solution-index.md`
+- `.codex-context/worktree-state.md`
 - `.codex/hooks/project-ops.mjs`
 - `.codex/hooks.json`
 - `AGENTS.md` containing `<!-- codex-project-ops:start -->`
@@ -45,14 +46,15 @@ After bootstrapping, continue onboarding in the same turn. Tell the user they sh
 
 1. Run the Bootstrap Gate if needed.
 2. Read `AGENTS.md` and key docs if present.
-3. Read `STRATEGY.md`, `CONCEPTS.md`, and `docs/solutions/README.md` if present; otherwise record them as absent, not required.
-4. List top-level files and directories.
-5. Detect manifests: `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `.csproj`, `composer.json`.
-6. Detect frameworks and entry points: `next.config.*`, `vite.config.*`, `src/main.*`, `src/app.*`, `app/`, `pages/`, `cmd/`, `server.*`, `manage.py`.
-7. Detect tests and verification commands: `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, `pytest.ini`, `vitest.config.*`, `jest.config.*`, CI workflows.
-8. Detect conventions from nearby files before claiming style rules.
-9. Run `node .codex/hooks/project-ops.mjs solution-status --update-index` when the hook script is installed.
-10. Record unknowns explicitly instead of guessing.
+3. Detect current workspace role and update `.codex-context/worktree-state.md` when the repo is a worktree or hook source/root paths may be confusing.
+4. Read `STRATEGY.md`, `CONCEPTS.md`, and `docs/solutions/README.md` if present; otherwise record them as absent, not required.
+5. List top-level files and directories.
+6. Detect manifests: `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`, `.csproj`, `composer.json`.
+7. Detect frameworks and entry points: `next.config.*`, `vite.config.*`, `src/main.*`, `src/app.*`, `app/`, `pages/`, `cmd/`, `server.*`, `manage.py`.
+8. Detect tests and verification commands: `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, `pytest.ini`, `vitest.config.*`, `jest.config.*`, CI workflows.
+9. Detect conventions from nearby files before claiming style rules.
+10. Run `node .codex/hooks/project-ops.mjs solution-status --update-index` when the hook script is installed.
+11. Record unknowns explicitly instead of guessing.
 
 ## Output
 
@@ -74,6 +76,7 @@ Update `.codex-context/project-map.md` with:
 After onboarding:
 
 - update `.codex-context/current-state.md` with the current understanding and next action
+- update `.codex-context/worktree-state.md` with current workspace role and branch state when relevant
 - update `.codex-context/open-questions.md` with unresolved unknowns
 - update `.codex-context/artifact-index.md` if key files were inspected or created
 - update `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed

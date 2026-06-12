@@ -28,6 +28,7 @@ Use only the bundled curated set by default:
 - `systematic-debugging`
 - `verification-before-completion`
 - `codex-git-checkpoint`
+- `codex-worktree-governance`
 - `codex-architecture-governance`
 - `codex-docs-stewardship`
 - `codex-review-panel`
@@ -60,6 +61,7 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `risks.md`
 - `verification.md`
 - `learned-instincts.md`
+- `worktree-state.md`
 - `handoff-summary.md`
 
 Use `.codex-context/raw/` for raw logs or large outputs.
@@ -67,6 +69,8 @@ Project bootstrap should keep `.codex-context/raw/*` ignored in `.gitignore`, wi
 Use `.codex-context/archive/` for old but still useful verification or handoff history.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
 Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions/` and `CONCEPTS.md`; do not paste full solution docs into active state.
+
+Use `.codex-context/worktree-state.md` to record whether the current workspace is the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, a submodule, or unknown. Refresh it before execution, checkpoint, branch completion, cleanup, or whenever hook UI source paths differ from the actual Git root.
 
 If present:
 
@@ -99,15 +103,16 @@ Write a fresh handoff at phase boundaries and before long pauses. The `PreCompac
 After compaction, recover in this order:
 
 1. `.codex-context/handoff-summary.md`
-2. `.codex-context/current-state.md`
-3. `.codex-context/project-map.md`
-4. `.codex-context/spec.md`
-5. `.codex-context/plan-progress.md`
-6. `.codex-context/artifact-index.md`
-7. `.codex-context/solution-index.md`
-8. `.codex-context/learned-instincts.md`
-9. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
-10. latest user instruction
+2. `.codex-context/worktree-state.md`
+3. `.codex-context/current-state.md`
+4. `.codex-context/project-map.md`
+5. `.codex-context/spec.md`
+6. `.codex-context/plan-progress.md`
+7. `.codex-context/artifact-index.md`
+8. `.codex-context/solution-index.md`
+9. `.codex-context/learned-instincts.md`
+10. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
+11. latest user instruction
 
 ## Completion
 

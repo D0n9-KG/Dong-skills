@@ -1,25 +1,25 @@
 # Current State
 
 ## Objective
-Tighten Dong Skills so the kit stays lightweight but enforces basic phase boundaries, user approval, plan execution approval, state updates, and verification evidence.
+Add lightweight, Codex-aware worktree governance to Dong Skills.
 
 ## Latest User Instruction
-User asked to commit the reviewed Dong Skills updates after strengthening lightweight workflow constraints.
+User approved the adapted Superpowers-style worktree governance approach and asked to implement it for Dong Skills.
 
 ## Current Phase
 checkpoint
 
 ## Active Assumptions
-- The user does not want upstream Superpowers' heavyweight ritual, but does want minimum hard gates that prevent Codex from drifting.
-- Non-trivial work should flow through `brainstorming` -> `writing-plans` -> `executing-plans`, with explicit design/spec approval and execution approval.
-- Verification and review outcomes should be recorded in `.codex-context/`, not only described in chat.
-- Existing projects may need a bootstrap/onboarding refresh to receive updated project-level templates and AGENTS guidance.
+- Dong Skills should detect and record worktree state, but should not force worktree creation.
+- Codex App managed worktrees must be detected and left to Codex App for cleanup.
+- Project-level hooks should resolve actual work from hook input `cwd` where available.
+- New and existing projects should receive `worktree-state.md` through bootstrap/health repair.
 
 ## Blockers
 - None.
 
 ## Next Action
-Create a local checkpoint commit for the Dong Skills source repository. Do not push unless the user asks for GitHub push.
+Commit and push the verified worktree governance update to `origin/main`.
 
 ## Last Updated
-2026-06-12 16:19 +08:00
+2026-06-12 19:14 +08:00

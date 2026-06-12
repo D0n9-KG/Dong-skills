@@ -26,6 +26,7 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
 - Never use `git add -A` unless the whole worktree is confirmed in scope.
 - Never commit generated secrets, raw observations, logs, backups, local paths, or private runtime data.
 - Never rewrite history, force-push, delete branches, or reset work without explicit user approval.
+- Never remove host-managed worktrees such as Codex App `.codex/worktrees/...`; use `codex-worktree-governance` to confirm cleanup ownership first.
 - Do not push to a protected or shared branch when the safer path is a feature branch or draft PR.
 - If the work is not ready to commit, write the reason and next checkpoint in `handoff-summary.md` under `Git Checkpoint`.
 
@@ -34,6 +35,9 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
 1. Inspect repository state:
    - `git status -sb`
    - `git branch --show-current`
+   - `git rev-parse --show-toplevel`
+   - `git rev-parse --git-dir`
+   - `git rev-parse --git-common-dir`
    - `git remote -v`
    - `git log --oneline -5`
    - check upstream/ahead state when relevant: `git status -sb` usually shows it.
@@ -48,6 +52,7 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
 4. Refresh project state before committing:
    - `artifact-index.md`: files changed and why they matter.
    - `verification.md`: fresh command evidence or explicit gap.
+   - `worktree-state.md`: current workspace role, branch state, and cleanup owner when worktree state matters.
    - `handoff-summary.md`: current state, next action, and `Git Checkpoint`.
 5. Stage intentionally:
    - Prefer `git add -- path1 path2 ...`.

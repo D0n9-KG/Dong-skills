@@ -111,8 +111,9 @@ function readyHealthFixture(projectRoot) {
 
   write(path.join(projectRoot, ".codex", "hooks.json"), JSON.stringify({ hooks }, null, 2));
   write(path.join(projectRoot, ".codex", "hooks", "project-ops.mjs"), "console.log('root hook');\n");
+  write(path.join(projectRoot, ".codex", "hooks", "launch-project-ops.mjs"), "console.log('launcher');\n");
   write(path.join(projectRoot, ".codex", "scripts", "lib", "core.mjs"), "export const value = 1;\n");
-  for (const scriptName of ["project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["instincts.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
     write(path.join(projectRoot, "scripts", scriptName), "#!/usr/bin/env node\n");
   }
   write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n");
@@ -132,6 +133,27 @@ function readyHealthFixture(projectRoot) {
   ]) {
     write(path.join(ctx, name), `# ${name}\n`);
   }
+
+  write(path.join(ctx, "worktree-state.md"), `# Worktree State
+
+## Current Workspace
+- Role: primary-checkout
+
+## Primary Checkout
+- Path: fixture
+
+## Branch State
+- Branch: fixture
+
+## Ownership And Cleanup
+- Cleanup owner: none
+
+## Hook Root Notes
+- Actual Git root: fixture
+
+## Resume Instructions
+- Re-detect before cleanup.
+`);
 
   write(path.join(ctx, "handoff-summary.md"), `# Handoff Summary
 
@@ -189,7 +211,7 @@ test("published Windows hook commands are encoded project hook invocations", () 
           const decoded = decodePowerShellEncodedCommand(command);
           assert.match(decoded, /git rev-parse --show-toplevel/);
           assert.match(decoded, /Join-Path/);
-          assert.match(decoded, /\.codex\/hooks\/project-ops\.mjs/);
+          assert.match(decoded, /\.codex\/hooks\/launch-project-ops\.mjs/);
         }
       }
     }
@@ -246,8 +268,10 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "solutions.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "session-history.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "hooks", "launch-project-ops.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "worktree-state.md")), true);
 
   const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
   const recovery = execFileSync(process.execPath, [installedHook], {
@@ -257,8 +281,60 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
     stdio: ["pipe", "pipe", "pipe"]
   }).trim();
   const context = JSON.parse(recovery).hookSpecificOutput.additionalContext;
-  assert.match(context, /7\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /9\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
+  assert.match(context, /8\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /10\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+});
+
+test("hook launcher dispatches using hook input cwd rather than launcher cwd", () => {
+  const source = tempProject();
+  const target = tempProject();
+  git(source, ["init"]);
+  git(target, ["init"]);
+  write(path.join(source, ".codex", "hooks", "project-ops.mjs"), "console.log(JSON.stringify({ root: 'source' }));\n");
+  write(path.join(target, ".codex", "hooks", "project-ops.mjs"), "console.log(JSON.stringify({ root: 'target' }));\n");
+
+  const launcher = path.join(root, ".codex", "hooks", "launch-project-ops.mjs");
+  const out = execFileSync(process.execPath, [launcher], {
+    cwd: source,
+    input: JSON.stringify({ cwd: target, hook_event_name: "SessionStart" }),
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"]
+  }).trim();
+
+  assert.deepEqual(JSON.parse(out), { root: "target" });
+});
+
+test("health check reports linked worktree diagnostics without failing", () => {
+  const project = tempProject();
+  const worktree = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  write(path.join(project, "README.md"), "# fixture\n");
+  git(project, ["add", "README.md"]);
+  git(project, ["commit", "-m", "init"]);
+
+  try {
+    git(project, ["worktree", "add", worktree, "-b", "feature/test"]);
+    readyHealthFixture(worktree);
+
+    const out = execFileSync(process.execPath, [health, worktree], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    assert.match(out, /Worktree:/);
+    assert.match(out, /Role: manual-worktree/);
+    assert.match(out, /Linked worktree: yes/);
+    assert.match(out, /Branch: feature\/test/);
+    assert.match(out, /Result: pass/);
+  } finally {
+    try {
+      git(project, ["worktree", "remove", worktree, "--force"]);
+    } catch {}
+  }
 });
 
 test("learning observations redact private key bodies and URL userinfo", () => {
@@ -348,16 +424,20 @@ Resume final task.
   write(path.join(project, ".codex-context", "plan-progress.md"), "# Plan Progress\n\n## Current Step\nResume.\n");
   write(path.join(project, ".codex-context", "solution-index.md"), "# Solution Index\n\n## Knowledge Store\n- docs/solutions present: yes\n");
   write(path.join(project, ".codex-context", "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- None.\n");
+  write(path.join(project, ".codex-context", "worktree-state.md"), "# Worktree State\n\n## Current Workspace\n- Role: primary-checkout\n");
 
   const output = runHook(project, { hook_event_name: "SessionStart" });
   const context = output.hookSpecificOutput.additionalContext;
-  assert.match(context, /7\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /9\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
+  assert.match(context, /8\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /10\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /Worktree: role=unknown/);
   assert.match(context, /## Git Checkpoint/);
   assert.match(context, /## Next Action\nResume final task\./);
   assert.match(context, /## Files To Re-read First\n- important\.md/);
   assert.match(context, /Solution index excerpt:/);
   assert.match(context, /docs\/solutions present: yes/);
+  assert.match(context, /Worktree state excerpt:/);
 });
 
 test("PostCompact emits only common hook output fields", () => {
@@ -495,7 +575,7 @@ test("health check rejects Windows encoded commands that do not invoke project h
     });
   } catch (error) {
     failed = true;
-    assert.match(String(error.stdout), /encoded command does not invoke project-ops\.mjs/);
+    assert.match(String(error.stdout), /encoded command does not invoke Dong Skills hook launcher/);
   }
   assert.equal(failed, true);
 });

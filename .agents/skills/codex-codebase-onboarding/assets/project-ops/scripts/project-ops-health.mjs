@@ -16,6 +16,7 @@ const REQUIRED_CONTEXT_FILES = [
   "verification.md",
   "learned-instincts.md",
   "solution-index.md",
+  "worktree-state.md",
   "handoff-summary.md"
 ];
 
@@ -62,6 +63,96 @@ function gitRoot(cwd) {
   }
 }
 
+function runGit(cwd, args) {
+  try {
+    return execFileSync("git", ["-C", cwd, ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+
+function resolveGitPath(root, value) {
+  if (!value) return "";
+  if (path.isAbsolute(value)) return path.resolve(value);
+  return path.resolve(root, value);
+}
+
+function normalizedPath(value) {
+  return path.resolve(value || "").replace(/\\/g, "/").toLowerCase();
+}
+
+function pathContainsSegment(value, segments) {
+  const normalized = normalizedPath(value);
+  return segments.some((segment) => normalized.includes(segment));
+}
+
+function detectWorktree(cwd) {
+  const root = gitRoot(cwd);
+  const gitDirRaw = runGit(cwd, ["rev-parse", "--git-dir"]);
+  const gitCommonRaw = runGit(cwd, ["rev-parse", "--git-common-dir"]);
+  const gitDir = resolveGitPath(root, gitDirRaw);
+  const gitCommonDir = resolveGitPath(root, gitCommonRaw);
+  const branch = runGit(cwd, ["branch", "--show-current"]);
+  const superproject = runGit(cwd, ["rev-parse", "--show-superproject-working-tree"]);
+  const isGitRepo = Boolean(gitDirRaw && gitCommonRaw);
+  const isSubmodule = Boolean(superproject);
+  const isLinkedWorktree = isGitRepo &&
+    !isSubmodule &&
+    Boolean(gitDir && gitCommonDir) &&
+    normalizedPath(gitDir) !== normalizedPath(gitCommonDir);
+
+  let role = "unknown";
+  let cleanupOwner = "unknown";
+  if (isSubmodule) {
+    role = "submodule";
+    cleanupOwner = "none";
+  } else if (!isGitRepo) {
+    role = "unknown";
+    cleanupOwner = "unknown";
+  } else if (!isLinkedWorktree) {
+    role = "primary-checkout";
+    cleanupOwner = "none";
+  } else if (pathContainsSegment(root, ["/.codex/worktrees/"])) {
+    role = "codex-managed-worktree";
+    cleanupOwner = "host";
+  } else if (pathContainsSegment(root, ["/.worktrees/", "/worktrees/"])) {
+    role = "dong-managed-worktree";
+    cleanupOwner = "dong-skills";
+  } else {
+    role = "manual-worktree";
+    cleanupOwner = "user";
+  }
+
+  return {
+    root,
+    gitDir,
+    gitCommonDir,
+    branch,
+    detached: isGitRepo && !branch,
+    isLinkedWorktree,
+    isSubmodule,
+    role,
+    cleanupOwner
+  };
+}
+
+function worktreeHealthLines(info) {
+  return [
+    "Worktree:",
+    `- Role: ${info.role}`,
+    `- Root: ${info.root}`,
+    `- Git dir: ${info.gitDir || "not detected"}`,
+    `- Git common dir: ${info.gitCommonDir || "not detected"}`,
+    `- Branch: ${info.detached ? "detached HEAD" : (info.branch || "none")}`,
+    `- Linked worktree: ${info.isLinkedWorktree ? "yes" : "no"}`,
+    `- Submodule: ${info.isSubmodule ? "yes" : "no"}`,
+    `- Cleanup owner: ${info.cleanupOwner}`
+  ];
+}
+
 function readText(file) {
   try {
     return fs.readFileSync(file, "utf8");
@@ -106,13 +197,14 @@ function decodePowerShellEncodedCommand(value) {
   }
 }
 
-function hookCommandMentionsProjectOps(group) {
+function hookCommandMentionsDongSkills(group) {
   for (const hook of group.hooks || []) {
     for (const field of ["command", "commandWindows", "command_windows"]) {
       const value = String(hook[field] || "");
       if (value.includes("project-ops.mjs")) return true;
+      if (value.includes("launch-project-ops.mjs")) return true;
       if ((field === "commandWindows" || field === "command_windows") &&
-          decodePowerShellEncodedCommand(value).includes("project-ops.mjs")) {
+          /(?:project-ops|launch-project-ops)\.mjs/.test(decodePowerShellEncodedCommand(value))) {
         return true;
       }
     }
@@ -126,8 +218,8 @@ function checkWindowsHookCommand(group, eventName, issues) {
     if (!value) continue;
     if (!value.includes("-EncodedCommand")) {
       issues.push(`.codex/hooks.json ${eventName} commandWindows must use -EncodedCommand to avoid PowerShell variable expansion`);
-    } else if (!decodePowerShellEncodedCommand(value).includes("project-ops.mjs")) {
-      issues.push(`.codex/hooks.json ${eventName} commandWindows encoded command does not invoke project-ops.mjs`);
+    } else if (!/(?:project-ops|launch-project-ops)\.mjs/.test(decodePowerShellEncodedCommand(value))) {
+      issues.push(`.codex/hooks.json ${eventName} commandWindows encoded command does not invoke Dong Skills hook launcher`);
     }
     if (value.includes('-Command "$root') || value.includes("2>$null")) {
       issues.push(`.codex/hooks.json ${eventName} commandWindows contains unsafe inline PowerShell variable syntax`);
@@ -152,7 +244,7 @@ function checkHooksJson(root, issues) {
 
   for (const eventName of REQUIRED_HOOK_EVENTS) {
     const groups = Array.isArray(config.hooks?.[eventName]) ? config.hooks[eventName] : [];
-    if (!groups.some(hookCommandMentionsProjectOps)) {
+    if (!groups.some(hookCommandMentionsDongSkills)) {
       issues.push(`.codex/hooks.json is missing Dong Skills hook for ${eventName}`);
     }
     for (const group of groups) checkWindowsHookCommand(group, eventName, issues);
@@ -206,6 +298,20 @@ function checkContext(root, issues) {
       issues.push(`handoff-summary.md Git Checkpoint missing field label: ${labels.join(" or ")}`);
     }
   }
+
+  const worktree = readText(path.join(ctx, "worktree-state.md"));
+  for (const heading of [
+    "Current Workspace",
+    "Primary Checkout",
+    "Branch State",
+    "Ownership And Cleanup",
+    "Hook Root Notes",
+    "Resume Instructions"
+  ]) {
+    if (!worktree.includes(`## ${heading}`)) {
+      issues.push(`worktree-state.md missing section: ${heading}`);
+    }
+  }
 }
 
 function checkAssetParity(root, issues) {
@@ -213,6 +319,10 @@ function checkAssetParity(root, issues) {
   if (!fs.existsSync(assetRoot)) return;
 
   const pairs = [
+    [
+      path.join(root, ".codex", "hooks", "launch-project-ops.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks", "launch-project-ops.mjs")
+    ],
     [
       path.join(root, ".codex", "hooks", "project-ops.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks", "project-ops.mjs")
@@ -285,6 +395,9 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "hooks", "project-ops.mjs"))) {
     issues.push("Missing .codex/hooks/project-ops.mjs");
   }
+  if (!fs.existsSync(path.join(root, ".codex", "hooks", "launch-project-ops.mjs"))) {
+    issues.push("Missing .codex/hooks/launch-project-ops.mjs");
+  }
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "instincts.mjs")) &&
       !fs.existsSync(path.join(root, "scripts", "instincts.mjs"))) {
     issues.push("Missing project ops instincts script");
@@ -308,6 +421,8 @@ function run(root) {
   const lines = [
     "Dong Skills health check",
     `Root: ${root}`,
+    "",
+    ...worktreeHealthLines(detectWorktree(root)),
     ""
   ];
 

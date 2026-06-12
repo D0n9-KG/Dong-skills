@@ -1,91 +1,73 @@
 # Handoff Summary
 
 ## Objective
-Tighten Dong Skills so it remains lightweight but has enforceable phase boundaries, approval semantics, state updates, and verification gates.
+Add lightweight, Codex-aware worktree governance to Dong Skills.
 
 ## Latest User Instruction
-User asked to commit the completed Dong Skills workflow-gate updates.
+User approved the adapted Superpowers-style worktree governance approach and asked to implement it for Dong Skills.
 
 ## Approved Scope / Spec
-Commit the Dong Skills source changes already reviewed and verified. Include global-source parity, bootstrap template updates, state-file refresh, and README/AGENTS guidance. Do not push unless separately requested.
+Add a mainline `codex-worktree-governance` skill, `worktree-state.md`, worktree-aware hook launcher, health diagnostics, bootstrap propagation, routing updates, tests, global sync, and GitHub push. Do not import the full heavy Superpowers worktree workflow.
 
 ## Plan Status
-Implementation and verification are complete. Checkpoint commit is in progress.
+Implementation and verification are complete. Active step is Git checkpoint and push.
 
 ## Files Modified
-- `.agents/skills/brainstorming/SKILL.md`
-- `.agents/skills/writing-plans/SKILL.md`
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/executing-plans/SKILL.md`
-- `.agents/skills/verification-before-completion/SKILL.md`
-- `.agents/skills/systematic-debugging/SKILL.md`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
-- `.agents/skills/codex-context-budget/SKILL.md`
-- `.agents/skills/codex-evidence-capture/SKILL.md`
-- `.agents/skills/codex-review-panel/SKILL.md`
-- `.agents/skills/requesting-code-review/SKILL.md`
-- `.agents/skills/codex-solution-memory/SKILL.md`
-- `.agents/skills/codex-strategy-anchor/SKILL.md`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/spec.md`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/plan-progress.md`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- `AGENTS.project-ops.snippet.md`
-- `README.md`
-- `.codex-context/current-state.md`
-- `.codex-context/plan-progress.md`
-- `.codex-context/artifact-index.md`
-- `.codex-context/decisions.md`
-- `.codex-context/risks.md`
-- `.codex-context/verification.md`
-- `.codex-context/handoff-summary.md`
+- New worktree governance skill: `.agents/skills/codex-worktree-governance/SKILL.md`
+- New state and hook runtime: `.codex-context/worktree-state.md`, `.codex/hooks/launch-project-ops.mjs`, `.codex/scripts/lib/worktree.mjs`
+- Bootstrap assets: onboarding `.codex-context`, `.codex/hooks`, `.codex/scripts/lib`, `AGENTS.project-ops.snippet.md`, and health script copies
+- Routing skills: `using-superpowers`, `codex-project-governance`, `executing-plans`, `codex-git-checkpoint`, `codex-codebase-onboarding`
+- Project scripts/docs/tests: `scripts/project-ops-health.mjs`, `scripts/install-windows.ps1`, `tests/project-ops.test.mjs`, `README.md`, `AGENTS.project-ops.snippet.md`
+- State files: `.codex-context/spec.md`, `plan-progress.md`, `artifact-index.md`, `current-state.md`, `verification.md`, `handoff-summary.md`
 
 ## Files Read But Not Changed
-- Upstream Superpowers raw skills for `brainstorming`, `writing-plans`, and `using-superpowers`
-- Existing Dong Skills tests, health check, release check, project ops skills, and bootstrap assets
+- Upstream Superpowers `using-git-worktrees`, `finishing-a-development-branch`, and worktree design docs
+- Existing Dong Skills hook, recovery, template, bootstrap, health, release, and test files
 
 ## Decisions Made
-- Keep Dong Skills lightweight, but enforce basic gates: approved spec before implementation, written plan before multi-step work, execution approval before executing a plan, and fresh verification before completion claims.
-- Do not add a broad pre-edit hook now; rely on skill gates, state files, and existing PostToolUse/Stop hooks.
-- Rewrite `verification-before-completion` to be concise and Dong Skills-native while preserving the hard evidence requirement.
-- Preserve UTF-8 bootstrap safeguards and sync all changed source files to the global installed skills.
+- Add `codex-worktree-governance` as a main curated Dong Skills skill.
+- Use detect-and-defer: detect current Git/worktree state first, defer to Codex App/native worktrees, and only allow manual fallback creation with user approval.
+- Treat Codex App `.codex/worktrees/...` cleanup as host-owned, not Dong-owned.
+- Add `worktree-state.md` to recovery order immediately after `handoff-summary.md`.
+- Route hooks through `launch-project-ops.mjs`, which uses hook input `cwd` to dispatch to the actual Git root's `project-ops.mjs`.
 
 ## Open Questions And Assumptions
-- Assumption: Existing projects must rerun onboarding/bootstrap or refresh managed AGENTS/state templates to get project-local wording for the new phase gates.
-- Assumption: The user wants commit only, not push, because the instruction was `提交吧`.
+- Assumption: existing projects should rerun `codex-codebase-onboarding` or bootstrap repair to receive `worktree-state.md` and the launcher.
+- Assumption: Codex UI may still display hook registration source paths, but runtime diagnostics now expose actual Git root and role.
 
 ## Risks
-- Skill gates rely on the agent selecting and following skills; they reduce drift but do not make unapproved edits technically impossible in every harness.
-- Existing project-local templates may remain stale until refreshed.
+- Codex UI hook trust display is still controlled by Codex, not Dong Skills.
+- Existing sessions may keep using old trusted hook commands until restarted or hooks are re-trusted.
+- Worktree cleanup remains intentionally conservative; agents must not delete host-managed worktrees.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs` passed 14/14 tests.
-- `node scripts\project-ops-health.mjs .` reported `Issues: none`.
+- `node --test tests\project-ops.test.mjs` passed 16/16 tests.
+- `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none` and printed primary-checkout diagnostics.
 - `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
-- Source and global installed changed files have matching SHA-256 hashes.
+- Source and global installed changed skill directories match by SHA-256/file list.
 
 ## Git Checkpoint
-- Latest commit: pending
-- Push state: not pushed; user requested commit only
-- Files included: pending staged workflow-gate, bootstrap, docs, state, and README changes
+- Latest commit: pending this checkpoint
+- Push state: pending push to `origin/main`
+- Files included: worktree governance skill, launcher, worktree detection helpers, bootstrap assets, routing docs, tests, README/AGENTS guidance, and refreshed state files
 - Files intentionally left uncommitted: none intended
-- Deferred reason: push not requested
-- Next checkpoint: push to `origin/main` if user asks to publish
+- Deferred reason: none
+- Next checkpoint: verify remote `origin/main` after push
 
 ## Learned Instincts To Preserve
-- `continue` or vague acknowledgement is not approval to skip phase gates.
-- Written plans are not execution approval.
-- New verification evidence belongs at the end of `.codex-context/verification.md`.
+- Worktree state is a workspace boundary, not just a Git convenience.
+- Hook UI source paths can differ from actual Git roots; trust hook input `cwd` and health diagnostics for runtime root.
+- Cleanup ownership must be explicit before removing any linked worktree.
 
 ## Next Action
-Stage the scoped files, commit with `chore(skills): tighten lightweight workflow gates`, then report the local commit SHA.
+Stage the scoped files, commit, push to `origin/main`, then verify remote branch state.
 
 ## Files To Re-read First
 - `.codex-context/handoff-summary.md`
+- `.codex-context/worktree-state.md`
 - `.codex-context/current-state.md`
 - `.codex-context/plan-progress.md`
-- `.agents/skills/brainstorming/SKILL.md`
-- `.agents/skills/writing-plans/SKILL.md`
-- `.agents/skills/executing-plans/SKILL.md`
-- `.agents/skills/verification-before-completion/SKILL.md`
+- `.agents/skills/codex-worktree-governance/SKILL.md`
+- `.codex/hooks/launch-project-ops.mjs`
+- `.codex/scripts/lib/worktree.mjs`
+- `scripts/project-ops-health.mjs`

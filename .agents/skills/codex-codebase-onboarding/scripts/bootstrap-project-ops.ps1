@@ -269,6 +269,7 @@ $targetScriptDir = Join-Path $targetCodex "scripts"
 New-Item -ItemType Directory -Force -Path $targetHookDir | Out-Null
 New-Item -ItemType Directory -Force -Path $targetScriptDir | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\project-ops.mjs") -Destination (Join-Path $targetHookDir "project-ops.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\launch-project-ops.mjs") -Destination (Join-Path $targetHookDir "launch-project-ops.mjs") -Force
 Get-ChildItem -LiteralPath $sourceCodexScripts -Force | ForEach-Object {
   Copy-Item -LiteralPath $_.FullName -Destination $targetScriptDir -Recurse -Force
 }
