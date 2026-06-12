@@ -12,7 +12,7 @@ Implement the three agreed optimizations and clearly distinguish ordinary reusab
 - Dong Skills self-improvement signals should be recorded separately in `docs/improvements/backlog.md`.
 
 ## Plan Status
-Runtime, bootstrap assets, tests, skill docs, README, and state files have been updated. Regression tests, health check, release check, learning-status check, privacy spot check, global skill parity, and Git push verification have passed. Only the final state refresh commit remains.
+Runtime, bootstrap assets, tests, skill docs, README, and state files have been updated. Regression tests, health check, release check, learning-status check, privacy spot check, global skill parity, Git push verification, and state refresh have passed.
 
 ## Files Modified
 - `.codex/scripts/lib/events.mjs`

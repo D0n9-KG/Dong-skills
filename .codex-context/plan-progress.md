@@ -3,7 +3,7 @@
 **Goal:** Preserve useful handoff content during automatic `PreCompact` and clearly separate reusable project memory from Dong Skills meta-learning.
 **Spec:** User-approved inline requirement from 2026-06-12 discussion.
 **Spec Approval:** Approved by user.
-**Current Step:** Final archive.
+**Current Step:** Complete.
 **Verification:** `node --test tests\project-ops.test.mjs`, `node .codex/hooks/project-ops.mjs health-check`, `git diff --check`, `node scripts/release-check.mjs .`, global install parity, Git push verification.
 **Execution Approval:** User asked to optimize directly.
 
@@ -26,7 +26,7 @@
 
 - [x] Task 4: Final archive.
   - Files: all changed files in this checkpoint.
-  - Result: release check, learning status, privacy spot check, global sync/parity, and Git push verification passed.
+  - Result: release check, learning status, privacy spot check, global sync/parity, Git push verification, and state refresh passed.
   - Verification: checkpoint commit created and pushed.
 
 ## Risks

@@ -19,7 +19,7 @@ delivery
 - None.
 
 ## Next Action
-No active implementation step. The functional checkpoint is pushed; the remaining work is the final state refresh commit.
+No active implementation step. Functional and state checkpoints are pushed; target projects can refresh via `codex-codebase-onboarding` or bootstrap repair.
 
 ## Last Updated
-2026-06-12 21:02 +08:00
+2026-06-12 21:05 +08:00
