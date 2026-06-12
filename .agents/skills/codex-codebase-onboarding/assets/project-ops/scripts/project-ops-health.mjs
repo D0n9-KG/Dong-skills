@@ -336,6 +336,10 @@ function checkAssetParity(root, issues) {
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "instincts.mjs")
     ],
     [
+      path.join(root, "scripts", "asset-governance.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "asset-governance.mjs")
+    ],
+    [
       path.join(root, "scripts", "project-ops-health.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "project-ops-health.mjs")
     ],
@@ -405,7 +409,7 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "lib", "core.mjs"))) {
     issues.push("Missing .codex/scripts/lib/core.mjs required by split project hook");
   }
-  for (const scriptName of ["project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
     if (!fs.existsSync(path.join(root, ".codex", "scripts", scriptName)) &&
         !fs.existsSync(path.join(root, "scripts", scriptName))) {
       issues.push(`Missing project ops helper script: ${scriptName}`);

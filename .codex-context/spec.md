@@ -1,42 +1,57 @@
 # Spec
 
 ## Problem
-Dong Skills has no explicit worktree governance. Codex App may run work inside managed worktrees while the UI still shows hook configuration from the primary checkout, which can confuse agents about which repository root, branch, hooks, and context files are authoritative.
+Dong Skills already had docs stewardship, context budget, learning memory, solution memory, architecture governance, hooks, and state files, but there was no single first-class workflow for asset lifecycle governance. Long-running projects could still accumulate stale state files, raw PreCompact snapshots, archive files, duplicate docs, generated evidence, orphan scripts, and misleading records.
 
 ## Goals
-- Add a lightweight Dong Skills worktree governance skill adapted from Superpowers detect-and-defer principles.
-- Detect primary checkout, linked worktree, Codex-managed worktree, Dong-managed fallback worktree, manual worktree, branch, detached HEAD, and cleanup ownership.
-- Record recoverable worktree state in `.codex-context/worktree-state.md`.
-- Include `worktree-state.md` in bootstrap templates, health checks, recovery order, README, AGENTS guidance, and state-file lists.
-- Make hooks launch through a worktree-aware dispatcher so hook input `cwd` controls the actual project root when available.
-- Add health output and tests that expose actual root, Git common dir, branch, role, and cleanup owner.
-- Keep the flow lighter than Superpowers: do not force worktree creation, do not delete host-managed worktrees, and do not add a heavy mandatory branch-finishing menu.
+- Add `codex-asset-governance` as a main curated Dong Skills skill.
+- Add a deterministic `asset-governance` audit command reachable through `node .codex/hooks/project-ops.mjs asset-governance`.
+- Classify accumulated assets as Keep, Update, Consolidate, Replace, Delete, Stale, or Raw-Prune.
+- Add safe lifecycle rules for generated `precompact-auto-*.md` raw snapshots while preserving `observations.jsonl` for learning review.
+- Escalate severe active state bloat or tracked raw/runtime artifacts through `PreCompact` and `Stop`.
+- Keep detailed docs cleanup, architecture cleanup, solution refresh, and context budgeting delegated to their specialist skills.
+- Sync root runtime files, onboarding bootstrap assets, installer behavior, health checks, tests, README, and AGENTS snippets.
+- Keep Dong Skills source installation clean when `install-windows.ps1` is run from the kit itself.
 
 ## Non-Goals
-- Do not replace Codex App native worktree behavior.
-- Do not create or remove Codex App `.codex/worktrees/...` directories.
-- Do not require every task to start in a worktree.
-- Do not import the full Superpowers `using-git-worktrees` or `finishing-a-development-branch` workflow.
-- Do not add global hooks.
+- Do not delete `observations.jsonl` through generic raw pruning.
+- Do not automatically delete durable docs, solution memory, or code assets.
+- Do not add broad pre-edit hooks for every file.
+- Do not import a heavy upstream ritual wholesale.
+- Do not treat old archive material as active recovery context.
 
 ## Approved Scope
-Approved by user on 2026-06-12 after reviewing Superpowers worktree behavior and choosing an adapted Dong Skills implementation.
+Approved by user on 2026-06-12 after discussing Dong Skills asset/document/code lifecycle governance and comparing existing Dong Skills controls with CE/ECC/Superpowers-style maintenance patterns.
 
 ## User Decisions
-- Keep Dong Skills lighter than Superpowers.
-- Add explicit worktree governance as a main feature, not an optional module.
-- Prefer detect-and-defer: detect existing isolation, defer to Codex App/native worktrees, and only describe git worktree fallback when no native workspace exists and user asks for isolation.
+- Asset lifecycle governance should be a primary Dong Skills function, not an optional cleanup note.
+- Raw PreCompact snapshots are useful as backup/audit artifacts but need retention rules.
+- Ordinary project memory and Dong Skills optimization backlog must remain separate.
+- Hooks should block only for severe bloat or unsafe tracked artifacts; ordinary lifecycle cleanup can be handled by audit commands and skills.
+
+## Design
+- `codex-asset-governance` defines the asset lifecycle sweep and reader/owner/reason classification.
+- `.codex/scripts/lib/assets.mjs` implements deterministic status checks and safe raw snapshot pruning.
+- `scripts/asset-governance.mjs` exposes dry-run by default and `--apply` only for generated `precompact-auto-*.md` retention pruning.
+- `.codex/hooks/project-ops.mjs` exposes the `asset-governance` CLI command.
+- `events.mjs` calls asset governance from `PreCompact` and `Stop`, using only severe issues as blocking conditions.
+- Bootstrap and install scripts copy `asset-governance.mjs` into target projects; the Windows installer skips/removes generated helper copies when installing into the Dong Skills source kit itself.
+- Health check verifies asset script parity between root assets and onboarding bootstrap assets.
+- Tests cover bootstrap installation, raw pruning that preserves `observations.jsonl`, and Stop escalation for severe asset bloat.
 
 ## Acceptance Criteria
-- New `codex-worktree-governance` skill exists and is routed by `using-superpowers` and `codex-project-governance`.
-- `.codex-context/worktree-state.md` is created by bootstrap and required by health checks.
-- Recovery order reads `worktree-state.md` early enough to disambiguate primary checkout versus worktree.
-- Hook commands launch through a worktree-aware wrapper or equivalent logic using hook input `cwd` when available.
-- Health check reports worktree diagnostics and still fails on missing required state files or stale asset parity.
-- Tests cover bootstrap creation, hook command encoding, recovery ordering, and worktree diagnostics.
-- Global installed skills are synced.
-- Tests, health check, and release check pass.
-- Commit is pushed to GitHub.
+- `codex-asset-governance` exists and is routed by core workflow docs.
+- `asset-governance` CLI runs through `node .codex/hooks/project-ops.mjs asset-governance`.
+- New project bootstrap installs `asset-governance.mjs`.
+- Health check enforces asset script parity.
+- Tests cover bootstrap installation, raw snapshot pruning, and Stop escalation for severe asset bloat.
+- Current stale state files are refreshed or intentionally archived.
+- `verification.md` is pruned so active recovery remains compact.
+- Global installed skills include `codex-asset-governance`.
+- Tests, health check, asset governance audit, release check, privacy scan, and diff check pass.
 
-## Open Questions
-- None.
+## Approval Status
+Approved by user on 2026-06-12.
+
+## Next Step
+Final verification, checkpoint commit, and push to `origin/main`.

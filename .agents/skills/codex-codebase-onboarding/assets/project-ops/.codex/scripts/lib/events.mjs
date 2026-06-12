@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { assetGovernanceStatus } from "./assets.mjs";
 import { fileFresh, latestChangedMtime, readText, shortList, writeJson } from "./core.mjs";
 import { gitChangedFiles, gitCheckpointStatus, gitStatusFiles } from "./git.mjs";
 import { handoffStatus, markdownStatus, meaningful, sectionContent, verificationStatus } from "./markdown.mjs";
@@ -250,6 +251,8 @@ export function preCompact(input, root, ctx) {
 
   const checkpoint = gitCheckpointStatus(root, ctx, latest);
   if (!checkpoint.ok) issues.push(checkpoint.summary);
+  const assets = assetGovernanceStatus(root, ctx);
+  issues.push(...assets.issues);
 
   if (issues.length === 0) return;
 
@@ -292,8 +295,9 @@ export function stop(input, root, ctx) {
   const statusFiles = gitStatusFiles(root);
   const latest = latestChangedMtime(root, [...new Set([...changed, ...statusFiles])]);
   const checkpoint = gitCheckpointStatus(root, ctx, latest);
+  const assets = assetGovernanceStatus(root, ctx);
 
-  if (changed.length === 0 && learning.ok && checkpoint.ok) {
+  if (changed.length === 0 && learning.ok && checkpoint.ok && assets.ok) {
     writeJson({ continue: true });
     return;
   }
@@ -322,6 +326,7 @@ export function stop(input, root, ctx) {
 
   issues.push(...learning.issues);
   if (!checkpoint.ok) issues.push(checkpoint.summary);
+  issues.push(...assets.issues);
 
   if (issues.length === 0) {
     writeJson({ continue: true });

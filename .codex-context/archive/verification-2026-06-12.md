@@ -1,0 +1,184 @@
+# Verification Archive 2026-06-12
+
+## Archived 2026-06-12T13:42:33.129Z
+
+- Diff whitespace check.
+  - Result: pass
+  - Evidence: `git diff --check` returned exit code 0.
+  - Date: 2026-06-09 21:30 +08:00
+- Global skill install check.
+  - Result: pass
+  - Evidence: `codex-architecture-governance`, `codex-docs-stewardship`, `codex-project-governance`, `codex-codebase-onboarding`, `systematic-debugging`, `codex-context-budget`, and `codex-git-checkpoint` all have `SKILL.md` under the global `.agents/skills` root.
+  - Date: 2026-06-09 21:32 +08:00
+- Learning review status.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs learning-status` reported 0 raw observations, 0 pending observations, and fresh index.
+  - Date: 2026-06-09 21:33 +08:00
+- Git checkpoint push verification for governance optimization.
+  - Result: pass
+  - Evidence: local `HEAD` and `origin/main` both pointed to `0f214afa17bfa3e4f67e7e380fd7c9bdeb7a050e` after pushing `feat(skills): add architecture and docs governance`.
+  - Date: 2026-06-09 21:42 +08:00
+- Health-check alias fix verification.
+  - Result: pass
+  - Evidence: after allowing `Latest functional commit` as a valid Git Checkpoint label, `node scripts/project-ops-health.mjs .`, `node scripts/release-check.mjs .`, `node --test tests/project-ops.test.mjs`, and `git diff --check` all passed.
+  - Date: 2026-06-09 21:56 +08:00
+- CE-inspired enhancement syntax and command smoke checks.
+  - Result: pass
+  - Evidence: `node --check` passed for `scripts/solutions.mjs`, `scripts/session-history.mjs`, `.codex/hooks/project-ops.mjs`, and `tests/project-ops.test.mjs`; `solution-status`, `solution-validate`, and `session-history scan --days 0` ran successfully through the hook CLI.
+  - Date: 2026-06-09 23:36 +08:00
+- CE-inspired enhancement regression tests.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 8/8 tests, including bootstrap of `solution-index.md`, new helper scripts, and solution frontmatter validation.
+  - Date: 2026-06-09 23:36 +08:00
+- CE-inspired enhancement health and release checks.
+  - Result: pass
+  - Evidence: `git diff --check` passed; `node scripts/project-ops-health.mjs .` reported `Issues: none`; `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-09 23:36 +08:00
+- Context budget after CE-inspired enhancement.
+  - Result: pass with known weight increase
+  - Evidence: `node .codex/hooks/project-ops.mjs context-budget` estimated about 27,717 tokens across 44 active files; largest active files stayed below the split threshold.
+  - Date: 2026-06-09 23:36 +08:00
+- Global skill install and GitHub push verification.
+  - Result: pass
+  - Evidence: global install check found all five new skills under `.agents/skills`; `git push origin main` pushed `a53936d`; `git ls-remote origin refs/heads/main` returned `a53936d0c8e036ae053e7a95fde8c5c660e2181c`.
+  - Date: 2026-06-09 23:48 +08:00
+- Recovery-order alignment regression tests.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 9/9 tests, including installed bootstrap hook recovery order, solution-index recovery excerpt, and asset parity failure coverage.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment health and release checks.
+  - Result: pass
+  - Evidence: `node scripts/project-ops-health.mjs .`, `node .codex/hooks/project-ops.mjs health-check`, `node scripts/release-check.mjs .`, and `git diff --check` all passed.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment docs, architecture, budget, solution, and learning checks.
+  - Result: pass with advisory notes
+  - Evidence: architecture scan found only `tests/project-ops.test.mjs` over the large-file threshold; docs scan found no hard issue; context budget estimated ~28,130 tokens before pruning; `solution-status` found no invalid docs; `learning-status` found no pending observations.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment global install check.
+  - Result: pass
+  - Evidence: `scripts/install-windows.ps1` installed curated skills to `%USERPROFILE%\.agents\skills` using a temporary target project; global `codex-codebase-onboarding` asset recovery contains `solution-index.md` and on-demand `STRATEGY.md` / `CONCEPTS.md` / `docs/solutions` guidance.
+  - Date: 2026-06-10 01:02 +08:00
+- State pruning after recovery alignment.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs state-prune --keep 10 --apply` archived 22 older verification entries and reduced active context budget to ~27,616 tokens across 44 active files.
+  - Date: 2026-06-10 01:02 +08:00
+- Recovery-order alignment final release verification after skill-rule update.
+  - Result: pass
+  - Evidence: `node --test tests/project-ops.test.mjs` passed 9/9 tests; `node scripts/project-ops-health.mjs .` reported `Issues: none`; `node scripts/release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan; `git diff --check` passed.
+  - Date: 2026-06-10 01:14 +08:00
+- Recovery-order alignment final global install check.
+  - Result: pass
+  - Evidence: temporary-target `scripts/install-windows.ps1` run synced global skills; global `codex-verification-loop`, `codex-docs-stewardship`, and onboarding recovery asset contain the new recovery and verification-order rules.
+  - Date: 2026-06-10 01:14 +08:00
+- Recovery-order alignment checkpoint commit.
+  - Result: pass
+  - Evidence: local checkpoint commit created with subject `fix(skills): align recovery context`; it will be amended with final handoff state before push.
+  - Date: 2026-06-10 01:18 +08:00
+- Hook activation static and simulated checks.
+  - Result: pass
+  - Evidence: `node .codex/hooks/project-ops.mjs health-check` reported `Issues: none`; simulated `SessionStart` returned `Codex Project Ops hooks are active`, the full recovery order, and a `solution-index.md` excerpt.
+  - Date: 2026-06-10 15:14 +08:00
+- Windows hook hardening syntax checks.
+  - Result: pass
+  - Evidence: `node --check scripts\project-ops-health.mjs`, `node --check .agents\skills\codex-codebase-onboarding\assets\project-ops\scripts\project-ops-health.mjs`, and `node --check tests\project-ops.test.mjs` returned exit code 0.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 12/12 tests, including encoded Windows hook contents, outer PowerShell invocation, and bad encoded-command health-check rejection.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening health and release checks.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` and `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan; `git diff --check` passed.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening global install check.
+  - Result: pass
+  - Evidence: temporary-target `scripts\install-windows.ps1` synced global skills to `%USERPROFILE%\.agents\skills`; global onboarding skill now contains the stale-config health-check repair rule and its asset health check decodes Windows hook commands.
+  - Date: 2026-06-10 15:41 +08:00
+- Windows hook hardening GitHub push verification.
+  - Result: pass
+  - Evidence: `git push origin main` pushed `d40fc94ac0e1edbadc61fd741de9e42b0f61d214`; `git ls-remote origin refs/heads/main` returned the same SHA.
+  - Date: 2026-06-10 15:49 +08:00
+- PreCompact fallback syntax checks.
+  - Result: pass
+  - Evidence: `node --check .codex\scripts\lib\events.mjs`, asset `events.mjs`, `.codex\hooks\project-ops.mjs`, and asset hook entrypoint all returned exit code 0.
+  - Date: 2026-06-10 16:38 +08:00
+- PreCompact fallback regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 13/13 tests, including explicit manual PreCompact blocking and automatic PreCompact emergency handoff allow behavior.
+  - Date: 2026-06-10 16:38 +08:00
+- PreCompact fallback health and release checks.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` reported `Issues: none`; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan; `git diff --check` passed.
+  - Date: 2026-06-10 16:38 +08:00
+- PreCompact fallback learning and global install checks.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs learning-status` reported 0 raw observations, 0 pending observations, 0 candidate instincts, and fresh index; `scripts\install-windows.ps1` synced global skills, and global `codex-project-governance`, onboarding asset `events.mjs`, and onboarding AGENTS snippet contain the automatic PreCompact emergency handoff behavior.
+  - Date: 2026-06-10 16:38 +08:00
+- Final PreCompact fallback release check before commit.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after global sync and state refresh.
+  - Date: 2026-06-10 16:44 +08:00
+- PreCompact fallback local checkpoint.
+  - Result: pass
+  - Evidence: local functional commit `e063b22bc7f62ee775b02b3421cf06e4983dc168` was created with subject `fix(hooks): allow automatic precompact recovery`; a state-refresh commit will record this handoff before push.
+  - Date: 2026-06-10 16:44 +08:00
+- PostCompact hook output schema repair syntax checks.
+  - Result: pass
+  - Evidence: `node --check .codex\scripts\lib\events.mjs` and asset `events.mjs` returned exit code 0.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact hook output schema repair regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 14/14 tests, including `PostCompact emits only common hook output fields` and `PreCompact` auto without `hookSpecificOutput`.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact hook output schema repair health and release checks.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` reported `Issues: none`; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact hook output schema repair global and target sync checks.
+  - Result: pass
+  - Evidence: `scripts\install-windows.ps1` synced global skills; Science Evo project hook runtime was refreshed, `node --check .codex\hooks\project-ops.mjs` and `node --check .codex\scripts\lib\events.mjs` passed there, simulated `PostCompact` returned `{"continue":true}`, and `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
+  - Date: 2026-06-10 21:04 +08:00
+- Final PostCompact schema repair release check before commit.
+  - Result: pass
+  - Evidence: `git diff --check` passed; `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after state refresh.
+  - Date: 2026-06-10 21:04 +08:00
+- PostCompact schema repair local checkpoint.
+  - Result: pass
+  - Evidence: local functional commit `b01c78737d97430806911ba036b672565889d74a` was created with subject `fix(hooks): use common postcompact output`; a state-refresh commit will be pushed with it.
+  - Date: 2026-06-10 21:04 +08:00
+- Dong Skills lightweight workflow gate regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 14/14 tests after skill gate, template, bootstrap, and verification-rule updates.
+  - Date: 2026-06-12 16:19 +08:00
+- Dong Skills lightweight workflow gate health check.
+  - Result: pass
+  - Evidence: `node scripts\project-ops-health.mjs .` reported `Issues: none`.
+  - Date: 2026-06-12 16:19 +08:00
+- Dong Skills lightweight workflow gate release check.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
+  - Date: 2026-06-12 16:19 +08:00
+- Global skill sync parity for lightweight workflow gates.
+  - Result: pass
+  - Evidence: SHA-256 hashes for changed skill files matched between the source repository and `%USERPROFILE%\.agents\skills`.
+  - Date: 2026-06-12 16:19 +08:00
+- Worktree governance regression tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 16/16 tests, including hook launcher dispatch by input `cwd`, linked worktree health diagnostics, bootstrap `worktree-state.md`, and recovery-order assertions.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance health check.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none` and displayed primary-checkout worktree diagnostics for the source repository.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance release check.
+  - Result: pass
+  - Evidence: `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan after adding worktree governance and launcher files.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance global skill sync parity.
+  - Result: pass
+  - Evidence: SHA-256 hashes and file lists matched between source and global installed skill directories for `codex-codebase-onboarding`, `codex-git-checkpoint`, `codex-project-governance`, `executing-plans`, `using-superpowers`, and `codex-worktree-governance`.
+  - Date: 2026-06-12 19:14 +08:00
+- Worktree governance GitHub push verification.
+  - Result: pass
+  - Evidence: `git push origin main` pushed functional commit `a0533c3e88f84f4fc53868ccfc8a5c9383cb0218`; `git ls-remote origin refs/heads/main` returned the same SHA before this state-only handoff refresh.
+  - Date: 2026-06-12 19:20 +08:00

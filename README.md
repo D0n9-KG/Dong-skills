@@ -37,6 +37,7 @@ Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solution
 - 架构治理：`codex-architecture-governance` 审查大文件、平铺目录、耦合、重复概念、边界和可测试性。
 - 文档治理：`codex-docs-stewardship` 清理 README、AGENTS、docs、`.codex-context/`、`docs/solutions/` 和 `CONCEPTS.md`。
 - 上下文预算：`codex-context-budget` 检查 skills、hooks、state files、docs 是否膨胀。
+- 资产生命周期治理：`codex-asset-governance` 审计 docs/state/raw/archive/scripts/hooks/tests/code 资产，防止工作区一味叠加。
 - 发布安全：`release-check` 跑语法、测试、隐私和运行时产物检查。
 
 ### 包含的 skills
@@ -59,6 +60,7 @@ Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solution
 | `receiving-code-review` | 判断并处理 review 反馈。 |
 | `codex-architecture-governance` | 治理项目结构、模块边界、耦合和可测试性。 |
 | `codex-docs-stewardship` | 同步和清理文档、状态文件、归档和知识库。 |
+| `codex-asset-governance` | 统一治理 docs/state/raw/archive/scripts/hooks/tests/code 资产生命周期。 |
 | `codex-learning-memory` | 沉淀短的项目 instincts 和用户纠正。 |
 | `codex-solution-memory` | 沉淀结构化 solution docs 和项目词汇。 |
 | `codex-session-history` | 安全检索 prior sessions，避免完整 transcript 污染上下文。 |
@@ -108,6 +110,7 @@ Dong Skills 使用项目级 hooks，不安装全局 hooks。每个项目可以�
 
 ```powershell
 node .codex/hooks/project-ops.mjs context-budget
+node .codex/hooks/project-ops.mjs asset-governance
 node .codex/hooks/project-ops.mjs learning-status
 node .codex/hooks/project-ops.mjs instinct-status
 node .codex/hooks/project-ops.mjs instinct-validate
@@ -183,6 +186,7 @@ It helps with:
 - `.codex-context/solution-index.md` keeps the active recovery pointer compact.
 - `.codex-context/worktree-state.md` records whether Codex is operating in the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, or an unknown workspace.
 - Project hooks inject recovery context, check compaction readiness, track changed artifacts, and block final stopping when state is stale. Automatic PreCompact prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, and writes a raw snapshot as backup.
+- `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It uses Keep / Update / Consolidate / Replace / Delete / Stale / Raw-Prune classifications. Dry-run is default; `--apply` only prunes generated `precompact-auto-*.md` raw snapshots that exceed retention.
 - `codex-review-panel` adds persona-based review.
 - `codex-evidence-capture` records real behavior evidence for observable changes.
 - `release-check` runs syntax, tests, privacy, and runtime-artifact checks.
@@ -221,6 +225,7 @@ From the target project:
 
 ```powershell
 node .codex/hooks/project-ops.mjs context-budget
+node .codex/hooks/project-ops.mjs asset-governance
 node .codex/hooks/project-ops.mjs learning-status
 node .codex/hooks/project-ops.mjs instinct-status
 node .codex/hooks/project-ops.mjs instinct-validate
@@ -236,6 +241,7 @@ From this kit:
 
 ```powershell
 node scripts/context-budget.mjs "C:\path\to\repo"
+node scripts/asset-governance.mjs "C:\path\to\repo"
 node scripts/instincts.mjs status "C:\path\to\repo"
 node scripts/solutions.mjs "C:\path\to\repo" status
 node scripts/session-history.mjs "C:\path\to\repo" scan --days 7 --keywords auth,token

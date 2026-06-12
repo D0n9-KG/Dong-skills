@@ -7,7 +7,7 @@ description: Keep project docs, AGENTS guidance, README, docs, and `.codex-conte
 
 ## Purpose
 
-Act as an editor, not a recorder. The goal is a small, accurate knowledge system that lets a human or future Codex session recover the project quickly.
+Act as an editor, not a recorder. The goal is a small, accurate knowledge system that lets a human or future Codex session recover the project quickly. For whole-workspace lifecycle sweeps that include raw files, archives, generated evidence, scripts, hooks, tests, or code assets, use `codex-asset-governance` first.
 
 ## Inventory First
 
@@ -24,6 +24,12 @@ Act as an editor, not a recorder. The goal is a small, accurate knowledge system
 
 ```powershell
 node "<skill-dir>\scripts\docs-scan.mjs" "<project-root>"
+```
+
+For broader asset lifecycle issues, also run:
+
+```powershell
+node .codex/hooks/project-ops.mjs asset-governance
 ```
 
 3. Mark each file internally as `update`, `delete/archive`, or `leave`.

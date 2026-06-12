@@ -274,6 +274,7 @@ Get-ChildItem -LiteralPath $sourceCodexScripts -Force | ForEach-Object {
   Copy-Item -LiteralPath $_.FullName -Destination $targetScriptDir -Recurse -Force
 }
 Copy-Item -LiteralPath (Join-Path $sourceScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "asset-governance.mjs") -Destination (Join-Path $targetScriptDir "asset-governance.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "state-prune.mjs") -Destination (Join-Path $targetScriptDir "state-prune.mjs") -Force

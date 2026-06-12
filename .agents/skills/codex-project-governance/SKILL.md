@@ -61,6 +61,7 @@ Tiny mechanical edits can use a compact spec and direct implementation. If the b
 - `codex-strategy-anchor`: create or maintain `STRATEGY.md` as upstream grounding for product/project direction.
 - `codex-docs-stewardship`: milestone cleanup, stale docs, state-file archiving, README/AGENTS/docs reconciliation, or handoff cleanliness.
 - `codex-context-budget`: audit skill, hook, and state-file context cost.
+- `codex-asset-governance`: lifecycle audit and cleanup for state files, raw snapshots, archives, docs, scripts, hooks, tests, generated evidence, and code assets.
 
 Load only the skill needed for the current phase.
 
@@ -76,10 +77,11 @@ Load only the skill needed for the current phase.
 8. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
 9. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.
 10. Review: use `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings.
-11. Steward docs: at milestones or when docs/state files grow stale, use `codex-docs-stewardship`; archive old verification evidence when useful.
-12. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions. If the signal is about improving Dong Skills hooks, skills, docs, installers, or governance behavior, record it in `docs/improvements/backlog.md` instead of project memory.
-13. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
-14. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
+11. Govern assets: at milestones, compaction risk, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, unsafe, or bloated, use `codex-asset-governance`; delegate detailed docs cleanup to `codex-docs-stewardship`.
+12. Steward docs: when README/AGENTS/docs/state files need reconciliation, use `codex-docs-stewardship`; archive old verification evidence when useful.
+13. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions. If the signal is about improving Dong Skills hooks, skills, docs, installers, or governance behavior, record it in `docs/improvements/backlog.md` instead of project memory.
+14. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
+15. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
 
 ## Hooks
 
@@ -88,9 +90,10 @@ When `.codex/hooks/project-ops.mjs` and `.codex/hooks.json` are installed and tr
 - `SessionStart` injects recovery context.
 - `UserPromptSubmit` captures likely learning signals as raw observations, not active memory.
 - `PostToolUse` blocks after non-context file changes until `artifact-index.md` is fresh.
-- `PreCompact` blocks stale manual compaction; for automatic compaction, it writes an emergency handoff snapshot and lets compaction continue.
+- `PreCompact` blocks stale manual compaction; for automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves meaningful existing handoff content below it, writes a raw backup snapshot, and lets compaction continue.
 - `PostCompact` confirms compaction completion with common hook output only; recovery context is injected by `SessionStart` when the start source is `compact`.
 - `Stop` blocks final stopping when state, artifacts, verification, Git checkpoint notes, handoff, or learning review are stale.
+- `Stop` also blocks severe asset bloat or unsafe tracked raw/runtime artifacts reported by asset governance.
 
 If a hook blocks, update the named state files. Do not disable hooks unless the user explicitly asks.
 
@@ -105,6 +108,7 @@ Before any completion claim:
 5. Use `codex-git-checkpoint` to commit/push a checkpoint, or record the deferred reason in `handoff-summary.md`.
 6. If `.codex-context/raw/observations.jsonl` has pending learning events, use `codex-learning-memory` to save, absorb, or drop them, then refresh `learned-instincts.md`.
 7. If verified work produced a durable solution or stale learning signal, use `codex-solution-memory` or record why it is not worth capturing. If the learning is about Dong Skills itself, update `docs/improvements/backlog.md` instead.
-8. Refresh `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed.
-9. Refresh `handoff-summary.md`.
-10. Then answer the user with verified state and remaining gaps.
+8. Run `codex-asset-governance` when assets, docs, raw snapshots, archives, generated evidence, or active state files grew during the task; prune or record deferred cleanup.
+9. Refresh `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed.
+10. Refresh `handoff-summary.md`.
+11. Then answer the user with verified state and remaining gaps.

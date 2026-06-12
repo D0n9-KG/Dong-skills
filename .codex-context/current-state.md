@@ -1,25 +1,42 @@
 # Current State
 
 ## Objective
-Optimize Dong Skills so automatic `PreCompact` preserves useful handoff context and memory capture clearly separates reusable project knowledge from Dong Skills improvement feedback.
+Add first-class asset lifecycle governance to Dong Skills so docs, state files, raw snapshots, archives, scripts, hooks, tests, generated evidence, and code assets do not accumulate stale or redundant material.
 
 ## Latest User Instruction
-User asked to implement the three agreed optimizations, with an explicit distinction between ordinary learning memory and Dong Skills optimization backlog entries.
+User asked to optimize Dong Skills after identifying that state files, records, docs, raw files, and code assets need lifecycle governance instead of only hook reminders.
 
 ## Current Phase
-delivery
+Final verification and checkpoint.
+
+## Implemented
+- Added `codex-asset-governance` as a curated skill.
+- Added deterministic asset governance runtime in `.codex/scripts/lib/assets.mjs`.
+- Added CLI entry `node .codex/hooks/project-ops.mjs asset-governance`.
+- Added `scripts/asset-governance.mjs` and onboarding bootstrap copies.
+- Wired severe asset governance issues into `PreCompact` and `Stop`.
+- Updated install/bootstrap scripts, health checks, README, AGENTS snippets, routing skills, and tests.
+- Added installer self-install cleanup so Dong Skills source does not keep duplicate generated `.codex/scripts/*.mjs` helper copies.
+- Synced global installed skills to `%USERPROFILE%\.agents\skills`, including `codex-asset-governance`.
 
 ## Active Assumptions
-- Orange hook output in the screenshot is hook feedback or blocking guidance, not a Node/runtime crash.
-- Automatic `PreCompact` should keep compaction moving under context pressure, but must not erase the useful existing handoff from the main recovery file.
-- Ordinary memory should capture only future-useful patterns that reduce later trial-and-error.
-- Dong Skills hook, skill, README, installer, bootstrap, recovery, or governance improvement signals belong in `docs/improvements/backlog.md`, not project instincts or solution memory.
+- Asset governance is a main Dong Skills feature, not an optional module.
+- `observations.jsonl` is learning review input and must not be pruned by generic raw cleanup.
+- Generated `precompact-auto-*.md` snapshots are short-lived backup/audit artifacts and can be pruned by retention.
+- Hook blocking should be limited to severe bloat or unsafe tracked raw/runtime artifacts.
 
 ## Blockers
 - None.
 
+## Verification Snapshot
+- Asset governance dry-run: pass, no blocking issues or advisories.
+- Health check: pass, no issues.
+- Tests: pass, 19/19.
+- Release check: pass, including syntax, tests, privacy scan, and runtime artifact scan.
+- `git diff --check`: pass after state-file EOF cleanup.
+
 ## Next Action
-No active implementation step. Functional and state checkpoints are pushed; target projects can refresh via `codex-codebase-onboarding` or bootstrap repair.
+Commit and push the verified asset governance update.
 
 ## Last Updated
-2026-06-12 21:05 +08:00
+2026-06-12 22:25 +08:00

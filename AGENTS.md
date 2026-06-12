@@ -1,3 +1,5 @@
+
+<!-- codex-project-ops:start -->
 # Codex Project Ops
 
 Use Chinese by default unless the user asks otherwise or the project requires another language.
@@ -126,3 +128,5 @@ After compaction, recover in this order:
 Before claiming work is complete, run fresh verification or record the explicit verification gap in `verification.md`. For observable UI/CLI/API/artifact/workflow changes, capture product evidence or explicitly record why it is blocked/not applicable. Then use `codex-git-checkpoint` to commit/push a checkpoint or record why it is deferred in `handoff-summary.md`, and refresh `handoff-summary.md`.
 
 For installation or release hygiene, run `node .codex/hooks/project-ops.mjs health-check` from the target project when hooks are installed.
+
+<!-- codex-project-ops:end -->

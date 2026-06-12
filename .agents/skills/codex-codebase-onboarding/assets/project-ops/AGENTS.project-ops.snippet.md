@@ -31,6 +31,7 @@ Use only the bundled curated set by default:
 - `codex-worktree-governance`
 - `codex-architecture-governance`
 - `codex-docs-stewardship`
+- `codex-asset-governance`
 - `codex-review-panel`
 - `codex-solution-memory`
 - `codex-session-history`
@@ -81,6 +82,10 @@ If present:
 Use `codex-architecture-governance` before or after structural changes, major refactors, large-file growth, flat-directory growth, unclear ownership, or repeated bugs caused by coupling. Keep architecture facts in `project-map.md`, decisions in `decisions.md`, and structural risks in `risks.md`.
 
 Use `codex-docs-stewardship` at milestones, before handoff, after API/architecture changes, or when README/AGENTS/docs/.codex-context may be stale. Delete, merge, or archive stale docs instead of keeping misleading notes.
+
+Use `codex-asset-governance` before milestone handoff, compaction, release, or when docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, or code assets may be stale, duplicated, orphaned, unsafe, or bloated. Classify assets as Keep, Update, Consolidate, Replace, Delete, Stale, or Raw-Prune.
+
+Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle audit. Use `--apply` only for safe pruning of generated `precompact-auto-*.md` raw snapshots; do not prune `observations.jsonl` generically.
 
 Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 

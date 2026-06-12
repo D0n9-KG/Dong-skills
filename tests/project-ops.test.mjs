@@ -12,6 +12,7 @@ const bootstrap = path.join(root, ".agents", "skills", "codex-codebase-onboardin
 const statePrune = path.join(root, "scripts", "state-prune.mjs");
 const solutions = path.join(root, "scripts", "solutions.mjs");
 const health = path.join(root, "scripts", "project-ops-health.mjs");
+const assetGovernance = path.join(root, "scripts", "asset-governance.mjs");
 
 function decodePowerShellEncodedCommand(command) {
   const match = String(command).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
@@ -113,7 +114,7 @@ function readyHealthFixture(projectRoot) {
   write(path.join(projectRoot, ".codex", "hooks", "project-ops.mjs"), "console.log('root hook');\n");
   write(path.join(projectRoot, ".codex", "hooks", "launch-project-ops.mjs"), "console.log('launcher');\n");
   write(path.join(projectRoot, ".codex", "scripts", "lib", "core.mjs"), "export const value = 1;\n");
-  for (const scriptName of ["instincts.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["instincts.mjs", "asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
     write(path.join(projectRoot, "scripts", scriptName), "#!/usr/bin/env node\n");
   }
   write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n");
@@ -266,6 +267,7 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.match(gitignore, /!\.codex-context\/raw\/\.gitkeep/);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "core.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "asset-governance.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "solutions.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "session-history.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "hooks", "launch-project-ops.mjs")), true);
@@ -595,6 +597,60 @@ test("state-prune archives old verification commands and keeps recent evidence",
   const archive = fs.readFileSync(path.join(ctx, "archive", archives[0]), "utf8");
   assert.match(archive, /command 1/);
   assert.match(archive, /command 2/);
+});
+
+test("asset-governance prunes only excess precompact raw snapshots", () => {
+  const project = tempProject();
+  const raw = path.join(project, ".codex-context", "raw");
+  fs.mkdirSync(raw, { recursive: true });
+  write(path.join(raw, "observations.jsonl"), "{\"status\":\"unreviewed\"}\n");
+
+  for (let index = 0; index < 7; index += 1) {
+    const file = path.join(raw, `precompact-auto-2026-06-12T00-00-0${index}-000Z.md`);
+    write(file, `snapshot ${index}\n`);
+    const time = new Date(Date.now() - index * 10_000);
+    fs.utimesSync(file, time, time);
+  }
+
+  const out = execFileSync(process.execPath, [assetGovernance, project, "--keep-precompact", "3", "--raw-days", "999", "--apply"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Deleted 4 snapshot/);
+
+  const remaining = fs.readdirSync(raw);
+  assert.equal(remaining.filter((name) => /^precompact-auto-/.test(name)).length, 3);
+  assert.equal(remaining.includes("observations.jsonl"), true);
+});
+
+test("Stop blocks severe asset governance bloat", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  readyState(project, `- Latest commit: not needed
+- Push state: no remote
+- Files included: none
+- Files intentionally left uncommitted: .codex-context state files
+- Deferred reason: fixture state is intentionally uncommitted
+- Next checkpoint: none
+`);
+
+  const commands = Array.from({ length: 41 }, (_, index) => `- command ${index + 1}\n  - Result: pass`).join("\n");
+  write(path.join(project, ".codex-context", "verification.md"), `# Verification
+
+## Commands Run
+${commands}
+
+## Product Evidence
+- None.
+
+## Not Yet Verified
+- None.
+`);
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /verification\.md has 41 command entries/);
 });
 
 test("health check fails when bootstrap assets drift from root files", () => {

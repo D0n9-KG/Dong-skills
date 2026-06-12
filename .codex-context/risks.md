@@ -10,6 +10,8 @@
 - Full `docs/solutions/` bodies and session histories must stay on-demand; active recovery should use `solution-index.md` and targeted reads.
 - Automatic recovery now injects a compact `solution-index.md` excerpt; keep that file short enough to remain useful after compaction.
 - Automatic PreCompact emergency handoff is a fallback, not a substitute for deliberate phase-boundary handoffs; after recovery, state files still need review.
+- Asset governance can become noisy if thresholds are too low; only severe active state bloat and unsafe tracked raw/runtime artifacts should block hooks.
+- Raw snapshot pruning is intentionally narrow; `observations.jsonl` remains governed by learning review, not generic raw cleanup.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -26,11 +28,13 @@
 - Scan scripts are heuristic only and must not drive automatic refactors without review.
 - `solutions.mjs` validates a compact frontmatter contract, not semantic truth; stale or misleading solution docs still require human/agent review against current code.
 - `session-history.mjs` searches local agent history metadata and keyword counts only; it does not guarantee complete recovery of prior work.
+- `asset-governance.mjs` is a lifecycle signal source, not semantic proof that every doc is correct.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.
 - Split hook modules reduce file concentration but add asset-sync risk.
 - State archive can grow over time; budget excludes it, so docs stewardship should review archive size separately.
+- PreCompact raw snapshots can grow over time; asset governance should prune old generated snapshots by count or age.
 - Adding CE-inspired skills increases the global skill set; routing docs must stay concise and skill details should remain on demand.
 
 ## Documentation Risks

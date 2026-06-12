@@ -19,7 +19,11 @@
 - Windows `commandWindows` hook invocations use PowerShell `-EncodedCommand`; inline nested `-Command "$root = ... 2>$null"` is rejected because Codex may execute the configured command through an outer PowerShell layer that expands variables first.
 - `codex-codebase-onboarding` runs a health check even when all bootstrap files exist, then reruns bootstrap once if stale hook commands, helper scripts, templates, or managed guidance are detected.
 - `PreCompact` uses different behavior for manual and automatic compaction: explicit manual compaction still hard-blocks stale governance state, while automatic or unknown-trigger compaction writes an emergency handoff and returns `continue: true`.
-- Automatic `PreCompact` stores the previous handoff under `.codex-context/raw/precompact-auto-*.md` before overwriting `.codex-context/handoff-summary.md` with the emergency recovery snapshot.
+- Automatic `PreCompact` prepends an emergency notice to `.codex-context/handoff-summary.md`, preserves meaningful existing handoff content below it, and stores a raw `.codex-context/raw/precompact-auto-*.md` backup for audit/recovery.
+- Dong Skills has first-class asset lifecycle governance through `codex-asset-governance` and `asset-governance.mjs`.
+- Asset governance classifies accumulated material as Keep, Update, Consolidate, Replace, Delete, Stale, or Raw-Prune.
+- `asset-governance --apply` is allowed to prune generated `precompact-auto-*.md` snapshots that exceed retention, but must not delete `observations.jsonl`.
+- Severe active state bloat or tracked raw/runtime artifacts can block Stop through asset governance; lower-severity lifecycle findings remain audit advisories.
 - `PostCompact` must emit common hook output only. Full recovery context remains owned by `SessionStart` when the start source is `compact`.
 - Dong Skills keeps a lightweight workflow rather than importing the full Superpowers ritual, but non-trivial work now requires explicit scope, design/spec approval, plan, execution approval, verification, and checkpoint boundaries.
 - `executing-plans` treats a written plan as insufficient by itself; execution requires `## Execution Approval` in `.codex-context/plan-progress.md` unless the user explicitly requested plan-then-execute.
@@ -37,3 +41,5 @@
 - Hard-blocking automatic `PreCompact` as the default safety mechanism, because it can leave Codex stopped under context pressure without reliable chat-visible feedback.
 - Reusing `SessionStart` `hookSpecificOutput.additionalContext` for `PostCompact`, because Codex rejects event-specific output on `PostCompact`.
 - Treating `continue`, vague acknowledgment, or a written plan as automatic permission to implement.
+- Generic raw cleanup that deletes `observations.jsonl`.
+- Keeping duplicate or obsolete durable docs in archive folders when Git history is sufficient.

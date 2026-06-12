@@ -74,3 +74,18 @@ Use this backlog as the global queue for Dong Skills improvement candidates.
 
 Verification:
 Update skill and project snippet guidance so future agents route Dong Skills optimization signals here.
+
+### 2026-06-12 - Add Asset Lifecycle Governance
+
+Status: accepted
+Affected area: skills / hooks / state files / raw lifecycle / docs governance
+Source: user feedback
+
+Signal:
+Dong Skills had separate controls for docs, context budget, architecture, raw observations, solution memory, verification pruning, and Git checkpointing, but no unified lifecycle governance for all accumulated assets.
+
+Decision:
+Add `codex-asset-governance` and `asset-governance.mjs` as the main lifecycle sweep for docs, `.codex-context`, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets.
+
+Verification:
+Add tests for bootstrap installation, safe raw PreCompact snapshot pruning, and Stop escalation for severe active-state bloat.

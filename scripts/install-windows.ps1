@@ -28,6 +28,11 @@ if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
   throw "Target project root not found: $TargetProjectRoot"
 }
 
+$trimChars = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+$resolvedTargetProjectRoot = ([System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $TargetProjectRoot).Path)).TrimEnd($trimChars)
+$resolvedKitRoot = ([System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $kitRoot).Path)).TrimEnd($trimChars)
+$isKitSelfInstall = [System.String]::Equals($resolvedTargetProjectRoot, $resolvedKitRoot, [System.StringComparison]::OrdinalIgnoreCase)
+
 New-Item -ItemType Directory -Force -Path $TargetSkillsRoot | Out-Null
 
 Get-ChildItem -LiteralPath $sourceSkillsRoot -Directory | ForEach-Object {
@@ -279,12 +284,27 @@ Copy-Item -LiteralPath (Join-Path $sourceCodex "hooks\launch-project-ops.mjs") -
 Get-ChildItem -LiteralPath $sourceCodexScripts -Force | ForEach-Object {
   Copy-Item -LiteralPath $_.FullName -Destination $targetScriptDir -Recurse -Force
 }
-Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "state-prune.mjs") -Destination (Join-Path $targetScriptDir "state-prune.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "solutions.mjs") -Destination (Join-Path $targetScriptDir "solutions.mjs") -Force
-Copy-Item -LiteralPath (Join-Path $sourceProjectScripts "session-history.mjs") -Destination (Join-Path $targetScriptDir "session-history.mjs") -Force
+$projectHelperScripts = @(
+  "instincts.mjs",
+  "asset-governance.mjs",
+  "project-ops-health.mjs",
+  "release-check.mjs",
+  "state-prune.mjs",
+  "solutions.mjs",
+  "session-history.mjs"
+)
+if ($isKitSelfInstall) {
+  foreach ($scriptName in $projectHelperScripts) {
+    $generatedScript = Join-Path $targetScriptDir $scriptName
+    if (Test-Path -LiteralPath $generatedScript) {
+      Remove-Item -LiteralPath $generatedScript -Force
+    }
+  }
+} else {
+  foreach ($scriptName in $projectHelperScripts) {
+    Copy-Item -LiteralPath (Join-Path $sourceProjectScripts $scriptName) -Destination (Join-Path $targetScriptDir $scriptName) -Force
+  }
+}
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"

@@ -24,7 +24,8 @@ For project work, keep this order:
 5. **Debug:** use `systematic-debugging` for bugs, failures, regressions, or unexpected behavior.
 6. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
 7. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
-8. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
+8. **Asset cleanup:** use `codex-asset-governance` before milestone handoff, compaction, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, or bloated.
+9. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
 
 Do not jump from scope directly to implementation for multi-step or behavior-changing work.
 
@@ -37,6 +38,7 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Starting, resuming, finishing, or debugging path confusion in a Git worktree: `codex-worktree-governance`.
 - Bug, failing test, build failure, regression, or unexpected behavior: `systematic-debugging`.
 - Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
+- Stale, duplicate, orphaned, bloated, unsafe, or lifecycle-unclear docs/state/raw/code assets: `codex-asset-governance`.
 - Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
 - Prior session context needed beyond project files: `codex-session-history`.
 - Before completion claim: `verification-before-completion`.
@@ -66,6 +68,7 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 - Before long pauses, compaction, or final response: refresh `handoff-summary.md`.
 - Before long pauses or final response with meaningful changes: commit/push a Git checkpoint or record the deferred reason in `handoff-summary.md`.
 - Before success claims: run or record verification in `verification.md`.
+- Before milestone handoff or release: run `asset-governance` when state files, raw snapshots, archives, solution docs, or generated assets have grown.
 
 ## Tool Mapping
 

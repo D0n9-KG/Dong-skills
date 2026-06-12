@@ -59,6 +59,7 @@ if (cliMode === "session-history") {
 }
 
 const projectOpsScripts = {
+  "asset-governance": "asset-governance.mjs",
   "health-check": "project-ops-health.mjs",
   "release-check": "release-check.mjs",
   "state-prune": "state-prune.mjs"

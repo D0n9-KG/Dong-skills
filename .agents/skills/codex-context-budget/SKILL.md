@@ -27,6 +27,12 @@ If `.codex-context/verification.md` is bloated with old command history, preview
 node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 ```
 
+For broader asset lifecycle pressure, run:
+
+```powershell
+node .codex/hooks/project-ops.mjs asset-governance
+```
+
 ## What To Inspect
 
 - `AGENTS.md` and nested `AGENTS.md`
@@ -47,6 +53,7 @@ node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 - `AGENTS.md` over 250 lines: candidate for slimming
 - state files with raw logs pasted in: move logs to `.codex-context/raw/`
 - old verification history: archive with `state-prune` instead of deleting evidence
+- old `precompact-auto-*.md` raw snapshots: prune with `asset-governance --apply`; do not prune `observations.jsonl` generically
 - `docs/solutions/` growth: consolidate duplicates with `codex-solution-memory`; do not paste all solutions into active state
 - session history: search metadata first with `codex-session-history`; never bulk-load transcripts
 

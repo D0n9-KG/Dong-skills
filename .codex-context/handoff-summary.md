@@ -1,92 +1,93 @@
 # Handoff Summary
 
 ## Objective
-Optimize Dong Skills memory and compaction governance so recovery is safer and learning stores stay clean.
+Add first-class asset lifecycle governance to Dong Skills so long-running projects do not accumulate stale state, raw snapshots, archives, generated evidence, duplicate docs, orphan scripts, or misleading code assets.
 
 ## Latest User Instruction
-Implement the three agreed optimizations and clearly distinguish ordinary reusable memory from Dong Skills optimization backlog entries.
+User asked to optimize Dong Skills after identifying that current hooks/state files help but do not fully govern the lifecycle of docs, records, raw files, archives, scripts, and code assets.
 
 ## Approved Scope / Spec
-- Automatic `PreCompact` must not overwrite useful `handoff-summary.md` content.
-- Learning memory should capture only future-useful, reusable patterns that reduce later trial-and-error.
-- Dong Skills self-improvement signals should be recorded separately in `docs/improvements/backlog.md`.
+- Add a main `codex-asset-governance` skill.
+- Add deterministic `asset-governance` audit/prune command.
+- Keep `observations.jsonl` for learning review and only prune generated `precompact-auto-*.md` snapshots through raw retention.
+- Hook blocking should be limited to severe bloat or unsafe tracked raw/runtime artifacts.
+- Keep Dong Skills meta-optimization backlog separate from ordinary project memory.
+- Keep the Dong Skills source repo clean when the installer is run against the kit itself.
 
 ## Plan Status
-Runtime, bootstrap assets, tests, skill docs, README, and state files have been updated. Regression tests, health check, release check, learning-status check, privacy spot check, global skill parity, Git push verification, and state refresh have passed.
+Implementation, docs, verification, and global install sync are complete. Final checkpoint commit and push are pending.
 
 ## Files Modified
+- `AGENTS.md`
+- `.agents/skills/codex-asset-governance/SKILL.md`
+- `.codex/scripts/lib/assets.mjs`
+- `scripts/asset-governance.mjs`
+- `.codex/hooks/project-ops.mjs`
 - `.codex/scripts/lib/events.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/assets.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
-- `.codex/scripts/lib/recovery.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/asset-governance.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `scripts/install-windows.ps1`
+- `scripts/project-ops-health.mjs`
 - `tests/project-ops.test.mjs`
-- `.agents/skills/codex-learning-memory/SKILL.md`
-- `.agents/skills/codex-solution-memory/SKILL.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
 - `AGENTS.project-ops.snippet.md`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
 - `README.md`
+- `.agents/skills/using-superpowers/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
+- `.agents/skills/codex-docs-stewardship/SKILL.md`
+- `.agents/skills/codex-context-budget/SKILL.md`
 - `docs/improvements/backlog.md`
-- `scripts/release-check.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`
-- `.gitignore`
-- `.codex-context/artifact-index.md`
-- `.codex-context/current-state.md`
-- `.codex-context/plan-progress.md`
-- `.codex-context/verification.md`
-- `.codex-context/handoff-summary.md`
-
-## Files Read But Not Changed
-- Existing verification history and previous handoff state.
-- Hook feedback screenshot showing orange PostToolUse/Stop guidance.
+- `.codex-context/*` state and archive files
 
 ## Decisions Made
-- Automatic `PreCompact` now prepends `PreCompact Emergency Notice` and `PreCompact Issues` to the main handoff, while preserving a meaningful previous handoff below the notice.
-- If previous handoff content is empty or template-like, the hook writes emergency fallback sections instead of pretending useful prior context exists.
-- Recovery excerpts prioritize the emergency notice and issues after compaction.
-- Ordinary learning memory is limited to reusable future behavior, not one-time progress or loose notes.
-- Dong Skills self-improvement belongs in `docs/improvements/backlog.md`, not `.codex-context/instincts` or `docs/solutions`.
-
-## Open Questions And Assumptions
-- Assumption: existing target projects need rerunning `codex-codebase-onboarding` or bootstrap repair to receive these project-local hook/runtime updates.
-- Assumption: orange hook output in Codex UI can be acceptable governance feedback when `continue:false` or stale-state guidance is intentional.
-
-## Risks
-- Automatic compaction can still happen at context pressure; the hook cannot make the model perform a full semantic summary at that moment.
-- Target projects running old installed assets will not get this behavior until refreshed.
-- The new backlog must be reviewed periodically, or it can become another stale document.
+- Asset governance is a main lifecycle skill and a CLI audit, not a lightweight optional note.
+- `asset-governance --apply` only deletes generated `precompact-auto-*.md` snapshots that exceed retention.
+- `observations.jsonl` is never pruned by generic asset cleanup.
+- `PreCompact` and `Stop` consume only severe asset governance issues as blockers.
+- Ordinary stale/duplicate/orphan findings stay as audit advisories unless they are unsafe or large enough to block.
+- Installer self-install into the Dong Skills source kit removes generated `.codex/scripts/*.mjs` helper copies so root `scripts/` remains the canonical helper source.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs` passed 17/17 tests.
-- `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
-- `git diff --check` passed.
-- `node scripts\release-check.mjs .` passed health, syntax, PowerShell parse, tests, privacy scan, and runtime-artifact scan.
-- `node .codex\hooks\project-ops.mjs learning-status` reported no pending observations.
-- Global installed changed skill directories match source by SHA-256/file-list parity.
-- Manual privacy keyword spot check found only expected fake secret strings in tests; release privacy scan passed.
-- `git push origin main` advanced `origin/main` to `1cb6bf92edac65cd3cf5709a6fba9842fd3d8253`.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no blocking issues or advisories.
+- `node .codex\hooks\project-ops.mjs health-check`: pass, no issues.
+- `node --test tests\project-ops.test.mjs`: pass, 19/19 tests.
+- `node scripts\release-check.mjs .`: pass, including syntax, tests, privacy scan, and runtime artifact scan.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1 -TargetProjectRoot .`: pass; global skill sync completed and source self-install helper duplicates were removed.
+- Global `%USERPROFILE%\.agents\skills\codex-asset-governance\SKILL.md`: present.
+- `git diff --check`: pass after final state-file rewrite.
+
+## Open Questions And Assumptions
+- Existing target projects still need rerunning bootstrap/onboarding to receive the new project-local `asset-governance` script and hook wiring.
+- Codex UI hook trust still has to be handled per project through `/hooks`; this change improves installed assets, not UI trust persistence.
+
+## Risks
+- Thresholds may need future tuning if Stop becomes too noisy on very large projects.
+- `docs/improvements/backlog.md` must be reviewed periodically or it can become stale.
+- Asset governance reports lifecycle problems; it intentionally does not auto-delete durable docs/code.
 
 ## Git Checkpoint
-- Latest functional commit: `1cb6bf92edac65cd3cf5709a6fba9842fd3d8253` (`fix(hooks): preserve handoff during precompact`)
-- Push state: pushed to `origin/main`
-- Files included: precompact runtime, memory boundary docs, backlog, bootstrap sync, tests, README, and refreshed state files
-- Files intentionally left uncommitted: none intended
-- Deferred reason: none
-- Next checkpoint: none
-
-## Learned Instincts To Preserve
-- Do not turn Dong Skills optimization feedback into ordinary project instincts.
-- Save only reusable behavior that affects future decisions; current progress belongs in state files.
+- Latest commit: pending final asset governance checkpoint.
+- Push state: pending final push to `origin/main`.
+- Files included: all current asset governance skill, script, hook, installer, bootstrap, docs, tests, and state-file changes.
+- Files intentionally left uncommitted: none intended.
+- Deferred reason: none.
+- Next checkpoint: commit and push the verified asset governance update.
 
 ## Next Action
-No active implementation step. Target projects can rerun `codex-codebase-onboarding` or bootstrap repair to receive these updates.
+Commit, push, and report the commit SHA.
 
 ## Files To Re-read First
-- `.codex-context/handoff-summary.md`
-- `.codex-context/current-state.md`
-- `.codex-context/plan-progress.md`
-- `.codex-context/artifact-index.md`
-- `.codex-context/verification.md`
-- `.agents/skills/codex-learning-memory/SKILL.md`
-- `docs/improvements/backlog.md`
-- `.codex/scripts/lib/events.mjs`
+1. `.codex-context/handoff-summary.md`
+2. `.codex-context/current-state.md`
+3. `.codex-context/spec.md`
+4. `.codex-context/plan-progress.md`
+5. `.codex-context/artifact-index.md`
+6. `.codex-context/verification.md`
+7. `.agents/skills/codex-asset-governance/SKILL.md`
+8. `.codex/scripts/lib/assets.mjs`
+9. `scripts/asset-governance.mjs`
+10. `scripts/install-windows.ps1`
