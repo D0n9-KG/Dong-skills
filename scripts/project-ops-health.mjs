@@ -15,6 +15,7 @@ const REQUIRED_CONTEXT_FILES = [
   "risks.md",
   "verification.md",
   "learned-instincts.md",
+  "dong-skills-outbox.md",
   "solution-index.md",
   "worktree-state.md",
   "handoff-summary.md"

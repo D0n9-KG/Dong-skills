@@ -130,6 +130,7 @@ function readyHealthFixture(projectRoot) {
     "risks.md",
     "verification.md",
     "learned-instincts.md",
+    "dong-skills-outbox.md",
     "solution-index.md"
   ]) {
     write(path.join(ctx, name), `# ${name}\n`);
@@ -274,6 +275,7 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "worktree-state.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "dong-skills-outbox.md")), true);
 
   const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
   const recovery = execFileSync(process.execPath, [installedHook], {
@@ -285,7 +287,8 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const context = JSON.parse(recovery).hookSpecificOutput.additionalContext;
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
   assert.match(context, /8\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /10\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /10\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
+  assert.match(context, /11\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
 });
 
 test("hook launcher dispatches using hook input cwd rather than launcher cwd", () => {
@@ -361,6 +364,51 @@ test("learning observations redact private key bodies and URL userinfo", () => {
   assert.match(obs, /example\.com/);
 });
 
+test("learning-status reports Dong Skills fallback outbox", () => {
+  const project = tempProject();
+  write(path.join(project, ".codex-context", "dong-skills-outbox.md"), `# Dong Skills Improvement Outbox
+
+## Pending Improvements
+
+### 2026-06-13 - Route skill improvements
+
+Status: pending
+Signal: test
+`);
+
+  const out = execFileSync(process.execPath, [hook, "learning-status", project], {
+    cwd: project,
+    encoding: "utf8",
+    env: { ...process.env, DONG_SKILLS_REPO: "", DONG_SKILLS_HOME: "", DONG_SKILLS_DISABLE_SOURCE_MARKER: "1" },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Dong Skills meta-learning:/);
+  assert.match(out, /Target: not found; use fallback outbox/);
+  assert.match(out, /Fallback outbox: \.codex-context\/dong-skills-outbox\.md/);
+  assert.match(out, /Pending outbox items: 1/);
+  assert.match(out, /Installed skill copies are not treated as the Dong Skills source repo/);
+});
+
+test("learning-status locates Dong Skills source repo from environment", () => {
+  const project = tempProject();
+  const source = tempProject();
+  write(path.join(source, "docs", "improvements", "backlog.md"), "# Dong Skills Improvement Backlog\n");
+  write(path.join(source, ".agents", "skills", "codex-learning-memory", "SKILL.md"), "---\nname: codex-learning-memory\n---\n");
+
+  const out = execFileSync(process.execPath, [hook, "learning-status", project], {
+    cwd: project,
+    encoding: "utf8",
+    env: { ...process.env, DONG_SKILLS_REPO: source, DONG_SKILLS_HOME: "" },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Dong Skills meta-learning:/);
+  assert.match(out, /Target source: DONG_SKILLS_REPO/);
+  assert.match(out, /docs[\\/]improvements[\\/]backlog\.md/);
+  assert.match(out, /Pending outbox items: 0/);
+});
+
 test("Stop requires structured Git Checkpoint fields when worktree is dirty", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -432,7 +480,8 @@ Resume final task.
   const context = output.hookSpecificOutput.additionalContext;
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
   assert.match(context, /8\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /10\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /10\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
+  assert.match(context, /11\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
   assert.match(context, /Worktree: role=unknown/);
   assert.match(context, /## Git Checkpoint/);
   assert.match(context, /## Next Action\nResume final task\./);

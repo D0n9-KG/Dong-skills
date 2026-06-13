@@ -12,6 +12,7 @@
 - Automatic PreCompact emergency handoff is a fallback, not a substitute for deliberate phase-boundary handoffs; after recovery, state files still need review.
 - Asset governance can become noisy if thresholds are too low; only severe active state bloat and unsafe tracked raw/runtime artifacts should block hooks.
 - Raw snapshot pruning is intentionally narrow; `observations.jsonl` remains governed by learning review, not generic raw cleanup.
+- Dong Skills improvement outbox entries can become stale if the real source repo remains unavailable; migrate them after source discovery works.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -29,6 +30,7 @@
 - `solutions.mjs` validates a compact frontmatter contract, not semantic truth; stale or misleading solution docs still require human/agent review against current code.
 - `session-history.mjs` searches local agent history metadata and keyword counts only; it does not guarantee complete recovery of prior work.
 - `asset-governance.mjs` is a lifecycle signal source, not semantic proof that every doc is correct.
+- The generated Dong Skills source marker can become stale if the source checkout moves; reinstall or set `DONG_SKILLS_REPO` / `DONG_SKILLS_HOME`.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.
@@ -48,3 +50,4 @@
 - Installer and bootstrap modify `.gitignore` to protect `.codex-context/raw/`; incomplete managed marker blocks intentionally stop installation.
 - Release scans must exclude `.git` and verify no raw observations, logs, backups, local paths, or secrets are published.
 - Checkpoint commits must not stage unrelated user changes, secrets, raw observations, logs, backups, or local private paths.
+- Do not commit generated `%USERPROFILE%\.agents\skills\.dong-skills-source.json`; it intentionally contains a local source path.

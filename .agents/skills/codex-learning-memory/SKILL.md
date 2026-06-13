@@ -61,9 +61,43 @@ Do not capture:
 
 If the observation is about hooks, skills, docs, installation, recovery flow, or other Dong Skills behavior:
 
-- record it in `docs/improvements/backlog.md`
+- record it in the real Dong Skills source repo at `docs/improvements/backlog.md`
 - classify it as a skill optimization candidate, not a project instinct
 - keep it separate from reusable project behavior and from solution memory
+
+Do not edit installed skill copies under `%USERPROFILE%\.agents\skills` as if they were the source repo.
+
+### Source Repo Discovery
+
+Find the real Dong Skills source repo in this order:
+
+1. `DONG_SKILLS_REPO`
+2. `DONG_SKILLS_HOME`
+3. `%USERPROFILE%\.agents\skills\.dong-skills-source.json`
+4. `%USERPROFILE%\.codex\skills\.dong-skills-source.json`
+5. Current Git repo, only if it contains both `docs/improvements/backlog.md` and `.agents/skills/codex-learning-memory/SKILL.md`
+6. Known local checkout candidates near the current repo
+7. Fallback outbox
+
+If the source repo is found and writable, write the improvement to `docs/improvements/backlog.md` there.
+
+If the source repo is not found or not writable, write the item to `.codex-context/dong-skills-outbox.md` in the current project. This file is a migration queue, not project memory and not an active instinct.
+
+After recording a Dong Skills improvement, report:
+
+- Target location: where it should live.
+- Actual location: where it was written.
+- Unfinished reason: why it was not written to the target, if applicable.
+- Risk: whether the temporary location could be mistaken for project memory.
+- Next step: how to migrate it.
+
+Use:
+
+```powershell
+node .codex/hooks/project-ops.mjs learning-status
+```
+
+to see the detected Dong Skills target and pending outbox count.
 
 ## Quality Gate
 

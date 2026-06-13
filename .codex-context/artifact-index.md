@@ -1,38 +1,31 @@
 # Artifact Index
 
 ## Created
-- `AGENTS.md`: active project instructions for the Dong Skills source repo, generated from the project ops snippet and safe to publish.
-- `.agents/skills/codex-asset-governance/SKILL.md`: first-class asset lifecycle governance skill.
-- `.codex/scripts/lib/assets.mjs`: deterministic asset governance status/report/prune runtime.
-- `scripts/asset-governance.mjs`: CLI wrapper for asset governance audits and safe raw snapshot pruning.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/assets.mjs`: bootstrap copy of asset governance runtime.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/asset-governance.mjs`: bootstrap copy of asset governance CLI.
-- `.codex-context/archive/verification-2026-06-12.md`: archived older verification entries after pruning active `verification.md`.
+- `.codex-context/dong-skills-outbox.md`: fallback queue for Dong Skills improvement candidates when the real source repo is unavailable.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/dong-skills-outbox.md`: bootstrap template for target projects.
 
 ## Modified
-- `.codex/hooks/project-ops.mjs`: exposes `asset-governance` as a project ops CLI command.
-- `.codex/scripts/lib/events.mjs`: `PreCompact` and `Stop` include severe asset governance issues.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`: bootstrap hook copy kept in sync.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: bootstrap event runtime kept in sync.
-- `scripts/install-windows.ps1`: installs `asset-governance.mjs`, syncs global skills, and removes generated helper duplicates during Dong Skills source self-install.
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`: copies `asset-governance.mjs` into target project `.codex/scripts`.
-- `scripts/project-ops-health.mjs` and bootstrap copy: require asset governance script presence and parity.
-- `tests/project-ops.test.mjs`: added coverage for bootstrap installation, safe raw snapshot pruning, and Stop blocking on severe verification bloat.
-- `AGENTS.project-ops.snippet.md` and onboarding asset copy: document `codex-asset-governance` and raw lifecycle audit command.
-- `README.md`: documents asset lifecycle governance and command usage in Chinese and English sections.
-- `.agents/skills/using-superpowers/SKILL.md`: routes stale/duplicate/orphan/bloated assets to `codex-asset-governance`.
-- `.agents/skills/codex-project-governance/SKILL.md`: adds asset governance to lifecycle, hooks, and completion gates.
-- `.agents/skills/codex-docs-stewardship/SKILL.md`: directs whole-workspace lifecycle sweeps to asset governance first.
-- `.agents/skills/codex-context-budget/SKILL.md`: references asset governance for broader bloat/raw snapshot cleanup.
-- `.codex-context/spec.md`, `plan-progress.md`, `current-state.md`, `artifact-index.md`, `verification.md`, and `handoff-summary.md`: refreshed for this task.
-- `.codex-context/project-map.md`, `decisions.md`, `risks.md`, `learned-instincts.md`, `solution-index.md`, and related instinct docs: updated to remove stale prior-task wording and record asset governance decisions.
-- `docs/improvements/backlog.md`: records the accepted Dong Skills asset lifecycle governance improvement.
+- `.codex/scripts/lib/learning.mjs`: adds Dong Skills source discovery, installed-copy rejection, outbox status, and learning-status reporting.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/learning.mjs`: bootstrap runtime copy.
+- `.codex/scripts/lib/templates.mjs`: adds `dong-skills-outbox.md` required file and template.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`: bootstrap runtime copy.
+- `.codex/scripts/lib/recovery.mjs`: recovery order mentions outbox only for Dong Skills improvement work.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`: bootstrap runtime copy.
+- `.codex/scripts/lib/assets.mjs`: includes outbox in active state file size governance.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/assets.mjs`: bootstrap runtime copy.
+- `scripts/install-windows.ps1`: writes global local source marker.
+- `scripts/project-ops-health.mjs` and bootstrap copy: require `dong-skills-outbox.md`.
+- `tests/project-ops.test.mjs`: adds fallback outbox and source repo discovery tests.
+- `.agents/skills/codex-learning-memory/SKILL.md`: documents source discovery, fallback outbox, and status answer template.
+- `.agents/skills/codex-project-governance/SKILL.md`: routes Dong Skills meta-learning to backlog or outbox.
+- `AGENTS.project-ops.snippet.md`, onboarding copy, `AGENTS.md`, and `README.md`: document outbox/source marker behavior.
+- `docs/improvements/backlog.md`: records user-reported Dong Skills PRD items.
+- `.codex-context/*.md`: refreshed for this task.
 
 ## Read / Inspected
-- Existing governance skills and hooks.
-- Asset governance implementation diff.
-- Install/bootstrap scripts, health check, release check, tests, README, AGENTS snippets, and state files.
+- Current `brainstorming`, `codex-learning-memory`, `codex-project-governance`, and `codex-asset-governance` skills.
+- Learning, recovery, template, health-check, install, and test runtime files.
+- Upstream Superpowers brainstorming behavior for context.
 
 ## Raw Outputs
-- Verification outputs are summarized in `.codex-context/verification.md`.
-- `.codex-context/raw/` contains only `.gitkeep`.
+- No raw outputs added. Verification evidence is summarized in `.codex-context/verification.md`.

@@ -17,8 +17,9 @@ const RECOVERY_ORDER = [
   "7. .codex-context/artifact-index.md",
   "8. .codex-context/solution-index.md",
   "9. .codex-context/learned-instincts.md",
-  "10. STRATEGY.md, CONCEPTS.md, or relevant docs/solutions entries only when the task needs them",
-  "11. latest user instruction"
+  "10. .codex-context/dong-skills-outbox.md only when discussing Dong Skills improvements",
+  "11. STRATEGY.md, CONCEPTS.md, or relevant docs/solutions entries only when the task needs them",
+  "12. latest user instruction"
 ].join("\n");
 
 function excerpt(ctx, name, max) {

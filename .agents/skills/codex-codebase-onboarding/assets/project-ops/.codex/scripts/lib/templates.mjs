@@ -12,6 +12,7 @@ export const REQUIRED_FILES = {
   risks: "risks.md",
   verification: "verification.md",
   instincts: "learned-instincts.md",
+  dongSkillsOutbox: "dong-skills-outbox.md",
   solutions: "solution-index.md",
   worktree: "worktree-state.md",
   handoff: "handoff-summary.md"
@@ -191,6 +192,23 @@ Keep this file as a compact index. Store individual instincts under \`.codex-con
 
 ## Maintenance Log
 - None yet.
+`,
+  "dong-skills-outbox.md": `# Dong Skills Improvement Outbox
+
+## Purpose
+This file is a fallback queue for Dong Skills improvement ideas when the real Dong Skills source repository cannot be found or written.
+
+Do not treat entries here as project instincts, project rules, or solution memory. Migrate useful entries to the Dong Skills repository at \`docs/improvements/backlog.md\`.
+
+## Target
+- Preferred location: Dong Skills repo \`docs/improvements/backlog.md\`
+- Discovery order: \`DONG_SKILLS_REPO\`, \`DONG_SKILLS_HOME\`, global source marker, current repo if it is Dong Skills, then this outbox
+
+## Pending Improvements
+- None.
+
+## Migrated
+- None.
 `,
   "solution-index.md": `# Solution Index
 

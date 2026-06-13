@@ -1,42 +1,38 @@
-# Dong Skills Asset Governance Implementation Plan
+# Dong Skills Meta-Learning Routing Plan
 
-**Goal:** Add first-class asset lifecycle governance so Dong Skills can audit and prune state files, raw snapshots, archives, docs, scripts, hooks, tests, generated evidence, and code assets.
+**Goal:** Ensure Dong Skills improvement ideas can be deposited from any project session without confusing installed skill copies for the source repo.
 **Spec:** `.codex-context/spec.md`
-**Spec Approval:** Approved by user on 2026-06-12.
-**Current Step:** Final checkpoint.
-**Verification:** `asset-governance`, `health-check`, `node --test tests\project-ops.test.mjs`, `node scripts\release-check.mjs .`, `git diff --check`.
-**Execution Approval:** User said to optimize it directly.
+**Spec Approval:** Approved by user on 2026-06-13.
+**Current Step:** Checkpoint commit and push.
+**Verification:** `node --test tests\project-ops.test.mjs`, `node .codex/hooks/project-ops.mjs learning-status`, `node .codex/hooks/project-ops.mjs health-check`, `node scripts/release-check.mjs .`, `git diff --check`.
+**Execution Approval:** User explicitly asked to address the issue.
 
 ## Tasks
 
-- [x] Task 1: Add asset governance workflow skill.
-  - Files: `.agents/skills/codex-asset-governance/SKILL.md`, routing skills, README, AGENTS snippets, onboarding asset snippet.
-  - Result: skill defines Keep/Update/Consolidate/Replace/Delete/Stale/Raw-Prune classification, raw lifecycle rules, and routing from project governance, using-superpowers, docs stewardship, and context budget.
-  - Evidence: release check and README/skill diff review passed.
+- [x] Task 1: Record downstream feedback in Dong Skills backlog.
+  - Files: `docs/improvements/backlog.md`
+  - Evidence: user PRD items added without private project paths.
 
-- [x] Task 2: Add deterministic asset governance audit/prune script.
-  - Files: `.codex/scripts/lib/assets.mjs`, `scripts/asset-governance.mjs`, onboarding asset copies, `.codex/hooks/project-ops.mjs`.
-  - Result: dry-run reports state bloat, stale review candidates, raw snapshot retention, runtime artifacts, tracked raw/runtime artifacts, and suggested actions. `--apply` only prunes generated `precompact-auto-*.md` snapshots.
-  - Evidence: `node .codex/hooks/project-ops.mjs asset-governance` passed with no blocking issues or advisories.
+- [x] Task 2: Add fallback outbox template.
+  - Files: `.codex/scripts/lib/templates.mjs`, bootstrap `.codex-context/dong-skills-outbox.md`, AGENTS snippets.
+  - Evidence: bootstrap test asserts the file exists in new target projects.
 
-- [x] Task 3: Wire hooks, bootstrap, install, health, release, and tests.
-  - Files: `.codex/scripts/lib/events.mjs`, install/bootstrap PowerShell scripts, `scripts/project-ops-health.mjs`, tests, onboarding assets.
-  - Result: `PreCompact` and `Stop` include severe asset governance issues; bootstrap/install copy the asset governance script to target projects; source-kit self-install removes generated duplicate helper scripts; health check enforces parity.
-  - Evidence: `node --test tests\project-ops.test.mjs` passed 19/19; `node scripts\release-check.mjs .` passed.
+- [x] Task 3: Add source repo discovery and learning-status reporting.
+  - Files: `.codex/scripts/lib/learning.mjs`, bootstrap runtime copy.
+  - Evidence: tests cover fallback outbox and `DONG_SKILLS_REPO` source detection.
 
-- [x] Task 4: Reconcile current Dong Skills state/docs.
-  - Files: `.codex-context/spec.md`, `project-map.md`, `decisions.md`, `risks.md`, `learned-instincts.md`, `artifact-index.md`, `verification.md`, `handoff-summary.md`, archive files.
-  - Result: stale prior-task state was replaced with the current asset-governance state; old verification history was archived; current verification remains compact.
-  - Evidence: `asset-governance` reported no large active state files, no prunable raw snapshots, and no stale review candidates.
+- [x] Task 4: Add install marker.
+  - Files: `scripts/install-windows.ps1`
+  - Evidence: install run created `%USERPROFILE%\.agents\skills\.dong-skills-source.json`.
+
+- [x] Task 5: Update docs and health checks.
+  - Files: `codex-learning-memory`, `codex-project-governance`, `README.md`, `AGENTS.project-ops.snippet.md`, `project-ops-health.mjs`.
+  - Evidence: health check passes.
 
 ## Risks
-- Stop hook asset bloat checks can become noisy if thresholds are too low; blocking uses high thresholds, lower-severity findings remain advisories.
-- Raw pruning must never delete `observations.jsonl`; this is covered by test.
-- Asset governance must orchestrate specialist skills rather than duplicate docs stewardship, architecture governance, solution memory, or context budget.
-
-## Rollback
-- If Stop becomes noisy, remove only the `Stop` call to asset status while keeping the CLI audit.
-- If raw pruning misbehaves, disable `--apply` deletion and keep dry-run reporting.
+- The source marker contains a local path and must remain generated outside the repo.
+- Outbox entries can become stale if not migrated after the source repo becomes available.
+- README Chinese text is already mojibake in the current file; this task avoids broad README rewrites.
 
 ## Next Step
-Commit and push the verified Dong Skills asset governance update.
+Commit and push the verified checkpoint.

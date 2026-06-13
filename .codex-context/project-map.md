@@ -22,6 +22,8 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - `.codex/hooks/project-ops.mjs`: hook CLI and event dispatcher.
 - `.codex/scripts/lib/`: source for split hook behavior.
 - `.codex/scripts/lib/assets.mjs`: reusable asset lifecycle audit logic used by Stop/PreCompact and CLI reports.
+- `.codex/scripts/lib/learning.mjs`: raw learning observation handling plus Dong Skills source repo discovery and fallback outbox status.
+- `.codex-context/dong-skills-outbox.md`: fallback migration queue for Dong Skills improvement candidates when the real source repo is unavailable.
 - `scripts/state-prune.mjs`: archives old verification history into `.codex-context/archive/`.
 - `scripts/asset-governance.mjs`: dry-run asset lifecycle audit and safe raw PreCompact snapshot pruning.
 - `scripts/solutions.mjs`: validates and summarizes `docs/solutions/` and updates `solution-index.md`.
@@ -53,6 +55,7 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - Release: `node scripts/release-check.mjs .`.
 - Budget: `node .codex/hooks/project-ops.mjs context-budget`.
 - Asset governance: `node .codex/hooks/project-ops.mjs asset-governance`.
+- Learning status and Dong Skills target discovery: `node .codex/hooks/project-ops.mjs learning-status`.
 - Solution status: `node .codex/hooks/project-ops.mjs solution-status`.
 - Solution validate: `node .codex/hooks/project-ops.mjs solution-validate`.
 - Session history scan: `node .codex/hooks/project-ops.mjs session-history scan --days 7 --keywords <terms>`.
@@ -65,6 +68,8 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - Never prune `.codex-context/raw/observations.jsonl` through generic raw cleanup; review it with `codex-learning-memory`.
 - Keep structured reusable solutions in `docs/solutions/`; keep `.codex-context/solution-index.md` compact.
 - Keep Dong Skills self-improvement proposals in `docs/improvements/backlog.md`, separate from project instincts and solution memory.
+- If the real Dong Skills repo is unavailable, keep Dong Skills self-improvement proposals in `.codex-context/dong-skills-outbox.md` until they can be migrated.
+- Global install writes `%USERPROFILE%\.agents\skills\.dong-skills-source.json` as local source metadata; do not commit that generated marker.
 - Keep full session transcripts out of active context; session history scans report metadata first.
 - Keep onboarding asset files in parity with root hook, helper scripts, and AGENTS snippet.
 
@@ -75,6 +80,7 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - Curated skill routing: `.agents/skills/using-superpowers/SKILL.md`, `.agents/skills/codex-project-governance/SKILL.md`, and `AGENTS.project-ops.snippet.md`.
 - Release/privacy checks: `scripts/release-check.mjs`.
 - Asset lifecycle audit: `.codex/scripts/lib/assets.mjs`, `scripts/asset-governance.mjs`, and `codex-asset-governance`.
+- Dong Skills meta-learning routing: `.codex/scripts/lib/learning.mjs`, `.codex-context/dong-skills-outbox.md`, and `codex-learning-memory`.
 - Solution memory validation: `scripts/solutions.mjs` plus `codex-solution-memory` references.
 - Session metadata scan: `scripts/session-history.mjs` plus `codex-session-history`.
 

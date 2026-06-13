@@ -64,6 +64,7 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `risks.md`
 - `verification.md`
 - `learned-instincts.md`
+- `dong-skills-outbox.md`
 - `worktree-state.md`
 - `handoff-summary.md`
 
@@ -71,6 +72,7 @@ Use `.codex-context/raw/` for raw logs or large outputs.
 Project bootstrap should keep `.codex-context/raw/*` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
 Use `.codex-context/archive/` for old but still useful verification or handoff history.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
+Use `.codex-context/dong-skills-outbox.md` only for Dong Skills improvement candidates when the real Dong Skills source repo cannot be found. It is not project memory and not an active instinct.
 Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions/` and `CONCEPTS.md`; do not paste full solution docs into active state.
 
 Use `.codex-context/worktree-state.md` to record whether the current workspace is the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, a submodule, or unknown. Refresh it before execution, checkpoint, branch completion, cleanup, or whenever hook UI source paths differ from the actual Git root.
@@ -101,6 +103,8 @@ For non-trivial verified fixes or reusable solutions, use `codex-solution-memory
 
 If the signal is about improving Dong Skills itself, such as hooks, skills, README, installer, bootstrap, recovery, or governance behavior, record it in `docs/improvements/backlog.md` in the Dong Skills repo. Do not mix Dong Skills meta-learning with project instincts or project solution memory.
 
+If the real Dong Skills repo cannot be found, write the item to `.codex-context/dong-skills-outbox.md` and report the target location, actual location, reason, risk, and migration next step. Use `node .codex/hooks/project-ops.mjs learning-status` to see the detected Dong Skills backlog target and pending outbox count. Never edit installed skill copies under `%USERPROFILE%\.agents\skills` as if they were source.
+
 ## Session History
 
 Use `codex-session-history` only when project files are insufficient or the user references previous sessions. Search metadata/keyword counts first, never paste full transcripts, and move durable findings into `.codex-context/` or `docs/solutions/`.
@@ -120,8 +124,9 @@ After compaction, recover in this order:
 7. `.codex-context/artifact-index.md`
 8. `.codex-context/solution-index.md`
 9. `.codex-context/learned-instincts.md`
-10. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
-11. latest user instruction
+10. `.codex-context/dong-skills-outbox.md` only when discussing Dong Skills improvements
+11. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
+12. latest user instruction
 
 ## Completion
 

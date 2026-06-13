@@ -1,84 +1,84 @@
 # Handoff Summary
 
 ## Objective
-Add first-class asset lifecycle governance to Dong Skills so long-running projects do not accumulate stale state, raw snapshots, archives, generated evidence, duplicate docs, orphan scripts, or misleading code assets.
+Make Dong Skills optimization deposits reliable from any project session by locating the real Dong Skills source repo or using a standard fallback outbox.
 
 ## Latest User Instruction
-User asked to optimize Dong Skills after identifying that current hooks/state files help but do not fully govern the lifecycle of docs, records, raw files, archives, scripts, and code assets.
+User emphasized that other sessions cannot find the correct place to deposit Dong Skills skill-optimization points.
 
 ## Approved Scope / Spec
-- Add a main `codex-asset-governance` skill.
-- Add deterministic `asset-governance` audit/prune command.
-- Keep `observations.jsonl` for learning review and only prune generated `precompact-auto-*.md` snapshots through raw retention.
-- Hook blocking should be limited to severe bloat or unsafe tracked raw/runtime artifacts.
-- Keep Dong Skills meta-optimization backlog separate from ordinary project memory.
-- Keep the Dong Skills source repo clean when the installer is run against the kit itself.
+- Add deterministic source repo discovery for Dong Skills meta-learning.
+- Generate a global source marker during install.
+- Add `.codex-context/dong-skills-outbox.md` as a fallback migration queue.
+- Update learning-status, docs, templates, health checks, bootstrap assets, and tests.
+- Keep outbox separate from project instincts and solution memory.
 
 ## Plan Status
-Implementation, docs, verification, and global install sync are complete. Final checkpoint commit and push are pending.
+Implementation is complete. Final checkpoint commit and push are pending.
 
 ## Files Modified
-- `AGENTS.md`
-- `.agents/skills/codex-asset-governance/SKILL.md`
+- `.codex/scripts/lib/learning.mjs`
+- `.codex/scripts/lib/templates.mjs`
+- `.codex/scripts/lib/recovery.mjs`
 - `.codex/scripts/lib/assets.mjs`
-- `scripts/asset-governance.mjs`
-- `.codex/hooks/project-ops.mjs`
-- `.codex/scripts/lib/events.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/learning.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/assets.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/asset-governance.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `.codex-context/dong-skills-outbox.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/dong-skills-outbox.md`
 - `scripts/install-windows.ps1`
 - `scripts/project-ops-health.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
 - `tests/project-ops.test.mjs`
+- `.agents/skills/codex-learning-memory/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
 - `AGENTS.project-ops.snippet.md`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
+- `AGENTS.md`
 - `README.md`
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/codex-docs-stewardship/SKILL.md`
-- `.agents/skills/codex-context-budget/SKILL.md`
 - `docs/improvements/backlog.md`
-- `.codex-context/*` state and archive files
+- `.codex-context/*.md`
+
+## Files Read But Not Changed
+- Upstream Superpowers brainstorming source was inspected for the related brainstorming issue.
 
 ## Decisions Made
-- Asset governance is a main lifecycle skill and a CLI audit, not a lightweight optional note.
-- `asset-governance --apply` only deletes generated `precompact-auto-*.md` snapshots that exceed retention.
-- `observations.jsonl` is never pruned by generic asset cleanup.
-- `PreCompact` and `Stop` consume only severe asset governance issues as blockers.
-- Ordinary stale/duplicate/orphan findings stay as audit advisories unless they are unsafe or large enough to block.
-- Installer self-install into the Dong Skills source kit removes generated `.codex/scripts/*.mjs` helper copies so root `scripts/` remains the canonical helper source.
-
-## Verification Evidence
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no blocking issues or advisories.
-- `node .codex\hooks\project-ops.mjs health-check`: pass, no issues.
-- `node --test tests\project-ops.test.mjs`: pass, 19/19 tests.
-- `node scripts\release-check.mjs .`: pass, including syntax, tests, privacy scan, and runtime artifact scan.
-- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1 -TargetProjectRoot .`: pass; global skill sync completed and source self-install helper duplicates were removed.
-- Global `%USERPROFILE%\.agents\skills\codex-asset-governance\SKILL.md`: present.
-- `git diff --check`: pass after final state-file rewrite.
+- Installed skill copies are explicitly rejected as Dong Skills source repos.
+- `%USERPROFILE%\.agents\skills\.dong-skills-source.json` is local generated metadata and should not be committed.
+- `dong-skills-outbox.md` is a migration queue, not project memory.
+- `learning-status` is the standard command for answering where Dong Skills meta-learning will be written.
 
 ## Open Questions And Assumptions
-- Existing target projects still need rerunning bootstrap/onboarding to receive the new project-local `asset-governance` script and hook wiring.
-- Codex UI hook trust still has to be handled per project through `/hooks`; this change improves installed assets, not UI trust persistence.
+- Assumption: existing target projects need bootstrap/onboarding refresh to receive `dong-skills-outbox.md` and updated runtime files.
+- Open question: semantic deduplication of repeated learning observations remains a separate backlog item.
 
 ## Risks
-- Thresholds may need future tuning if Stop becomes too noisy on very large projects.
-- `docs/improvements/backlog.md` must be reviewed periodically or it can become stale.
-- Asset governance reports lifecycle problems; it intentionally does not auto-delete durable docs/code.
+- If the source marker is stale after moving the repo, sessions will fall back to outbox until reinstall or env vars update the path.
+- Outbox entries must be periodically migrated or they can become stale.
+
+## Verification Evidence
+- `node --test tests\project-ops.test.mjs`: pass, 21/21.
+- `node .codex\hooks\project-ops.mjs learning-status`: pass, reports source target and zero pending outbox items.
+- `node .codex\hooks\project-ops.mjs health-check`: pass.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass.
+- `node scripts\release-check.mjs .`: pass.
+- `git diff --check`: pass.
+- Extra privacy scan for local paths/secrets: no real private path or secret findings; only documentation examples and test redaction fixtures matched.
 
 ## Git Checkpoint
-- Latest commit: pending final asset governance checkpoint.
-- Push state: pending final push to `origin/main`.
-- Files included: all current asset governance skill, script, hook, installer, bootstrap, docs, tests, and state-file changes.
+- Latest commit: pending meta-learning routing checkpoint.
+- Push state: pending push to `origin/main`.
+- Files included: source discovery, outbox template, installer marker, docs, tests, bootstrap assets, and state files.
 - Files intentionally left uncommitted: none intended.
 - Deferred reason: none.
-- Next checkpoint: commit and push the verified asset governance update.
+- Next checkpoint: commit and push after final verification.
+
+## Learned Instincts To Preserve
+- Dong Skills improvement points must go to the real Dong Skills backlog or the standard outbox, not project instincts.
 
 ## Next Action
-Commit, push, and report the commit SHA.
+Commit, push, and report result.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
@@ -87,7 +87,7 @@ Commit, push, and report the commit SHA.
 4. `.codex-context/plan-progress.md`
 5. `.codex-context/artifact-index.md`
 6. `.codex-context/verification.md`
-7. `.agents/skills/codex-asset-governance/SKILL.md`
-8. `.codex/scripts/lib/assets.mjs`
-9. `scripts/asset-governance.mjs`
-10. `scripts/install-windows.ps1`
+7. `.agents/skills/codex-learning-memory/SKILL.md`
+8. `.codex/scripts/lib/learning.mjs`
+9. `scripts/install-windows.ps1`
+10. `docs/improvements/backlog.md`

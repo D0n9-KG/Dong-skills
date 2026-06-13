@@ -1,42 +1,49 @@
 # Current State
 
 ## Objective
-Add first-class asset lifecycle governance to Dong Skills so docs, state files, raw snapshots, archives, scripts, hooks, tests, generated evidence, and code assets do not accumulate stale or redundant material.
+Make Dong Skills meta-learning actionable from any project session by locating the real Dong Skills source repo or falling back to a standard project outbox.
 
 ## Latest User Instruction
-User asked to optimize Dong Skills after identifying that state files, records, docs, raw files, and code assets need lifecycle governance instead of only hook reminders.
+User pointed out that other sessions trying to deposit Dong Skills skill-optimization ideas cannot find the correct location and often only see installed skill copies.
 
 ## Current Phase
-Final verification and checkpoint.
+verification
 
 ## Implemented
-- Added `codex-asset-governance` as a curated skill.
-- Added deterministic asset governance runtime in `.codex/scripts/lib/assets.mjs`.
-- Added CLI entry `node .codex/hooks/project-ops.mjs asset-governance`.
-- Added `scripts/asset-governance.mjs` and onboarding bootstrap copies.
-- Wired severe asset governance issues into `PreCompact` and `Stop`.
-- Updated install/bootstrap scripts, health checks, README, AGENTS snippets, routing skills, and tests.
-- Added installer self-install cleanup so Dong Skills source does not keep duplicate generated `.codex/scripts/*.mjs` helper copies.
-- Synced global installed skills to `%USERPROFILE%\.agents\skills`, including `codex-asset-governance`.
+- Added `.codex-context/dong-skills-outbox.md` as the standard fallback queue for Dong Skills improvement candidates.
+- Added Dong Skills source repo discovery to learning runtime:
+  - `DONG_SKILLS_REPO`
+  - `DONG_SKILLS_HOME`
+  - `%USERPROFILE%\.agents\skills\.dong-skills-source.json`
+  - `%USERPROFILE%\.codex\skills\.dong-skills-source.json`
+  - current repo if it is the Dong Skills source checkout
+  - nearby known checkout candidates
+  - fallback outbox
+- Explicitly rejects installed skill copies as source repos.
+- `learning-status` now reports the detected target backlog, fallback outbox path, pending outbox count, and installed-copy warning.
+- `install-windows.ps1` writes the global source marker during global skill sync.
+- Bootstrap templates, recovery order, health checks, AGENTS snippets, README, and tests are updated.
+- User-provided PRD/backlog items are recorded in `docs/improvements/backlog.md`.
 
 ## Active Assumptions
-- Asset governance is a main Dong Skills feature, not an optional module.
-- `observations.jsonl` is learning review input and must not be pruned by generic raw cleanup.
-- Generated `precompact-auto-*.md` snapshots are short-lived backup/audit artifacts and can be pruned by retention.
-- Hook blocking should be limited to severe bloat or unsafe tracked raw/runtime artifacts.
+- The global source marker is local runtime metadata and must not be committed.
+- If the real Dong Skills repo is unavailable, `.codex-context/dong-skills-outbox.md` is the correct temporary location.
+- Outbox entries are not project instincts or project rules.
 
 ## Blockers
 - None.
 
 ## Verification Snapshot
-- Asset governance dry-run: pass, no blocking issues or advisories.
-- Health check: pass, no issues.
-- Tests: pass, 19/19.
-- Release check: pass, including syntax, tests, privacy scan, and runtime artifact scan.
-- `git diff --check`: pass after state-file EOF cleanup.
+- `node --test tests\project-ops.test.mjs`: pass, 21/21.
+- `node .codex\hooks\project-ops.mjs learning-status`: pass, reports current repo as Dong Skills target and zero pending outbox items.
+- `node .codex\hooks\project-ops.mjs health-check`: pass.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass.
+- `node scripts\release-check.mjs .`: pass.
+- `git diff --check`: pass.
+- Extra privacy scan: pass; no real private path or secret findings.
 
 ## Next Action
-Commit and push the verified asset governance update.
+Commit and push the verified checkpoint.
 
 ## Last Updated
-2026-06-12 22:25 +08:00
+2026-06-13 16:28 +08:00

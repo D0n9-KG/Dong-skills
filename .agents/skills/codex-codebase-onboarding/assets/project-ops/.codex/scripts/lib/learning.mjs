@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { createHash } from "node:crypto";
 import {
   newestMtime,
@@ -95,6 +96,149 @@ export function observationsFile(ctx) {
   return path.join(ctx, "raw", "observations.jsonl");
 }
 
+export function dongSkillsOutboxFile(ctx) {
+  return path.join(ctx, REQUIRED_FILES.dongSkillsOutbox);
+}
+
+function readJsonFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function normalizePathCandidate(value) {
+  if (!value || typeof value !== "string") return "";
+  try {
+    return path.resolve(value);
+  } catch {
+    return "";
+  }
+}
+
+function isInside(parent, child) {
+  const rel = path.relative(parent, child);
+  return rel === "" || (!!rel && !rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function installedSkillRoots() {
+  const home = os.homedir();
+  return [
+    path.join(home, ".agents", "skills"),
+    path.join(home, ".codex", "skills")
+  ];
+}
+
+function isInstalledSkillCopy(candidate) {
+  const resolved = normalizePathCandidate(candidate);
+  return installedSkillRoots().some((skillsRoot) => isInside(skillsRoot, resolved));
+}
+
+function dongSkillsBacklog(candidate) {
+  return path.join(candidate, "docs", "improvements", "backlog.md");
+}
+
+function isDongSkillsSourceRepo(candidate) {
+  const resolved = normalizePathCandidate(candidate);
+  if (!resolved || isInstalledSkillCopy(resolved)) return false;
+  return fs.existsSync(dongSkillsBacklog(resolved)) &&
+    fs.existsSync(path.join(resolved, ".agents", "skills", "codex-learning-memory", "SKILL.md"));
+}
+
+function sourceMarkerCandidates() {
+  const markers = [];
+  for (const skillsRoot of installedSkillRoots()) {
+    markers.push(path.join(skillsRoot, ".dong-skills-source.json"));
+  }
+  return markers;
+}
+
+function markerRepoCandidates(env = process.env) {
+  if (env.DONG_SKILLS_DISABLE_SOURCE_MARKER === "1") return [];
+  const candidates = [];
+  for (const marker of sourceMarkerCandidates()) {
+    const data = readJsonFile(marker);
+    if (!data) continue;
+    for (const key of ["source_repo", "sourceRepo", "repo", "root"]) {
+      if (typeof data[key] === "string") candidates.push({ path: data[key], source: `source marker ${path.basename(marker)}` });
+    }
+  }
+  return candidates;
+}
+
+function parentCandidates(root) {
+  const candidates = [];
+  let current = normalizePathCandidate(root);
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    candidates.push({ path: current, source: depth === 0 ? "current repo" : "parent repo" });
+    candidates.push({ path: path.join(current, "outputs", "codex-project-ops-kit"), source: "known checkout candidate" });
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return candidates;
+}
+
+export function findDongSkillsRepo(root, env = process.env) {
+  const candidates = [
+    { path: env.DONG_SKILLS_REPO, source: "DONG_SKILLS_REPO" },
+    { path: env.DONG_SKILLS_HOME, source: "DONG_SKILLS_HOME" },
+    ...markerRepoCandidates(env),
+    ...parentCandidates(root)
+  ];
+
+  const seen = new Set();
+  const rejectedInstalledCopies = [];
+  for (const candidate of candidates) {
+    const resolved = normalizePathCandidate(candidate.path);
+    if (!resolved || seen.has(resolved)) continue;
+    seen.add(resolved);
+    if (isInstalledSkillCopy(resolved)) {
+      rejectedInstalledCopies.push(resolved);
+      continue;
+    }
+    if (isDongSkillsSourceRepo(resolved)) {
+      return {
+        found: true,
+        root: resolved,
+        backlogFile: dongSkillsBacklog(resolved),
+        source: candidate.source,
+        rejectedInstalledCopies
+      };
+    }
+  }
+
+  return {
+    found: false,
+    root: "",
+    backlogFile: "",
+    source: "fallback outbox",
+    rejectedInstalledCopies
+  };
+}
+
+function pendingOutboxItems(outboxFile) {
+  const text = readText(outboxFile);
+  if (!text.trim()) return [];
+  const blocks = text.split(/\n(?=###\s+)/).filter((block) => /^###\s+/m.test(block));
+  return blocks.filter((block) => !/Status:\s*(done|migrated|rejected)/i.test(block));
+}
+
+export function dongSkillsMetaLearningStatus(root, ctx, env = process.env) {
+  const repo = findDongSkillsRepo(root, env);
+  const outboxFile = dongSkillsOutboxFile(ctx);
+  const pendingOutbox = pendingOutboxItems(outboxFile);
+  return {
+    repo,
+    outboxFile,
+    pendingOutbox,
+    pendingOutboxCount: pendingOutbox.length,
+    target: repo.found ? repo.backlogFile : outboxFile,
+    targetKind: repo.found ? "source-backlog" : "fallback-outbox"
+  };
+}
+
 export function parseJsonLines(file) {
   const text = readText(file);
   if (!text.trim()) return [];
@@ -184,6 +328,7 @@ export function learningStatus(ctx) {
 
 export function learningStatusText(root, ctx) {
   const status = learningStatus(ctx);
+  const meta = dongSkillsMetaLearningStatus(root, ctx);
   const lines = [
     "Codex learning memory status",
     `Root: ${root}`,
@@ -191,6 +336,13 @@ export function learningStatusText(root, ctx) {
     `Pending observations: ${status.pendingObservations.length}`,
     `Candidate instincts: ${status.candidateCount}`,
     `Index freshness: ${status.indexStale ? "stale" : "fresh"}`,
+    "",
+    "Dong Skills meta-learning:",
+    `Target: ${meta.repo.found ? meta.repo.backlogFile : "not found; use fallback outbox"}`,
+    `Target source: ${meta.repo.found ? meta.repo.source : "fallback outbox"}`,
+    `Fallback outbox: ${path.relative(root, meta.outboxFile).replace(/\\/g, "/")}`,
+    `Pending outbox items: ${meta.pendingOutboxCount}`,
+    "Installed skill copies are not treated as the Dong Skills source repo.",
     ""
   ];
 

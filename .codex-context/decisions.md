@@ -21,6 +21,9 @@
 - `PreCompact` uses different behavior for manual and automatic compaction: explicit manual compaction still hard-blocks stale governance state, while automatic or unknown-trigger compaction writes an emergency handoff and returns `continue: true`.
 - Automatic `PreCompact` prepends an emergency notice to `.codex-context/handoff-summary.md`, preserves meaningful existing handoff content below it, and stores a raw `.codex-context/raw/precompact-auto-*.md` backup for audit/recovery.
 - Dong Skills has first-class asset lifecycle governance through `codex-asset-governance` and `asset-governance.mjs`.
+- Dong Skills meta-learning uses deterministic source repo discovery and falls back to `.codex-context/dong-skills-outbox.md` when the real source repo cannot be found.
+- Installed skill copies under `%USERPROFILE%\.agents\skills` or `%USERPROFILE%\.codex\skills` are not valid Dong Skills source repos.
+- Global install writes `%USERPROFILE%\.agents\skills\.dong-skills-source.json` as local runtime metadata so project sessions can find the real Dong Skills backlog.
 - Asset governance classifies accumulated material as Keep, Update, Consolidate, Replace, Delete, Stale, or Raw-Prune.
 - `asset-governance --apply` is allowed to prune generated `precompact-auto-*.md` snapshots that exceed retention, but must not delete `observations.jsonl`.
 - Severe active state bloat or tracked raw/runtime artifacts can block Stop through asset governance; lower-severity lifecycle findings remain audit advisories.
@@ -43,3 +46,4 @@
 - Treating `continue`, vague acknowledgment, or a written plan as automatic permission to implement.
 - Generic raw cleanup that deletes `observations.jsonl`.
 - Keeping duplicate or obsolete durable docs in archive folders when Git history is sufficient.
+- Treating `.codex-context/dong-skills-outbox.md` as project memory or an active project instinct.
