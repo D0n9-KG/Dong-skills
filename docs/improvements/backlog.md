@@ -92,10 +92,11 @@ Add tests for bootstrap installation, safe raw PreCompact snapshot pruning, and 
 
 ### 2026-06-13 - Add Living Spec Mode To Brainstorming
 
-Status: proposed
+Status: implemented
 Priority: P0
 Affected area: brainstorming / spec / compaction recovery
 Source: user feedback from downstream project usage
+Implemented: `brainstorming/SKILL.md` now requires Living Spec mode with `Approval Status: Living Draft / Not Approved`, confirmed decisions, candidate options, open questions, and handoff refresh before final approval.
 
 Signal:
 Current `brainstorming` writes `.codex-context/spec.md` only after approval. Long discussions about research narrative, architecture direction, or data-model design can be compacted before approval, leaving confirmed decisions only in chat.
@@ -108,10 +109,11 @@ Add guidance and tests/manual checks showing that an unapproved discussion can b
 
 ### 2026-06-13 - Restore Iterative Brainstorming Cadence
 
-Status: proposed
+Status: implemented
 Priority: P0
 Affected area: brainstorming / user interaction
 Source: user feedback comparing Dong Skills to upstream Superpowers
+Implemented: `brainstorming/SKILL.md` now requires exactly one important question per assistant message and section-by-section design confirmation for complex work.
 
 Signal:
 Dong Skills `brainstorming` says to ask one important question at a time, but it lacks upstream Superpowers' stricter checklist, "only one question per message", and design-section approval cadence. Agents still tend to output many discussion points at once.
@@ -124,10 +126,11 @@ Run prompt-level/manual tests where an ambiguous design request causes one focus
 
 ### 2026-06-13 - Add Executable Dong Skills Meta-Learning Routing
 
-Status: proposed
+Status: implemented
 Priority: P0
 Affected area: learning memory / source repo discovery / backlog routing
 Source: user feedback from downstream project usage
+Implemented: `learning-status` locates the Dong Skills source repo via env vars/source markers/current repo/known candidates, rejects installed copies, and falls back to `.codex-context/dong-skills-outbox.md`.
 
 Signal:
 `codex-learning-memory` tells agents to record Dong Skills improvements in `docs/improvements/backlog.md`, but target projects often only expose installed skill copies under `%USERPROFILE%\.agents\skills`, not the real Dong Skills Git source checkout.
@@ -140,10 +143,11 @@ Agent can answer exactly where a Dong Skills improvement was recorded. If the so
 
 ### 2026-06-13 - Add Dong Skills Improvement Outbox
 
-Status: proposed
+Status: implemented
 Priority: P1
 Affected area: learning memory / project state / handoff
 Source: user feedback from downstream project usage
+Implemented: `.codex-context/dong-skills-outbox.md` is now part of templates, bootstrap assets, health checks, recovery guidance, and `learning-status`.
 
 Signal:
 When the real Dong Skills backlog is unavailable, agents currently have no standard place for Dong Skills meta-learning and may mix it into `handoff-summary.md`, `learned-instincts.md`, `verification.md`, or project state.
@@ -156,10 +160,11 @@ When the Dong Skills repo cannot be found, an improvement goes to the outbox and
 
 ### 2026-06-13 - Deduplicate Learning Observations By Topic
 
-Status: proposed
+Status: implemented
 Priority: P0
 Affected area: learning hooks / observations / learning-status
 Source: user feedback from downstream project usage
+Implemented: learning observations now carry a topic when detectable, status follow-ups for an existing topic are deduplicated, and `learning-status` shows grouped pending observations.
 
 Signal:
 Repeated user questions about whether something was learned, where it was stored, or whether it should be migrated can generate multiple raw observations for the same Dong Skills meta-learning topic.
@@ -172,10 +177,11 @@ Verification:
 
 ### 2026-06-13 - Fix Raw Observation Chinese Encoding
 
-Status: proposed
+Status: implemented
 Priority: P1
 Affected area: learning hooks / raw observations / encoding
 Source: user feedback from downstream project usage
+Implemented: regression coverage verifies Chinese prompt excerpts remain readable UTF-8 in `observations.jsonl` and do not contain common mojibake markers.
 
 Signal:
 `.codex-context/raw/observations.jsonl` can contain mojibake in `prompt_excerpt`, which makes Chinese observations hard to review and classify.
@@ -188,10 +194,11 @@ Chinese text in `observations.jsonl` remains readable after hook capture and lat
 
 ### 2026-06-13 - Improve Stop Hook Git Checkpoint Diagnostics
 
-Status: proposed
+Status: implemented
 Priority: P1
 Affected area: Stop hook / Git checkpoint / handoff
 Source: user feedback from downstream project usage
+Implemented: Stop checkpoint diagnostics now report stale handoff basis, latest changed file, handoff mtime, latest mtime, and a direct refresh instruction.
 
 Signal:
 Stop hook may report `Git checkpoint needs review` even when `handoff-summary.md` has a deferred reason, because the handoff can be older than changed files. The message does not clearly explain the stale-file basis.
@@ -204,10 +211,11 @@ Agents can resolve Stop hook blocks from the hook output alone without reading s
 
 ### 2026-06-13 - Make Verification Pruning One-Step
 
-Status: proposed
+Status: implemented
 Priority: P1
 Affected area: state-prune / verification / asset governance
 Source: user feedback from downstream project usage
+Implemented: `state-prune --verification --archive --keep-latest 8 --apply` archives older verification entries, keeps recent evidence active, and writes an `Archived Evidence` pointer.
 
 Signal:
 When `asset-governance` reports `verification.md` bloat, the current remediation requires several manual steps: prune, archive, update active summary, refresh artifact/current/handoff, and rerun checks.
@@ -220,10 +228,11 @@ One command removes repeated verification bloat reports while preserving recent 
 
 ### 2026-06-13 - Add Learning Memory Status Answer Template
 
-Status: proposed
+Status: implemented
 Priority: P2
 Affected area: learning memory / user communication
 Source: user feedback from downstream project usage
+Implemented: `codex-learning-memory` now requires target location, actual location, unfinished reason, risk, and next migration step for Dong Skills meta-learning reports.
 
 Signal:
 When users ask where a learning or improvement was stored, agents can answer vaguely and blur expected target, actual location, missing prerequisites, and migration path.

@@ -1,18 +1,6 @@
 # Verification
 
 ## Commands Run
-- Dong Skills meta-learning routing tests.
-  - Result: pass
-  - Evidence: `node --test tests\project-ops.test.mjs` passed 21/21 tests, including fallback outbox and `DONG_SKILLS_REPO` source detection.
-  - Date: 2026-06-13 16:20 +08:00
-- Learning status target detection.
-  - Result: pass
-  - Evidence: `node .codex\hooks\project-ops.mjs learning-status` reported the current repo backlog as the Dong Skills target, fallback outbox `.codex-context/dong-skills-outbox.md`, and 0 pending outbox items.
-  - Date: 2026-06-13 16:20 +08:00
-- Dong Skills health check.
-  - Result: pass
-  - Evidence: `node .codex\hooks\project-ops.mjs health-check` reported `Issues: none`.
-  - Date: 2026-06-13 16:20 +08:00
 - Asset governance dry-run.
   - Result: pass
   - Evidence: `node .codex\hooks\project-ops.mjs asset-governance` reported no blocking issues or advisories.
@@ -33,9 +21,26 @@
   - Result: pass
   - Evidence: `rg -n "D0n9|C:/Users|C:\\Users|AppData|PRIVATE KEY|BEGIN RSA|BEGIN OPENSSH|api[_-]?key|password|secret|token"` only matched documentation examples, release-check regex labels, and test redaction fixtures; no real local paths or secrets were found in changed release content.
   - Date: 2026-06-13 16:28 +08:00
-
+- Remaining optimization targeted tests.
+  - Result: pass
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 23/23 tests, including Chinese UTF-8 observation preservation, topic dedupe, stale checkpoint diagnostics, and state-prune archive pointer behavior.
+  - Date: 2026-06-13 17:02 +08:00
+- State prune command shape.
+  - Result: pass
+  - Evidence: `node .codex\hooks\project-ops.mjs state-prune --verification --archive --keep-latest 8 --dry-run` ran through the hook dispatcher and reported no pruning needed because active verification has 8 command entries.
+  - Date: 2026-06-13 17:02 +08:00
+- Final remaining-optimization verification bundle.
+  - Result: pass
+  - Evidence: after final state refresh, `node scripts\release-check.mjs .` passed health, syntax, tests, privacy, and runtime artifact scans; `node .codex\hooks\project-ops.mjs asset-governance` passed with no advisories; `git diff --check` produced no output. Earlier in the same pass, `node --test tests\project-ops.test.mjs` passed 23/23, extra privacy scan found only documented examples and test fixtures, global install sync ran, and `.codex/hooks.json` stayed unchanged after installer idempotency fix.
+  - Date: 2026-06-13 17:18 +08:00
 ## Product Evidence
 - Not applicable; this change updates workflow skills, hooks, templates, installer behavior, tests, and docs.
 
 ## Not Yet Verified
-- Git checkpoint commit and push are still pending.
+- Checkpoint commit and push are still pending for the remaining optimization changes.
+
+## Archived Evidence
+- 2026-06-13: Archived 1 older command entry to `.codex-context/archive/verification-2026-06-13-final-remaining-optimization.md`; kept latest 8.
+  - After pruning, refresh `artifact-index.md` and `handoff-summary.md` if this changed active project state.
+- 2026-06-13: Archived 2 older command entries to `.codex-context/archive/verification-2026-06-13-remaining-optimization.md`; kept latest 8.
+  - After pruning, refresh `artifact-index.md` and `handoff-summary.md` if this changed active project state.

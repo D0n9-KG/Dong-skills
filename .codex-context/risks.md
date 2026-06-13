@@ -13,6 +13,8 @@
 - Asset governance can become noisy if thresholds are too low; only severe active state bloat and unsafe tracked raw/runtime artifacts should block hooks.
 - Raw snapshot pruning is intentionally narrow; `observations.jsonl` remains governed by learning review, not generic raw cleanup.
 - Dong Skills improvement outbox entries can become stale if the real source repo remains unavailable; migrate them after source discovery works.
+- Living Spec mode is a skill instruction rather than a technical lock; sessions that skip or fail to load `brainstorming` can still drift.
+- Topic-based learning dedupe is heuristic; real usage may show topics that need splitting or merging.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -31,6 +33,7 @@
 - `session-history.mjs` searches local agent history metadata and keyword counts only; it does not guarantee complete recovery of prior work.
 - `asset-governance.mjs` is a lifecycle signal source, not semantic proof that every doc is correct.
 - The generated Dong Skills source marker can become stale if the source checkout moves; reinstall or set `DONG_SKILLS_REPO` / `DONG_SKILLS_HOME`.
+- Existing projects need a runtime refresh before they get the improved Stop diagnostics, grouped learning status, and new state-prune behavior.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.

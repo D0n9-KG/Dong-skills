@@ -1,53 +1,51 @@
 # Spec
 
 ## Problem
-Dong Skills tells agents to record skill/hook/workflow improvement ideas in `docs/improvements/backlog.md`, but project sessions often only see installed skill copies under `%USERPROFILE%\.agents\skills`. Those copies are not the Git source repo and do not contain the authoritative backlog. When the source repo cannot be located, agents have no standard fallback location and may mix Dong Skills meta-learning into project instincts, handoff, verification, or ad hoc notes.
+The previous checkpoint implemented Dong Skills improvement deposit routing, but several user-reported optimization items were only recorded in `docs/improvements/backlog.md` and not implemented.
 
 ## Goals
-- Let any project session determine where a Dong Skills improvement should be recorded.
-- Avoid editing installed skill copies as if they were source.
-- Provide a standard fallback outbox when the real source repo is unavailable.
-- Make `learning-status` answer where Dong Skills meta-learning will go.
-- Generate a local source marker during installation.
-- Keep the outbox separate from project memory and solution memory.
+- Make `brainstorming` preserve discussion state before final approval through Living Spec mode.
+- Make `brainstorming` ask one important question per assistant message and confirm complex designs section by section.
+- Reduce repeated raw learning observations for the same Dong Skills meta-learning topic.
+- Verify Chinese learning observation excerpts remain UTF-8 readable.
+- Make Stop Git Checkpoint blocks explain stale handoff evidence directly.
+- Make verification pruning a one-command path with active archive pointers.
+- Mark implemented backlog items accurately.
 
 ## Non-Goals
-- Do not automatically migrate outbox entries into the Dong Skills repo.
-- Do not make `.codex-context/dong-skills-outbox.md` active project memory.
-- Do not hardcode private machine-specific source paths into published files.
-- Do not solve semantic observation deduplication in this pass.
+- Do not add a broad pre-edit hook.
+- Do not make Living Spec a runtime hook.
+- Do not implement automatic migration of Dong Skills outbox entries.
+- Do not rewrite the full README Chinese section in this pass.
 
 ## Approved Scope
-Approved by user on 2026-06-13 as a P0 Dong Skills workflow fix.
+Approved by user correction on 2026-06-13: finish the previously discussed optimization items, not only the skill-optimization deposit path.
 
 ## User Decisions
-- Dong Skills optimization deposits must have a concrete location from other sessions.
-- Installed skill copies must not be treated as the Dong Skills source repo.
-- If the source repo cannot be found, a standard outbox is required.
+- The previous source-repo deposit fix was incomplete relative to the earlier backlog.
+- Brainstorming should not become as heavy as upstream Superpowers, but it needs enough structure to avoid drifting, skipping spec approval, or dumping many questions at once.
+- Learning memory should distinguish project instincts from Dong Skills optimization candidates.
 
 ## Design
-- `install-windows.ps1` writes `%USERPROFILE%\.agents\skills\.dong-skills-source.json` with local source repo metadata.
-- `.codex/scripts/lib/learning.mjs` discovers the Dong Skills source repo from env vars, global source markers, current repo, nearby known candidates, then fallback.
-- Discovery validates a source repo by requiring both `docs/improvements/backlog.md` and `.agents/skills/codex-learning-memory/SKILL.md`.
-- Installed skill copies under `%USERPROFILE%\.agents\skills` and `%USERPROFILE%\.codex\skills` are rejected as source repos.
-- `.codex-context/dong-skills-outbox.md` is added to templates and bootstrap assets.
-- `learning-status` displays target backlog, source, fallback outbox, pending outbox count, and installed-copy warning.
-- Skill docs and snippets define the required status answer shape: target, actual, unfinished reason, risk, next migration step.
+- Update `brainstorming/SKILL.md` with Living Spec mode, `Living Draft / Not Approved`, confirmed decisions, candidate options, and one-question clarification cadence.
+- Add observation topics in `learning.mjs` and suppress repeated status follow-ups for an existing topic.
+- Extend `learning-status` with grouped pending observations.
+- Add tests proving Chinese JSONL excerpts remain readable and topic dedupe works.
+- Extend Git checkpoint diagnostics with latest changed file, mtime evidence, and handoff refresh guidance.
+- Add `state-prune --verification --archive --keep-latest N --apply`, archive older command evidence, and write an `Archived Evidence` pointer in active `verification.md`.
+- Sync all changed runtime files into the onboarding bootstrap asset copy.
 
 ## Acceptance Criteria
-- New projects get `.codex-context/dong-skills-outbox.md` during bootstrap.
-- `learning-status` reports fallback outbox when no source repo is found.
-- `learning-status` reports the real backlog when `DONG_SKILLS_REPO` points to a valid source repo.
-- Global install writes a source marker.
-- Health check requires the outbox state file.
-- Tests cover source discovery and fallback outbox status.
-- Release check, privacy scan, health check, asset governance, and diff check pass.
+- Tests cover Living-adjacent behavior through skill text review and runtime behaviors through unit tests.
+- `node --test tests\project-ops.test.mjs` passes with new tests.
+- `state-prune --verification --archive --keep-latest 8 --dry-run` runs through the hook dispatcher.
+- Release check, asset governance, diff check, and privacy scan pass before completion.
 
 ## Open Questions
 - None for this pass.
 
 ## Approval Status
-Approved by user on 2026-06-13.
+Approved by user correction on 2026-06-13.
 
 ## Next Step
-Final verification, commit, and push.
+Run full release verification, commit, and push.

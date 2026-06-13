@@ -33,6 +33,10 @@
 - `verification-before-completion` is a hard gate, but expressed as concise Dong Skills rules instead of the heavier upstream Superpowers wording.
 - The kit will not add a broad pre-edit hook for every file change at this stage; phase boundaries are enforced through skills, project state, and existing PostToolUse/Stop checks.
 - Bootstrap writes managed Markdown with explicit UTF-8 helpers and snippet trimming so Chinese `AGENTS.md` content is preserved and repeated bootstrap runs are idempotent.
+- Brainstorming uses Living Spec mode: confirmed decisions can be written before approval as `Living Draft / Not Approved`, while implementation still waits for final approval.
+- Brainstorming should ask exactly one important question per assistant message when clarifying scope or design.
+- Learning observation dedupe is topic-based only for repeated status follow-ups; it should not silently discard new substantive observations on the same topic.
+- `state-prune --verification --archive --keep-latest N --apply` is the standard one-step verification bloat cleanup path.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -47,3 +51,4 @@
 - Generic raw cleanup that deletes `observations.jsonl`.
 - Keeping duplicate or obsolete durable docs in archive folders when Git history is sufficient.
 - Treating `.codex-context/dong-skills-outbox.md` as project memory or an active project instinct.
+- Treating user-reported Dong Skills optimization backlog items as complete merely because they were recorded.

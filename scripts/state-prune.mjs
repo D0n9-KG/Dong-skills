@@ -20,21 +20,33 @@ function parseArgs(argv) {
   const flags = argv[0] && !argv[0].startsWith("--") ? argv.slice(1) : argv;
   let keep = 8;
   let apply = false;
+  let verification = false;
+  let archive = false;
+  let reason = "prune";
 
   for (let index = 0; index < flags.length; index += 1) {
     const flag = flags[index];
     if (flag === "--apply") apply = true;
     if (flag === "--dry-run") apply = false;
-    if (flag === "--keep") {
+    if (flag === "--verification") verification = true;
+    if (flag === "--archive") archive = true;
+    if (flag === "--keep" || flag === "--keep-latest") {
       keep = Number.parseInt(flags[index + 1] || "", 10);
       index += 1;
     } else if (flag.startsWith("--keep=")) {
       keep = Number.parseInt(flag.slice("--keep=".length), 10);
+    } else if (flag.startsWith("--keep-latest=")) {
+      keep = Number.parseInt(flag.slice("--keep-latest=".length), 10);
+    } else if (flag === "--reason") {
+      reason = flags[index + 1] || reason;
+      index += 1;
+    } else if (flag.startsWith("--reason=")) {
+      reason = flag.slice("--reason=".length) || reason;
     }
   }
 
   if (!Number.isFinite(keep) || keep < 1) keep = 8;
-  return { root: gitRoot(maybeRoot), keep, apply };
+  return { root: gitRoot(maybeRoot), keep, apply, verification, archive, reason };
 }
 
 function readText(file) {
@@ -99,9 +111,17 @@ function splitCommandItems(body) {
   });
 }
 
-function archiveFile(ctx) {
+function safeSlug(value) {
+  return String(value || "prune")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "prune";
+}
+
+function archiveFile(ctx, reason) {
   const stamp = new Date().toISOString().slice(0, 10);
-  return path.join(ctx, "archive", `verification-${stamp}.md`);
+  return path.join(ctx, "archive", `verification-${stamp}-${safeSlug(reason)}.md`);
 }
 
 function appendArchive(file, archivedItems) {
@@ -119,7 +139,18 @@ function appendArchive(file, archivedItems) {
   fs.writeFileSync(file, `${block.trimEnd()}\n`, "utf8");
 }
 
-function pruneVerification(root, keep, apply) {
+function prependArchivePointer(markdown, archivedCount, keptCount, relArchive) {
+  const date = new Date().toISOString().slice(0, 10);
+  const pointer = [
+    `- ${date}: Archived ${archivedCount} older command entr${archivedCount === 1 ? "y" : "ies"} to \`${relArchive}\`; kept latest ${keptCount}.`,
+    "  - After pruning, refresh `artifact-index.md` and `handoff-summary.md` if this changed active project state."
+  ].join("\n");
+  const existing = sectionBody(markdown, "Archived Evidence");
+  const body = existing ? `${pointer}\n${existing}` : pointer;
+  return replaceSection(markdown, "Archived Evidence", body);
+}
+
+function pruneVerification(root, keep, apply, reason) {
   const ctx = path.join(root, ".codex-context");
   const verification = path.join(ctx, "verification.md");
   const markdown = readText(verification);
@@ -137,30 +168,38 @@ function pruneVerification(root, keep, apply) {
 
   const archived = commands.slice(0, commands.length - keep);
   const kept = commands.slice(commands.length - keep);
-  const targetArchive = archiveFile(ctx);
-  const nextMarkdown = replaceSection(markdown, "Commands Run", kept.join("\n"));
+  const targetArchive = archiveFile(ctx, reason);
+  let nextMarkdown = replaceSection(markdown, "Commands Run", kept.join("\n"));
+  const relArchive = path.relative(root, targetArchive).replace(/\\/g, "/");
+  nextMarkdown = prependArchivePointer(nextMarkdown, archived.length, kept.length, relArchive);
 
   if (apply) {
     appendArchive(targetArchive, archived);
     fs.writeFileSync(verification, nextMarkdown, "utf8");
   }
 
-  const relArchive = path.relative(root, targetArchive).replace(/\\/g, "/");
   return {
     changed: true,
     text: [
       "Codex state prune report",
       `Root: ${root}`,
+      "Target: verification",
       `Mode: ${apply ? "apply" : "dry-run"}`,
       `Commands Run items: ${commands.length}`,
-      `Keep: ${keep}`,
+      `Keep latest: ${keep}`,
       `Archive: ${archived.length} item(s) -> ${relArchive}`,
       `Remain: ${kept.length} item(s) in .codex-context/verification.md`,
+      "Active file update: .codex-context/verification.md includes an Archived Evidence pointer.",
+      "Next state refresh: update artifact-index.md and handoff-summary.md if this pruning changes active project state.",
       apply ? "Result: verification history archived." : "Result: no files changed. Pass --apply to archive."
     ].join("\n")
   };
 }
 
-const { root, keep, apply } = parseArgs(process.argv.slice(2));
-const result = pruneVerification(root, keep, apply);
+const { root, keep, apply, verification, archive, reason } = parseArgs(process.argv.slice(2));
+if (!verification && archive) {
+  console.error("--archive currently applies to --verification only.");
+  process.exit(2);
+}
+const result = pruneVerification(root, keep, apply, reason);
 console.log(result.text);

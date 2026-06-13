@@ -1,49 +1,42 @@
 # Current State
 
 ## Objective
-Make Dong Skills meta-learning actionable from any project session by locating the real Dong Skills source repo or falling back to a standard project outbox.
+Finish the remaining Dong Skills optimization items that were previously recorded but not implemented.
 
 ## Latest User Instruction
-User pointed out that other sessions trying to deposit Dong Skills skill-optimization ideas cannot find the correct location and often only see installed skill copies.
+User corrected that the previous checkpoint only implemented the skill-optimization deposit path, while the earlier optimization list had several other actionable items.
 
 ## Current Phase
-verification
+implementation
 
 ## Implemented
-- Added `.codex-context/dong-skills-outbox.md` as the standard fallback queue for Dong Skills improvement candidates.
-- Added Dong Skills source repo discovery to learning runtime:
-  - `DONG_SKILLS_REPO`
-  - `DONG_SKILLS_HOME`
-  - `%USERPROFILE%\.agents\skills\.dong-skills-source.json`
-  - `%USERPROFILE%\.codex\skills\.dong-skills-source.json`
-  - current repo if it is the Dong Skills source checkout
-  - nearby known checkout candidates
-  - fallback outbox
-- Explicitly rejects installed skill copies as source repos.
-- `learning-status` now reports the detected target backlog, fallback outbox path, pending outbox count, and installed-copy warning.
-- `install-windows.ps1` writes the global source marker during global skill sync.
-- Bootstrap templates, recovery order, health checks, AGENTS snippets, README, and tests are updated.
-- User-provided PRD/backlog items are recorded in `docs/improvements/backlog.md`.
+- `brainstorming/SKILL.md` now requires Living Spec mode and one-question-at-a-time clarification.
+- `learning.mjs` now assigns topics to learning observations, deduplicates status follow-ups by topic, and reports grouped pending observations.
+- Chinese learning observation regression coverage verifies UTF-8 prompt excerpts remain readable.
+- `gitCheckpointStatus` now reports stale handoff basis, latest changed file, mtime evidence, and refresh guidance.
+- `state-prune` now supports `--verification --archive --keep-latest 8 --apply` and writes an `Archived Evidence` pointer.
+- Bootstrap runtime copies are synced for changed hook/runtime scripts.
+- `docs/improvements/backlog.md` marks implemented optimization items accurately.
 
 ## Active Assumptions
-- The global source marker is local runtime metadata and must not be committed.
-- If the real Dong Skills repo is unavailable, `.codex-context/dong-skills-outbox.md` is the correct temporary location.
-- Outbox entries are not project instincts or project rules.
+- These changes are scoped to already-discussed Dong Skills improvements; no new brainstorming is needed.
+- Living Spec behavior is instruction-level, not a runtime hook.
+- Chinese mojibake protection is verified through UTF-8 JSONL regression tests.
 
 ## Blockers
 - None.
 
 ## Verification Snapshot
-- `node --test tests\project-ops.test.mjs`: pass, 21/21.
-- `node .codex\hooks\project-ops.mjs learning-status`: pass, reports current repo as Dong Skills target and zero pending outbox items.
-- `node .codex\hooks\project-ops.mjs health-check`: pass.
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass.
+- `node --test tests\project-ops.test.mjs`: pass, 23/23 after the remaining optimization changes.
+- `node .codex\hooks\project-ops.mjs state-prune --verification --archive --keep-latest 8 --apply`: pass; active verification remains at 8 entries with archive pointers.
 - `node scripts\release-check.mjs .`: pass.
 - `git diff --check`: pass.
-- Extra privacy scan: pass; no real private path or secret findings.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass with no advisories.
+- Extra privacy scan: no real private path or secret findings.
+- Global install sync: pass; self-install no longer leaves `.codex/hooks.json` changed.
 
 ## Next Action
 Commit and push the verified checkpoint.
 
 ## Last Updated
-2026-06-13 16:28 +08:00
+2026-06-13 17:18 +08:00

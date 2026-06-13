@@ -1,38 +1,45 @@
-# Dong Skills Meta-Learning Routing Plan
+# Dong Skills Remaining Optimization Plan
 
-**Goal:** Ensure Dong Skills improvement ideas can be deposited from any project session without confusing installed skill copies for the source repo.
-**Spec:** `.codex-context/spec.md`
-**Spec Approval:** Approved by user on 2026-06-13.
-**Current Step:** Checkpoint commit and push.
-**Verification:** `node --test tests\project-ops.test.mjs`, `node .codex/hooks/project-ops.mjs learning-status`, `node .codex/hooks/project-ops.mjs health-check`, `node scripts/release-check.mjs .`, `git diff --check`.
-**Execution Approval:** User explicitly asked to address the issue.
+## Active Plan
+- Goal: implement the already-discussed Dong Skills optimization items beyond the source-repo deposit path.
+- Spec: `.codex-context/spec.md`
+
+## Spec Approval
+Approved by user correction on 2026-06-13.
+
+## Execution Approval
+User asked to continue addressing the missed optimization items.
 
 ## Tasks
-
-- [x] Task 1: Record downstream feedback in Dong Skills backlog.
+- [x] Task 1: Implement Living Spec and iterative brainstorming cadence.
+  - Files: `.agents/skills/brainstorming/SKILL.md`
+  - Evidence: skill now requires Living Draft status, one important question per message, and section-by-section confirmation.
+- [x] Task 2: Implement learning observation topic dedupe and Chinese regression coverage.
+  - Files: `.codex/scripts/lib/learning.mjs`, bootstrap copy, `tests/project-ops.test.mjs`
+  - Evidence: tests confirm one grouped observation for repeated Dong Skills status follow-ups and readable Chinese excerpt.
+- [x] Task 3: Improve Stop Git Checkpoint diagnostics.
+  - Files: `.codex/scripts/lib/git.mjs`, bootstrap copy, `tests/project-ops.test.mjs`
+  - Evidence: tests confirm stale handoff output includes latest changed file and refresh instruction.
+- [x] Task 4: Add one-step verification pruning command shape.
+  - Files: `scripts/state-prune.mjs`, bootstrap copy, `tests/project-ops.test.mjs`, `codex-asset-governance`
+  - Evidence: tests confirm `--verification --archive --keep-latest --apply` archives old entries and writes an active pointer.
+- [x] Task 5: Mark implemented backlog items accurately.
   - Files: `docs/improvements/backlog.md`
-  - Evidence: user PRD items added without private project paths.
-
-- [x] Task 2: Add fallback outbox template.
-  - Files: `.codex/scripts/lib/templates.mjs`, bootstrap `.codex-context/dong-skills-outbox.md`, AGENTS snippets.
-  - Evidence: bootstrap test asserts the file exists in new target projects.
-
-- [x] Task 3: Add source repo discovery and learning-status reporting.
-  - Files: `.codex/scripts/lib/learning.mjs`, bootstrap runtime copy.
-  - Evidence: tests cover fallback outbox and `DONG_SKILLS_REPO` source detection.
-
-- [x] Task 4: Add install marker.
+  - Evidence: implemented items no longer appear as proposed.
+- [x] Task 6: Sync global installation and avoid self-install hook formatting churn.
   - Files: `scripts/install-windows.ps1`
-  - Evidence: install run created `%USERPROFILE%\.agents\skills\.dong-skills-source.json`.
+  - Evidence: self-install no longer leaves `.codex/hooks.json` changed when hook config is semantically unchanged.
 
-- [x] Task 5: Update docs and health checks.
-  - Files: `codex-learning-memory`, `codex-project-governance`, `README.md`, `AGENTS.project-ops.snippet.md`, `project-ops-health.mjs`.
-  - Evidence: health check passes.
+## Current Step
+Final checkpoint commit and push.
 
-## Risks
-- The source marker contains a local path and must remain generated outside the repo.
-- Outbox entries can become stale if not migrated after the source repo becomes available.
-- README Chinese text is already mojibake in the current file; this task avoids broad README rewrites.
+## Verification
+- `node --test tests\project-ops.test.mjs`: pass, 23/23.
+- `node scripts\release-check.mjs .`: pass.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories after pruning.
+- `git diff --check`: pass.
 
-## Next Step
-Commit and push the verified checkpoint.
+## Out Of Scope
+- No broad pre-edit hook.
+- No runtime enforcement for Living Spec beyond skill instructions.
+- No automatic migration from Dong Skills outbox to backlog.

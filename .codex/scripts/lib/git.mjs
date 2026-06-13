@@ -87,12 +87,28 @@ export function gitAheadBehind(root) {
   }
 }
 
+function latestFileMtime(root, files) {
+  let latest = { file: "", mtime: 0 };
+  for (const file of files) {
+    const abs = path.join(root, file);
+    const current = mtimeMs(abs);
+    if (current > latest.mtime) latest = { file, mtime: current };
+  }
+  return latest;
+}
+
+function formatMtime(ms) {
+  if (!ms) return "missing";
+  return new Date(ms).toISOString();
+}
+
 export function gitCheckpointStatus(root, ctx, latest) {
   const statusFiles = gitStatusFiles(root);
   const branch = gitCurrentBranch(root);
   const remote = gitHasRemote(root);
   const aheadBehind = gitAheadBehind(root);
   const issues = [];
+  const checkpointDetails = [];
 
   if (statusFiles.length > 0) issues.push(`${statusFiles.length} uncommitted file(s)`);
   if (aheadBehind.ahead > 0) issues.push(`${aheadBehind.ahead} unpushed commit(s)`);
@@ -102,22 +118,44 @@ export function gitCheckpointStatus(root, ctx, latest) {
   const handoffFile = path.join(ctx, REQUIRED_FILES.handoff);
   const handoff = readText(handoffFile);
   const checkpoint = sectionContent(handoff, "Git Checkpoint");
-  const checkpointFresh = latest ? mtimeMs(handoffFile) >= latest - 1000 : true;
+  const handoffMtime = mtimeMs(handoffFile);
+  const checkpointFresh = latest ? handoffMtime >= latest - 1000 : true;
   const checkpointValidation = validateGitCheckpointSection(checkpoint);
   const checkpointRecorded = meaningful(checkpoint) && checkpointFresh && checkpointValidation.ok;
+  const nonGovernanceStatusFiles = statusFiles.filter((file) => !isGovernancePath(file));
+  const latestChanged = latestFileMtime(root, nonGovernanceStatusFiles.length ? nonGovernanceStatusFiles : statusFiles);
+
+  if (needsCheckpoint && meaningful(checkpoint) && !checkpointFresh) {
+    checkpointDetails.push([
+      "handoff-summary.md is older than changed files",
+      `latest changed file: ${latestChanged.file || "unknown"}`,
+      `latest mtime: ${formatMtime(latestChanged.mtime || latest)}`,
+      `handoff mtime: ${formatMtime(handoffMtime)}`,
+      "refresh handoff-summary.md after verification/artifact/current-state updates"
+    ].join("; "));
+  }
   if (needsCheckpoint && checkpointValidation.missing.length) {
     issues.push(`Git Checkpoint missing field(s): ${checkpointValidation.missing.join(", ")}`);
   }
+
+  const onlyGovernanceChanges = statusFiles.length > 0 && nonGovernanceStatusFiles.length === 0;
+  if (needsCheckpoint && onlyGovernanceChanges) {
+    checkpointDetails.push("Only governance/context files changed; a structured deferred reason is acceptable when no code checkpoint is needed.");
+  }
+
+  const detailText = checkpointDetails.length ? ` Details: ${checkpointDetails.join(" ")}` : "";
 
   return {
     ok: !needsCheckpoint || checkpointRecorded,
     needsCheckpoint,
     checkpointRecorded,
     checkpointValidation,
+    checkpointFresh,
+    checkpointDetails,
     statusFiles,
     issues,
     summary: needsCheckpoint
-      ? `Git checkpoint needs review: ${issues.join("; ")}. Use codex-git-checkpoint to commit/push or record the deferred reason in handoff-summary.md -> Git Checkpoint.`
+      ? `Git checkpoint needs review: ${issues.join("; ")}.${detailText} Use codex-git-checkpoint to commit/push or record the deferred reason in handoff-summary.md -> Git Checkpoint.`
       : "Git checkpoint ok: worktree has no uncommitted files and no unpushed commits."
   };
 }

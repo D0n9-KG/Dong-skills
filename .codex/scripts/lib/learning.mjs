@@ -92,6 +92,53 @@ export function classifyLearningCue(prompt) {
   return null;
 }
 
+function hasAny(text, patterns) {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function observationTopic(prompt) {
+  const text = normalizeWhitespace(prompt).toLowerCase();
+  if (!text) return "";
+
+  const mentionsDongSkills = hasAny(text, [/dong\s*-?\s*skills/i, /skill/i, /hooks?/i, /installer/i, /bootstrap/i, /治理/i, /优化/i]);
+  const mentionsMetaLearning = hasAny(text, [/backlog/i, /outbox/i, /沉淀/i, /优化/i, /改进/i, /放到哪里/i, /记录到哪里/i, /source repo/i, /源仓库/i]);
+  if (mentionsDongSkills && mentionsMetaLearning) return "dong-skills-meta-learning";
+
+  if (hasAny(text, [/brainstorm/i, /头脑风暴/i, /living spec/i, /spec/i, /讨论/i, /批准/i])) {
+    return "brainstorming-living-spec";
+  }
+  if (hasAny(text, [/precompact/i, /postcompact/i, /compact/i, /压缩/i, /handoff/i, /恢复记忆/i])) {
+    return "compaction-handoff";
+  }
+  if (hasAny(text, [/stop hook/i, /git checkpoint/i, /checkpoint/i, /提交/i, /push/i, /stale/i])) {
+    return "git-checkpoint-diagnostics";
+  }
+  if (hasAny(text, [/state-prune/i, /verification/i, /asset-governance/i, /归档/i, /验证/i, /资产/i])) {
+    return "state-asset-governance";
+  }
+
+  return "";
+}
+
+function isStatusFollowup(prompt) {
+  const text = normalizeWhitespace(prompt).toLowerCase();
+  return hasAny(text, [
+    /放到哪里/i,
+    /写到哪里/i,
+    /记录到哪里/i,
+    /有没有/i,
+    /是否/i,
+    /确认/i,
+    /状态/i,
+    /迁移/i,
+    /where/i,
+    /status/i,
+    /stored/i,
+    /pending/i,
+    /already/i
+  ]);
+}
+
 export function observationsFile(ctx) {
   return path.join(ctx, "raw", "observations.jsonl");
 }
@@ -254,9 +301,12 @@ export function parseJsonLines(file) {
   return records;
 }
 
-function recentObservationDuplicate(file, promptHash, excerpt) {
+function recentObservationDuplicate(file, promptHash, excerpt, topic, prompt) {
   const records = parseJsonLines(file).slice(-20);
-  return records.some((record) => record.prompt_fingerprint === promptHash || record.prompt_excerpt === excerpt);
+  return records.some((record) => {
+    if (record.prompt_fingerprint === promptHash || record.prompt_excerpt === excerpt) return true;
+    return !!topic && record.topic === topic && isStatusFollowup(prompt);
+  });
 }
 
 export function appendLearningObservation(root, ctx, input, cue, prompt) {
@@ -266,7 +316,8 @@ export function appendLearningObservation(root, ctx, input, cue, prompt) {
   const promptHash = fingerprint(prompt);
   const redacted = containsPotentialSecret(prompt);
   const promptExcerpt = sanitizeLearningExcerpt(prompt);
-  if (recentObservationDuplicate(file, promptHash, promptExcerpt)) return false;
+  const topic = observationTopic(prompt);
+  if (recentObservationDuplicate(file, promptHash, promptExcerpt, topic, prompt)) return false;
 
   const event = {
     timestamp: new Date().toISOString(),
@@ -275,6 +326,7 @@ export function appendLearningObservation(root, ctx, input, cue, prompt) {
     signal: cue.signal,
     status: "unreviewed",
     source: "UserPromptSubmit",
+    topic: topic || undefined,
     sensitive_redactions_applied: redacted,
     prompt_fingerprint: promptHash,
     cwd_relative: relativeCwd(root, input.cwd),
@@ -320,10 +372,24 @@ export function learningStatus(ctx) {
     issues,
     observations,
     pendingObservations,
+    groupedPendingObservations: groupObservationsByTopic(pendingObservations),
     candidateCount,
     indexStale,
     obsFile
   };
+}
+
+function groupObservationsByTopic(observations) {
+  const grouped = new Map();
+  for (const observation of observations) {
+    const key = observation.topic || observation.category || "uncategorized";
+    const item = grouped.get(key) || { topic: key, count: 0, newest: "", examples: [] };
+    item.count += 1;
+    if (!item.newest || String(observation.timestamp || "") > item.newest) item.newest = observation.timestamp || "";
+    if (observation.prompt_excerpt && item.examples.length < 2) item.examples.push(observation.prompt_excerpt);
+    grouped.set(key, item);
+  }
+  return [...grouped.values()].sort((a, b) => String(b.newest).localeCompare(String(a.newest)));
 }
 
 export function learningStatusText(root, ctx) {
@@ -347,6 +413,14 @@ export function learningStatusText(root, ctx) {
   ];
 
   if (status.pendingObservations.length) {
+    if (status.groupedPendingObservations.length) {
+      lines.push("Grouped pending observations:");
+      for (const group of status.groupedPendingObservations.slice(0, 8)) {
+        lines.push(`- topic: ${group.topic}, observations: ${group.count}, newest: ${group.newest || "unknown time"}`);
+      }
+      lines.push("");
+    }
+
     lines.push("Newest pending observations:");
     for (const item of status.pendingObservations.slice(-8).reverse()) {
       lines.push(`- ${item.timestamp || "unknown time"} [${item.category || "unknown"}] ${item.prompt_excerpt || ""}`);

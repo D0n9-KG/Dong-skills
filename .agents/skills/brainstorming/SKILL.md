@@ -5,7 +5,7 @@ description: MUST use before ambiguous, creative, behavior-changing, multi-file,
 
 # Brainstorming
 
-Use this skill to turn intent into an approved spec through collaborative discussion. Keep it lighter than upstream Superpowers, but keep the phase boundary hard: no implementation before approval.
+Use this skill to turn intent into an approved spec through collaborative discussion. Keep it lighter than upstream Superpowers, but keep the phase boundary hard: no implementation before approval and no loss of confirmed discussion state before approval.
 
 ## Hard Gate
 
@@ -22,22 +22,33 @@ Read-only discovery is allowed before approval. If you are unsure whether a requ
 
 - Understand the real problem, not just the first requested implementation.
 - Expose constraints, non-goals, risks, acceptance criteria, and open questions.
-- Explore alternatives before committing to one path.
-- Produce a written spec that survives compaction and new sessions.
+- Explore alternatives before committing to one path, without overwhelming the user with a large questionnaire.
+- Produce a living written spec that survives compaction and new sessions even before final approval.
 - Hand off to `writing-plans` for multi-step implementation.
 
 ## Process
 
 1. **Discover context.** Read `AGENTS.md`, `.codex-context/current-state.md`, `.codex-context/project-map.md`, relevant docs/code, and recent changes. Do not read the whole repo.
 2. **Restate the objective.** One sentence, including the user-visible outcome.
-3. **Clarify.** Ask one important question at a time when the answer changes scope, UX, architecture, data model, API, verification, or delivery. Prefer 2-3 concrete choices when useful.
-4. **Explore options.** Present 2-3 approaches when there is a real choice. Include trade-offs and a recommendation.
-5. **Present the design.** Scale detail to complexity. Cover only relevant sections: behavior, boundaries, files/modules, data flow, UX/API, error handling, migration, verification, non-goals.
-6. **Ask for approval.** Ask the user to approve or request changes. Do not treat silence, vague acknowledgement, or a question as approval.
-7. **Write the spec.** After approval, update `.codex-context/spec.md`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` only when the spec is too large for the state file, then link it from `spec.md`.
-8. **Self-review the spec.** Remove placeholders, contradictions, hidden scope creep, and ambiguous requirements.
-9. **Update state.** Update `.codex-context/current-state.md` and `.codex-context/open-questions.md`.
-10. **Transition.** For multi-step work, use `writing-plans` next. Do not jump from brainstorming directly to implementation unless the approved spec is tiny and mechanical.
+3. **Clarify.** Ask exactly one important question per assistant message when the answer changes scope, UX, architecture, data model, API, verification, or delivery. You may include 2-3 concrete choices for that one question, but do not bundle multiple questions.
+4. **Update the living spec.** As soon as the user confirms a decision, boundary, non-goal, acceptance criterion, or open question, update `.codex-context/spec.md` with `Approval Status: Living Draft / Not Approved`. Also refresh `.codex-context/decisions.md`, `.codex-context/open-questions.md`, `.codex-context/current-state.md`, and `.codex-context/handoff-summary.md` when the discussion is long enough that compaction would lose context.
+5. **Explore options.** Present 2-3 approaches only when there is a real choice. Include trade-offs and a recommendation, then ask one focused follow-up question.
+6. **Present the design section by section.** Scale detail to complexity. Cover only relevant sections: behavior, boundaries, files/modules, data flow, UX/API, error handling, migration, verification, non-goals. For complex work, ask for confirmation after each section before moving to the next section.
+7. **Ask for final approval.** Ask the user to approve the complete design/spec or request changes. Do not treat silence, vague acknowledgement, or a question as approval.
+8. **Finalize the spec.** After final approval, update `.codex-context/spec.md` from `Living Draft / Not Approved` to `Approved by user on [date/time]`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` only when the spec is too large for the state file, then link it from `spec.md`.
+9. **Self-review the spec.** Remove placeholders, contradictions, hidden scope creep, and ambiguous requirements.
+10. **Update state.** Update `.codex-context/current-state.md`, `.codex-context/decisions.md`, `.codex-context/open-questions.md`, and `.codex-context/handoff-summary.md`.
+11. **Transition.** For multi-step work, use `writing-plans` next. Do not jump from brainstorming directly to implementation unless the approved spec is tiny and mechanical.
+
+## Living Spec Mode
+
+Living Spec mode starts when brainstorming begins and ends only when the user approves the final design/spec or explicitly cancels the effort.
+
+- Store confirmed discussion state in `.codex-context/spec.md` before approval, marked `Approval Status: Living Draft / Not Approved`.
+- Clearly separate `Confirmed Decisions`, `Candidate Options`, `Open Questions`, and `Not Approved Yet`.
+- Do not present living draft content as permission to implement.
+- If a discussion spans multiple turns, a likely compaction boundary, or a new session handoff, refresh `handoff-summary.md` with the current living draft status.
+- When final approval arrives, rewrite the spec into the approved shape and preserve the important confirmed decisions.
 
 ## Spec Shape
 
@@ -53,10 +64,13 @@ Use this structure unless the project already has a stronger one:
 - [Observable outcome.]
 
 ## Approval Status
-Approved by user on [date/time or "Not approved yet"].
+Living Draft / Not Approved, or Approved by user on [date/time].
 
 ## User Decisions
 - [Decision, trade-off, and source.]
+
+## Candidate Options
+- [Options still under discussion, or "None."]
 
 ## Non-Goals
 - [Explicitly out of scope.]

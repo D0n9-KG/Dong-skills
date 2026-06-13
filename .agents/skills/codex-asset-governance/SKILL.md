@@ -65,7 +65,7 @@ Dry-run is the default. `--apply` only prunes generated `precompact-auto-*.md` r
 ## Update Matrix
 
 - State file stale or contradictory: update `.codex-context/current-state.md`, `spec.md`, `plan-progress.md`, `decisions.md`, `risks.md`, or `handoff-summary.md` as appropriate.
-- Verification bloat: run `state-prune --keep 8 --apply` after ensuring fresh evidence remains.
+- Verification bloat: run `state-prune --verification --archive --keep-latest 8 --apply` after ensuring fresh evidence remains. This archives older command evidence, keeps recent proof active, and adds an archive pointer to `verification.md`.
 - Docs duplicate or conflict: use `codex-docs-stewardship`; consolidate into the canonical doc and delete the duplicate.
 - Solution docs duplicate/stale: use `codex-solution-memory` refresh mode.
 - Code concentration, flat directories, duplicate concepts, or orphan scripts: use `codex-architecture-governance` before restructuring.
@@ -77,7 +77,7 @@ Dry-run is the default. `--apply` only prunes generated `precompact-auto-*.md` r
 Before long pauses, compaction, release, or major handoff:
 
 1. Run `asset-governance`.
-2. Run `state-prune --dry-run` if verification bloat is reported.
+2. Run `state-prune --verification --archive --keep-latest 8 --dry-run` if verification bloat is reported.
 3. Run docs/solution/architecture scans only for affected areas.
 4. Apply only safe, scoped cleanup.
 5. Refresh `artifact-index.md`, `current-state.md`, `verification.md`, and `handoff-summary.md`.

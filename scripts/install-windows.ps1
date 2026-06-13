@@ -274,6 +274,17 @@ function Merge-HooksJson {
   }
 
   $json = $targetConfig | ConvertTo-Json -Depth 30
+  if (Test-Path -LiteralPath $TargetFile) {
+    try {
+      $existingCanonical = (Get-Content -LiteralPath $TargetFile -Raw | ConvertFrom-Json) | ConvertTo-Json -Depth 30 -Compress
+      $nextCanonical = $targetConfig | ConvertTo-Json -Depth 30 -Compress
+      if ($existingCanonical -eq $nextCanonical) {
+        return
+      }
+    } catch {
+      # Fall through and rewrite malformed or unreadable hook config.
+    }
+  }
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($TargetFile, $json + [Environment]::NewLine, $utf8NoBom)
 }

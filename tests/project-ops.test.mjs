@@ -364,6 +364,35 @@ test("learning observations redact private key bodies and URL userinfo", () => {
   assert.match(obs, /example\.com/);
 });
 
+test("learning observations preserve Chinese UTF-8 and dedupe status follow-ups by topic", () => {
+  const project = tempProject();
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "记住：Dong Skills 优化沉淀应该写到真实源仓库，不要写进安装副本。"
+  });
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "确认一下，刚才这个 Dong Skills 优化沉淀放到哪里了？"
+  });
+
+  const obsFile = path.join(project, ".codex-context", "raw", "observations.jsonl");
+  const lines = fs.readFileSync(obsFile, "utf8").trim().split(/\r?\n/);
+  assert.equal(lines.length, 1);
+  const event = JSON.parse(lines[0]);
+  assert.equal(event.topic, "dong-skills-meta-learning");
+  assert.match(event.prompt_excerpt, /优化沉淀/);
+  assert.doesNotMatch(event.prompt_excerpt, /鎸|娌|穩/);
+
+  const out = execFileSync(process.execPath, [hook, "learning-status", project], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Grouped pending observations:/);
+  assert.match(out, /topic: dong-skills-meta-learning, observations: 1/);
+});
+
 test("learning-status reports Dong Skills fallback outbox", () => {
   const project = tempProject();
   write(path.join(project, ".codex-context", "dong-skills-outbox.md"), `# Dong Skills Improvement Outbox
@@ -428,6 +457,29 @@ test("Stop requires structured Git Checkpoint fields when worktree is dirty", ()
 `);
   const structured = runHook(project, { hook_event_name: "Stop" });
   assert.equal(structured.continue, true);
+});
+
+test("Stop explains stale Git Checkpoint handoff evidence", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  write(path.join(project, "work.txt"), "dirty\n");
+
+  readyState(project, `- Latest commit: not ready
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: test fixture keeps dirty work uncommitted
+- Next checkpoint: commit after fixture completes
+`);
+  const handoffFile = path.join(project, ".codex-context", "handoff-summary.md");
+  const old = new Date(Date.now() - 20_000);
+  fs.utimesSync(handoffFile, old, old);
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /handoff-summary\.md is older than changed files/);
+  assert.match(output.reason, /latest changed file: work\.txt/);
+  assert.match(output.reason, /refresh handoff-summary\.md after verification\/artifact\/current-state updates/);
 });
 
 test("SessionStart recovery includes tail handoff sections", () => {
@@ -627,12 +679,13 @@ test("state-prune archives old verification commands and keeps recent evidence",
 - UI trust prompt.
 `);
 
-  const out = execFileSync(process.execPath, [statePrune, project, "--keep", "2", "--apply"], {
+  const out = execFileSync(process.execPath, [statePrune, project, "--verification", "--archive", "--keep-latest", "2", "--reason", "test-bloat", "--apply"], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /Archive: 2 item/);
+  assert.match(out, /Active file update: \.codex-context\/verification\.md includes an Archived Evidence pointer/);
 
   const verification = fs.readFileSync(path.join(ctx, "verification.md"), "utf8");
   assert.doesNotMatch(verification, /command 1/);
@@ -640,9 +693,12 @@ test("state-prune archives old verification commands and keeps recent evidence",
   assert.match(verification, /command 3/);
   assert.match(verification, /command 4/);
   assert.match(verification, /UI trust prompt/);
+  assert.match(verification, /## Archived Evidence/);
+  assert.match(verification, /verification-\d{4}-\d{2}-\d{2}-test-bloat\.md/);
 
   const archives = fs.readdirSync(path.join(ctx, "archive")).filter((name) => name.startsWith("verification-"));
   assert.equal(archives.length, 1);
+  assert.match(archives[0], /test-bloat/);
   const archive = fs.readFileSync(path.join(ctx, "archive", archives[0]), "utf8");
   assert.match(archive, /command 1/);
   assert.match(archive, /command 2/);
