@@ -3,7 +3,7 @@
 ## Current Workspace
 - Role: primary-checkout
 - Path: Dong Skills source repository root
-- Detection date: 2026-06-12 19:14 +08:00
+- Detection date: 2026-06-13 21:45 +08:00
 
 ## Primary Checkout
 - Path: current repository root
@@ -13,6 +13,7 @@
 - Branch: main
 - Detached HEAD: no
 - Base branch: main
+- Current commit before this fix checkpoint: 84c0503
 
 ## Ownership And Cleanup
 - Cleanup owner: none

@@ -6,8 +6,12 @@
 - `.codex-context/archive/verification-2026-06-13-remaining-optimization.md`: archived older verification entries after `state-prune --verification --archive --keep-latest 8 --apply`.
 - `.codex-context/archive/verification-2026-06-13-final-remaining-optimization.md`: archived one older verification entry after final verification evidence was added.
 - `.codex-context/archive/verification-2026-06-13-audit-cleanup.md`: archived one older verification entry after the follow-up audit evidence was added.
+- `.codex-context/archive/verification-2026-06-13-brainstorming-continuation.md`: archived one older verification entry after the brainstorming continuation-loop fix evidence was added.
 
 ## Modified
+- `.agents/skills/brainstorming/SKILL.md`: adds an explicit Continuation Loop preserving upstream Superpowers flow discipline; after each user answer, brainstorming must continue to the next single question, approaches, design section, final approval, `writing-plans`, pause, or blocker instead of stopping after state-file updates.
+- `tests/project-ops.test.mjs`: adds a regression test that guards the brainstorming continuation-loop requirement.
+- `docs/improvements/backlog.md`: records the user-reported brainstorming continuation defect as a completed Dong Skills improvement.
 - `.codex/scripts/lib/learning.mjs`: adds Dong Skills source discovery, installed-copy rejection, outbox status, and learning-status reporting.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/learning.mjs`: bootstrap runtime copy.
 - `.codex/scripts/lib/learning.mjs`: now also assigns observation topics, deduplicates status follow-ups, and reports grouped pending observations.
@@ -16,7 +20,7 @@
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/git.mjs`: bootstrap copy synced.
 - `scripts/state-prune.mjs`: adds `--verification --archive --keep-latest` command shape and active archive pointers.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/state-prune.mjs`: bootstrap copy synced.
-- `.agents/skills/brainstorming/SKILL.md`: adds Living Spec mode, one-question cadence, and section-by-section approval guidance.
+- `.agents/skills/brainstorming/SKILL.md`: previously added Living Spec mode, one-question cadence, and section-by-section approval guidance.
 - `.agents/skills/codex-asset-governance/SKILL.md`: points verification bloat remediation to the new state-prune command.
 - `.codex/scripts/lib/templates.mjs`: adds `dong-skills-outbox.md` required file and template.
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`: bootstrap runtime copy.

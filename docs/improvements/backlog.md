@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-13 - Preserve Upstream Brainstorming Continuation Loop
+
+Status: done
+Priority: P0
+Affected area: brainstorming / user interaction / Superpowers parity
+Source: user feedback from downstream project usage
+Implemented: `brainstorming/SKILL.md` now has an explicit Continuation Loop requiring the agent to continue from each user answer to the next single question, approaches, design section, final approval, `writing-plans`, pause, or blocker. `tests/project-ops.test.mjs` guards the presence of this rule.
+
+Signal:
+After a user answered one brainstorming question, the agent updated living spec/state files and stopped instead of asking the next question or advancing to the next design phase. This lost useful upstream Superpowers behavior.
+
+Decision:
+Do not over-lighten upstream Superpowers. Keep Dong Skills lighter than the original, but preserve the flow state machine: answer -> record confirmed state -> continue to the next question or next phase.
+
+Verification:
+Add a test that asserts the brainstorming skill retains the continuation loop and the rule that state-file updates alone are not a valid brainstorming turn ending.
+
 ### 2026-06-12 - Preserve Handoff During Automatic PreCompact
 
 Status: done

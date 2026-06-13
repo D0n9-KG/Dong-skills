@@ -1,31 +1,22 @@
 # Handoff Summary
 
 ## Objective
-Audit whether the previously discussed Dong Skills optimization issues are resolved and clean up any remaining low-risk inconsistency.
+Restore upstream Superpowers brainstorming continuation behavior in Dong Skills.
 
 ## Latest User Instruction
-User asked whether the previously discussed issues are now solved and requested an overall review for remaining problems.
+User reported that Dong Skills brainstorming updates the living spec after a question is answered but fails to automatically ask the next question. User asked to compare original Superpowers and keep useful upstream behavior instead of over-modifying it away.
 
 ## Approved Scope / Spec
-- Living Spec mode and iterative brainstorming cadence.
-- Learning observation topic dedupe and Chinese UTF-8 regression coverage.
-- More precise Stop Git Checkpoint stale-handoff diagnostics.
-- One-step verification pruning command with archive pointer.
-- Backlog status cleanup so implemented items are not left as proposed.
-- Audit installed/source parity, hook/runtime health, learning-status routing, asset governance, and release readiness.
+- Preserve useful upstream Superpowers brainstorming flow discipline.
+- Keep Dong Skills lighter than upstream, but require forward motion after every user answer.
+- Do not restore upstream-only heavy pieces such as visual companion or forced spec commit.
+- Add a regression test so the continuation-loop constraint is not removed again.
 
 ## Plan Status
-Audit is done. One low-risk docs cleanup was made: `docs/improvements/backlog.md` now uses canonical `done` status for resolved items.
+Implementation and verification are done. Git checkpoint is pending.
 
 ## Files Modified
 - `.agents/skills/brainstorming/SKILL.md`
-- `.agents/skills/codex-asset-governance/SKILL.md`
-- `.codex/scripts/lib/learning.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/learning.mjs`
-- `.codex/scripts/lib/git.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/git.mjs`
-- `scripts/state-prune.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/state-prune.mjs`
 - `tests/project-ops.test.mjs`
 - `docs/improvements/backlog.md`
 - `.codex-context/*.md`
@@ -33,52 +24,45 @@ Audit is done. One low-risk docs cleanup was made: `docs/improvements/backlog.md
 ## Files Read But Not Changed
 - `codex-project-governance`
 - `writing-plans`
-- `codex-verification-loop`
-- `codex-git-checkpoint`
 - `using-superpowers`
-- `brainstorming`
-- `codex-learning-memory`
+- upstream `obra/superpowers` `skills/brainstorming/SKILL.md`
 
 ## Decisions Made
-- Living Spec is enforced through the brainstorming skill, not a runtime hook.
-- Observation dedupe is conservative: suppress repeated status follow-ups for an already-seen topic, not every same-topic prompt.
-- `state-prune --archive` applies to verification pruning only.
-- Stop diagnostics should prefer the latest non-governance changed file when available.
-- The apparent Chinese mojibake in `brainstorming/SKILL.md` was display-channel corruption from the shell output; byte-level UTF-8 read confirmed the file contains correct `可以` and `继续`.
-- `docs/improvements/backlog.md` should use the review states it defines; resolved items are now `done`, not mixed `accepted` / `implemented`.
+- Root cause: Dong Skills kept "one question at a time" and Living Spec, but lost the upstream flow state machine that forces the agent to continue after each answer.
+- Fix: add `Continuation Loop` to `brainstorming/SKILL.md`.
+- The loop requires ending each brainstorming turn with exactly one next question, design-section approval request, final approval request, `writing-plans` transition, pause, or blocker.
+- State-file updates, test results, or hook status can be mentioned, but cannot be the only ending of a brainstorming turn.
 
 ## Open Questions And Assumptions
-- Assumption: existing projects need a Dong Skills refresh/bootstrap to receive the new runtime scripts and project-local hook behavior.
+- Assumption: existing projects need global skill refresh/restart or project bootstrap to see the updated installed skill in a new session.
 - Open question: none blocking this pass.
 
 ## Risks
-- Skill-only brainstorming changes depend on Codex loading and following the skill.
-- Topic dedupe is heuristic and may need tuning after real use.
-- Existing projects with old hooks will not show improved Stop diagnostics until refreshed.
+- This is an instruction-level behavior fix; it depends on the agent loading `brainstorming`.
+- If a session has already loaded an older installed skill, it may need a new session/restart to pick up the update.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs`: pass, 23/23.
+- `node --test tests\project-ops.test.mjs`: pass, 24/24.
 - `node scripts\release-check.mjs .`: pass.
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories after state refresh.
 - `node .codex\hooks\project-ops.mjs learning-status`: pass; source marker target found, 0 pending observations, 0 pending outbox items.
-- `node scripts\project-ops-health.mjs .`: pass.
+- Global install sync: pass; installed `brainstorming/SKILL.md` hash matches source.
 - `git diff --check`: pass.
-- Installed global `SKILL.md` files and project-ops assets match source.
 
 ## Git Checkpoint
-- Latest commit: `893da98 fix(governance): finish remaining Dong Skills optimizations`.
-- Push state: `origin/main` was aligned before this audit cleanup.
-- Files included: backlog status normalization and refreshed state files.
+- Latest commit: `84c0503 chore(state): mark Dong Skills audit items done`.
+- Push state: `origin/main` aligned before this fix.
+- Files included: `brainstorming/SKILL.md`, test guard, backlog entry, global install sync, state files.
 - Files intentionally left uncommitted: none intended.
 - Deferred reason: none.
-- Next checkpoint: commit and push this audit cleanup, then report the final branch state.
+- Next checkpoint: commit and push after release verification.
 
 ## Learned Instincts To Preserve
-- User expects backlog items to be implemented when asking to optimize Dong Skills, not merely recorded.
-- Dong Skills optimization learning remains separate from project instincts.
+- Do not over-lighten upstream workflow skills. Preserve useful flow-control behavior unless there is a specific Codex reason to change it.
+- Dong Skills optimization learning remains separate from project instincts and belongs in `docs/improvements/backlog.md`.
 
 ## Next Action
-Report audit result and remaining risk clearly.
+Commit and push the verified checkpoint.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
@@ -88,6 +72,5 @@ Report audit result and remaining risk clearly.
 5. `.codex-context/artifact-index.md`
 6. `.codex-context/verification.md`
 7. `.agents/skills/brainstorming/SKILL.md`
-8. `.codex/scripts/lib/learning.mjs`
-9. `.codex/scripts/lib/git.mjs`
-10. `scripts/state-prune.mjs`
+8. `tests/project-ops.test.mjs`
+9. `docs/improvements/backlog.md`

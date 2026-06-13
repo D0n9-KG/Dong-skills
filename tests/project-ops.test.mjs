@@ -196,6 +196,15 @@ Continue.
 `);
 }
 
+test("brainstorming skill preserves upstream continuation loop", () => {
+  const skill = fs.readFileSync(path.join(root, ".agents", "skills", "brainstorming", "SKILL.md"), "utf8");
+
+  assert.match(skill, /## Continuation Loop/);
+  assert.match(skill, /After every user response during brainstorming/);
+  assert.match(skill, /ask the next single highest-impact question/);
+  assert.match(skill, /Do not end a brainstorming turn by only saying that files were updated/);
+});
+
 test("published Windows hook commands are encoded project hook invocations", () => {
   const hookJsonFiles = [
     path.join(root, ".codex", "hooks.json"),

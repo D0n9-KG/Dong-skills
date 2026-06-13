@@ -14,5 +14,8 @@
 ## Refresh Signals
 - No refresh candidates found.
 
+## Review Notes
+- 2026-06-13 21:45 +08:00: Brainstorming continuation fix did not add or change `docs/solutions/` or `CONCEPTS.md`.
+
 ## Last Updated
-- 2026-06-12 21:43 +08:00
+- 2026-06-13 21:45 +08:00

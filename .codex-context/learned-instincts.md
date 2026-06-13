@@ -26,3 +26,4 @@ Keep this file as a compact index. Store individual instincts under `.codex-cont
 - 2026-06-10: Saved verified project instinct for Windows hook command quoting after `/hooks` surfaced PowerShell parser failures.
 - 2026-06-10: Saved verified project instinct for automatic PreCompact fallback after user reported silent stopping without hook feedback.
 - 2026-06-12: Updated PreCompact instinct wording after implementation changed from replacing handoff content to preserving it below an emergency notice.
+- 2026-06-13: Reviewed brainstorming continuation feedback; routed it to Dong Skills improvement backlog instead of project instincts because it changes skill behavior, not a project-specific rule.
