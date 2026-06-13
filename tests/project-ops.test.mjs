@@ -13,6 +13,7 @@ const statePrune = path.join(root, "scripts", "state-prune.mjs");
 const solutions = path.join(root, "scripts", "solutions.mjs");
 const health = path.join(root, "scripts", "project-ops-health.mjs");
 const assetGovernance = path.join(root, "scripts", "asset-governance.mjs");
+const releaseCheck = path.join(root, "scripts", "release-check.mjs");
 
 function decodePowerShellEncodedCommand(command) {
   const match = String(command).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
@@ -135,6 +136,48 @@ function readyHealthFixture(projectRoot) {
   ]) {
     write(path.join(ctx, name), `# ${name}\n`);
   }
+
+  write(path.join(ctx, "spec.md"), `# Spec
+
+## Problem
+Fixture.
+
+## Goals
+- Fixture.
+
+## Approval Status
+Approved by fixture.
+
+## Approved Scope
+- Fixture.
+
+## Acceptance Criteria
+- Fixture passes.
+
+## Open Questions
+- None.
+
+## Next Step
+Continue.
+`);
+
+  write(path.join(ctx, "plan-progress.md"), `# Plan Progress
+
+## Active Plan
+Fixture.
+
+## Execution Approval
+Approved by fixture.
+
+## Tasks
+- [x] Fixture task.
+
+## Current Step
+None.
+
+## Out Of Scope
+- None.
+`);
 
   write(path.join(ctx, "worktree-state.md"), `# Worktree State
 
@@ -331,6 +374,8 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "worktree-state.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "dong-skills-outbox.md")), true);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Approval Status/);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Execution Approval/);
 
   const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
   const recovery = execFileSync(process.execPath, [installedHook], {
@@ -437,7 +482,8 @@ test("learning observations preserve Chinese UTF-8 and dedupe status follow-ups 
   const event = JSON.parse(lines[0]);
   assert.equal(event.topic, "dong-skills-meta-learning");
   assert.match(event.prompt_excerpt, /优化沉淀/);
-  assert.doesNotMatch(event.prompt_excerpt, /鎸|娌|穩/);
+  const mojibakeMarkerPattern = new RegExp(["\\u93b8", "\\u5a0c", "\\u7a69"].join("|"), "u");
+  assert.doesNotMatch(event.prompt_excerpt, mojibakeMarkerPattern);
 
   const out = execFileSync(process.execPath, [hook, "learning-status", project], {
     cwd: project,
@@ -535,6 +581,86 @@ test("Stop explains stale Git Checkpoint handoff evidence", () => {
   assert.match(output.reason, /handoff-summary\.md is older than changed files/);
   assert.match(output.reason, /latest changed file: work\.txt/);
   assert.match(output.reason, /refresh handoff-summary\.md after verification\/artifact\/current-state updates/);
+});
+
+test("health check requires state files to preserve approval gates", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "spec.md"), "# Spec\n\n## Problem\nFixture.\n");
+  write(path.join(project, ".codex-context", "plan-progress.md"), "# Plan Progress\n\n## Active Plan\nFixture.\n");
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [health, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /spec\.md missing section: Approval Status/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Approval/);
+  }
+  assert.equal(failed, true);
+});
+
+test("health check accepts singular Goal section in spec", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "spec.md"), `# Spec
+
+## Problem
+Fixture.
+
+## Goal
+- Fixture.
+
+## Approval Status
+Approved by fixture.
+
+## Approved Scope
+- Fixture.
+
+## Acceptance Criteria
+- Fixture passes.
+
+## Open Questions
+- None.
+
+## Next Step
+Continue.
+`);
+
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Result: pass/);
+});
+
+test("release check reports text readability mojibake markers", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const marker = String.fromCodePoint(0x93b8);
+  write(path.join(project, "README.md"), `# Fixture
+
+This line contains ${marker}
+`);
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [releaseCheck, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /FAIL text readability scan/);
+    assert.match(String(error.stdout), /README\.md:3: Chinese mojibake marker/);
+  }
+  assert.equal(failed, true);
 });
 
 test("SessionStart recovery includes tail handoff sections", () => {

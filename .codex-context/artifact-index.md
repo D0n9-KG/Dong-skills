@@ -4,28 +4,30 @@
 - None.
 
 ## Modified
-- `.agents/skills/brainstorming/SKILL.md`: strengthens option comparison for directional or behavior-changing brainstorming while preserving the existing continuation loop and Living Spec behavior.
-- `.agents/skills/writing-plans/SKILL.md`: restores upstream-style scope check, file-structure mapping, test-first default, acceptance mapping, test scenarios, execution notes, 2-5 minute step guidance, and checkpoint notes.
-- `.agents/skills/systematic-debugging/SKILL.md`: makes reliable reproduction the gate before implementation fixes.
-- `.agents/skills/executing-plans/SKILL.md`: adds plan critique, Execution Note handling, Test Discovery, behavior-change test expectations, and review/shipping gate.
-- `.agents/skills/requesting-code-review/SKILL.md`: adds mandatory review triggers and skip-recording requirements.
-- `.agents/skills/codex-review-panel/SKILL.md`: adds mandatory panel triggers for high-risk, cross-file, user-visible, API/security/migration, and verification-gap work.
-- `.agents/skills/codex-worktree-governance/SKILL.md`: adds a fixed branch finishing menu adapted from Superpowers while preserving Codex-managed worktree ownership.
-- `.agents/skills/codex-git-checkpoint/SKILL.md`: links checkpoint discipline to the worktree finishing menu.
-- `.agents/skills/codex-solution-memory/SKILL.md`: adds explicit save/update/absorb/drop evaluation after non-trivial verified reusable work.
-- `tests/project-ops.test.mjs`: adds regression checks for the restored gates.
-- `docs/improvements/backlog.md`: records the Dong Skills meta-learning item as done.
-- `.codex-context/spec.md`, `.codex-context/plan-progress.md`, `.codex-context/current-state.md`, `.codex-context/verification.md`, `.codex-context/handoff-summary.md`, `.codex-context/decisions.md`: refreshed for this task.
+- `.codex/scripts/lib/templates.mjs`: adds `Approval Status`, `Candidate Options`, `Design`, and `Next Step` fields to `spec.md`; adds `Execution Approval` to `plan-progress.md`.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`: synchronized bootstrap template copy.
+- `scripts/project-ops-health.mjs`: checks active `.codex-context/spec.md` and `plan-progress.md` for required approval-gate sections, accepting both `Goal` and `Goals`.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`: synchronized bootstrap helper copy.
+- `scripts/release-check.mjs`: adds text readability/mojibake scan for release assets.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`: synchronized bootstrap helper copy.
+- `tests/project-ops.test.mjs`: adds tests for bootstrapped gate fields, health-check gate failures, singular `Goal` compatibility, and release-check readability failures.
+- `docs/improvements/backlog.md`: records the state-template/readability hardening item.
+- `.codex-context/current-state.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/handoff-summary.md`, `.codex-context/decisions.md`, `.codex-context/risks.md`: refreshed for this audit and repair.
 
 ## Read / Inspected
-- Current Dong Skills source skills listed above.
-- Installed skill copies under `%USERPROFILE%\.agents\skills` via hash checks.
-- Local Superpowers originals: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `finishing-a-development-branch`.
-- Local ECC `continuous-learning-v2` reference for learning-memory boundaries.
+- `.agents/skills/codex-project-governance/SKILL.md`
+- `.agents/skills/codex-review-panel/SKILL.md`
+- `.agents/skills/codex-context-budget/SKILL.md`
+- `.agents/skills/codex-asset-governance/SKILL.md`
+- `.codex/scripts/lib/events.mjs`
+- `.codex/scripts/lib/learning.mjs`
+- `.codex/hooks.json`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
+- `.codex-context/spec.md`
+- `.codex-context/plan-progress.md`
 
 ## Raw Outputs
 - No raw outputs added.
 
-## Global Install
-- `scripts/install-windows.ps1 -TargetProjectRoot .` synced global skill copies to `%USERPROFILE%\.agents\skills`.
-- Changed installed `SKILL.md` files match source hashes.
+## Residual Watchpoints
+- `PostToolUse` still does not force immediate artifact-index refresh after shell/script/generated edits. Stop and PreCompact continue to catch stale state before stopping or compacting.

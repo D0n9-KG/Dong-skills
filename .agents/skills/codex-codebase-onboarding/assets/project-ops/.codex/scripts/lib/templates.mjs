@@ -86,6 +86,9 @@ export const TEMPLATES = {
 ## Goals
 - [Goal.]
 
+## Approval Status
+Living Draft / Not Approved.
+
 ## Non-Goals
 - [Explicitly out of scope.]
 
@@ -95,16 +98,28 @@ export const TEMPLATES = {
 ## User Decisions
 - [Decision and date.]
 
+## Candidate Options
+- None yet.
+
+## Design
+- Not drafted yet.
+
 ## Acceptance Criteria
 - [Observable outcome.]
 
 ## Open Questions
 - [Question or "None".]
+
+## Next Step
+[brainstorming | writing-plans | executing-plans | direct tiny edit | pause]
 `,
   "plan-progress.md": `# Plan Progress
 
 ## Active Plan
 [Path to detailed plan/spec, or "No formal plan yet".]
+
+## Execution Approval
+Not approved yet. Record "Approved by user on [date/time]" or the user's explicit plan-then-execute instruction before implementation.
 
 ## Tasks
 - [ ] Task 1: [status and evidence]

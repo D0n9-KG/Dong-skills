@@ -5,6 +5,20 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const EXCLUDED_DIRS = new Set([".git", ".codegraph", "node_modules", "dist", "build", ".next", "__pycache__"]);
+const TEXT_EXTENSIONS = new Set([".md", ".mjs", ".js", ".json", ".ps1", ".txt", ".toml", ".yml", ".yaml"]);
+const READABILITY_SCAN_DIRS = [
+  ".agents/",
+  ".codex/",
+  ".codex-context/",
+  "docs/",
+  "scripts/",
+  "tests/"
+];
+const READABILITY_SCAN_FILES = new Set([
+  "README.md",
+  "AGENTS.md",
+  "AGENTS.project-ops.snippet.md"
+]);
 
 function gitRoot(cwd) {
   try {
@@ -48,6 +62,48 @@ function runCommand(label, command, args, options = {}) {
     const details = [error.stdout, error.stderr].filter(Boolean).join("\n").trim();
     return { ok: false, label, details };
   }
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function fromCodePoints(points) {
+  return String.fromCodePoint(...points);
+}
+
+function textReadabilityPatterns() {
+  const latinMojibakePattern = new RegExp([
+    `${escapeRegExp(fromCodePoints([0x00c3]))}.`,
+    `${escapeRegExp(fromCodePoints([0x00c2]))}.`,
+    `${escapeRegExp(fromCodePoints([0x00e2]))}[\\u0080-\\u009F\\u20AC]`
+  ].join("|"), "u");
+  const cjkMojibakeMarkers = [
+    [0x93b8],
+    [0x9359],
+    [0x7481, 0x9881],
+    [0x6d7c, 0x6a3a],
+    [0x6d93, 0x20ac]
+  ].map(fromCodePoints);
+
+  return [
+    { name: "Unicode replacement character", regex: /\uFFFD/u },
+    { name: "private-use character often produced by mojibake", regex: /[\uE000-\uF8FF]/u },
+    { name: "Latin UTF-8 mojibake", regex: latinMojibakePattern },
+    {
+      name: "Chinese mojibake marker",
+      regex: new RegExp(cjkMojibakeMarkers.map(escapeRegExp).join("|"), "u")
+    }
+  ];
+}
+
+function shouldScanTextFile(root, file) {
+  const relative = rel(root, file);
+  if (relative.startsWith(".codex-context/raw/")) return false;
+  if (relative.startsWith(".codex-context/archive/")) return false;
+  if (READABILITY_SCAN_FILES.has(relative)) return true;
+  if (!TEXT_EXTENSIONS.has(path.extname(file))) return false;
+  return READABILITY_SCAN_DIRS.some((prefix) => relative.startsWith(prefix));
 }
 
 function syntaxChecks(root) {
@@ -97,6 +153,29 @@ function privacyScan(root) {
   return issues;
 }
 
+function textReadabilityScan(root) {
+  const issues = [];
+  const patterns = textReadabilityPatterns();
+
+  for (const file of walk(root)) {
+    if (!shouldScanTextFile(root, file)) continue;
+    const relative = rel(root, file);
+    const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (line.includes("codex-release-check: allow-mojibake")) continue;
+      for (const pattern of patterns) {
+        if (pattern.regex.test(line)) {
+          issues.push(`${relative}:${index + 1}: ${pattern.name}`);
+          break;
+        }
+      }
+    }
+  }
+
+  return issues;
+}
+
 function runtimeArtifactScan(root) {
   return walk(root)
     .map((file) => rel(root, file))
@@ -126,6 +205,13 @@ function main(root) {
     ok: privacyIssues.length === 0,
     label: "privacy scan",
     details: privacyIssues.join("\n")
+  });
+
+  const readabilityIssues = textReadabilityScan(root);
+  checks.push({
+    ok: readabilityIssues.length === 0,
+    label: "text readability scan",
+    details: readabilityIssues.join("\n")
   });
 
   const runtimeArtifacts = runtimeArtifactScan(root);

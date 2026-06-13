@@ -15,6 +15,7 @@
 - Dong Skills improvement outbox entries can become stale if the real source repo remains unavailable; migrate them after source discovery works.
 - Living Spec mode is a skill instruction rather than a technical lock; sessions that skip or fail to load `brainstorming` can still drift.
 - Topic-based learning dedupe is heuristic; real usage may show topics that need splitting or merging.
+- Shell/script/formatter/generated file changes may bypass the immediate `PostToolUse` artifact-index freshness block because the matcher remains scoped to edit/write/apply_patch-style tools. Stop and PreCompact still catch stale state before stopping or compacting.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -34,6 +35,7 @@
 - `asset-governance.mjs` is a lifecycle signal source, not semantic proof that every doc is correct.
 - The generated Dong Skills source marker can become stale if the source checkout moves; reinstall or set `DONG_SKILLS_REPO` / `DONG_SKILLS_HOME`.
 - Existing projects need a runtime refresh before they get the improved Stop diagnostics, grouped learning status, and new state-prune behavior.
+- Text readability scanning is heuristic. It may need narrow allow comments for legitimate rare Unicode sequences, but disabling the scan would re-open the mojibake publication risk.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.

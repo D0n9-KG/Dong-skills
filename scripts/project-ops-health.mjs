@@ -43,6 +43,24 @@ const REQUIRED_HANDOFF_SECTIONS = [
   "Files To Re-read First"
 ];
 
+const REQUIRED_SPEC_SECTIONS = [
+  ["Problem"],
+  ["Goal", "Goals"],
+  ["Approval Status"],
+  ["Approved Scope"],
+  ["Acceptance Criteria"],
+  ["Open Questions"],
+  ["Next Step"]
+];
+
+const REQUIRED_PLAN_SECTIONS = [
+  ["Active Plan"],
+  ["Execution Approval"],
+  ["Tasks"],
+  ["Current Step"],
+  ["Out Of Scope"]
+];
+
 const REQUIRED_CHECKPOINT_FIELDS = [
   ["Latest commit", "Latest functional commit"],
   ["Push state"],
@@ -188,6 +206,14 @@ function sectionContent(markdown, heading) {
   return body.join("\n").trim();
 }
 
+function hasAnyHeading(markdown, headings) {
+  return headings.some((heading) => markdown.includes(`## ${heading}`));
+}
+
+function headingLabel(headings) {
+  return headings.join(" or ");
+}
+
 function decodePowerShellEncodedCommand(value) {
   const match = String(value).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
   if (!match) return "";
@@ -284,6 +310,20 @@ function checkContext(root, issues) {
   const ctx = path.join(root, ".codex-context");
   for (const name of REQUIRED_CONTEXT_FILES) {
     if (!fs.existsSync(path.join(ctx, name))) issues.push(`Missing .codex-context/${name}`);
+  }
+
+  const spec = readText(path.join(ctx, "spec.md"));
+  for (const headings of REQUIRED_SPEC_SECTIONS) {
+    if (!hasAnyHeading(spec, headings)) {
+      issues.push(`spec.md missing section: ${headingLabel(headings)}`);
+    }
+  }
+
+  const plan = readText(path.join(ctx, "plan-progress.md"));
+  for (const headings of REQUIRED_PLAN_SECTIONS) {
+    if (!hasAnyHeading(plan, headings)) {
+      issues.push(`plan-progress.md missing section: ${headingLabel(headings)}`);
+    }
   }
 
   const handoff = readText(path.join(ctx, "handoff-summary.md"));

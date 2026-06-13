@@ -38,6 +38,8 @@
 - Learning observation dedupe is topic-based only for repeated status follow-ups; it should not silently discard new substantive observations on the same topic.
 - `state-prune --verification --archive --keep-latest N --apply` is the standard one-step verification bloat cleanup path.
 - Borrowed workflow skills should stay lighter than their upstream originals, but lightening must not remove gates that prevent drift, weak plans, missing reproduction, missing tests, optional high-risk review, unsafe branch finishing, or forgotten solution-memory evaluation.
+- `spec.md` `Approval Status` and `plan-progress.md` `Execution Approval` are required state schema fields, not optional prose. New templates include them and health checks flag old projects missing them.
+- Release checks include a text readability scan for active Dong Skills assets so mojibake or replacement-character regressions are caught before publishing.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.

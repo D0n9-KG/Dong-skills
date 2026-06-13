@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-14 - Harden State Gate Templates And Readability Checks
+
+Status: done
+Priority: P1
+Affected area: context templates / health check / release check / bootstrap assets
+Source: whole-system audit for drift, stale state, compaction recovery, and record timing
+Implemented: new project templates now include `spec.md` `Approval Status` and `plan-progress.md` `Execution Approval`; `project-ops-health` reports old projects that lack those sections while accepting both `Goal` and `Goals`; `release-check` scans active text assets for common mojibake/readability markers; bootstrap assets are synchronized; regression tests cover these gates.
+
+Signal:
+The skills required approval and execution gates, but newly bootstrapped state templates did not expose the corresponding sections. That mismatch made it easier for agents to recover after compaction without seeing whether a spec or plan was approved. Release checks also did not catch readable-text regressions before publishing.
+
+Decision:
+Treat approval status and execution approval as required state-file schema, not only prose in the skills. Keep the readability scan conservative and exclude raw/archive runtime material.
+
+Verification:
+`node --test tests\project-ops.test.mjs` and `node scripts\release-check.mjs .` cover the new template, health-check, and readability-scan behavior.
+
 ### 2026-06-13 - Restore Required Upstream Workflow Gates
 
 Status: done

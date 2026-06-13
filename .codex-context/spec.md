@@ -1,50 +1,52 @@
 # Spec
 
 ## Problem
-Dong Skills intentionally adapted Superpowers/ECC/Compound Engineering into a lighter Codex workflow. Usage showed that some useful upstream flow-control constraints were weakened too much: plans can be vague, debugging can start fixes without a reliable reproduction, execution can skip test discovery, review gates are advisory, branch finishing lacks the fixed menu, and durable solution capture is too optional.
+Dong Skills already has many governance skills and hooks, but real use can still drift if state templates do not expose phase gates, old projects do not get diagnosed, or release checks allow unreadable text regressions. The user asked for another whole-system audit focused on practical failure modes after compaction, new sessions, delayed records, and state confusion.
 
 ## Goals
-- Keep Dong Skills lighter than the originals while restoring necessary gates that prevent drift, premature implementation, weak verification, and forgotten handoff/checkpoint decisions.
+- Identify remaining Dong Skills issues that could cause agents to drift, forget state, or recover incorrectly.
+- Repair verified low-risk gaps directly in the source kit and bootstrap assets.
+- Keep residual risks explicit when a change is intentionally deferred.
 
 ## Approval Status
-Approved by user instruction on 2026-06-13: repair requested.
+Approved by user instruction on 2026-06-14: perform whole-system audit and repair practical issues found.
 
 ## User Decisions
-- Do not fully import heavy upstream components just to be faithful to originals.
-- Do preserve useful original process discipline when it directly prevents Codex from drifting, skipping discussion, or losing project state.
-- Distinguish Dong Skills meta-learning from project memory.
+- Prefer practical guardrails over a lightweight workflow that only looks good in docs.
+- Do not add noisy hooks unless the trade-off is clearly worth it.
+
+## Candidate Options
+- Broaden PostToolUse matcher to shell/script tools: deferred because it may create noisy blocks after command-based workflows.
+- Keep PostToolUse scoped and strengthen schema/release checks: selected for this pass.
 
 ## Non-Goals
-- No Superpowers visual companion restoration.
-- No mandatory subagent-driven implementation flow.
-- No new runtime hooks for instruction-only gates in this pass.
-- No destructive worktree cleanup automation.
+- No global hooks.
+- No full Superpowers ritual import.
+- No automatic update of target projects or global installed copies in this pass.
+- No broad pre-edit/pre-shell hook expansion in this pass.
 
 ## Approved Scope
-- Strengthen borrowed workflow skills: `brainstorming`, `writing-plans`, `systematic-debugging`, `executing-plans`, `requesting-code-review`, `codex-review-panel`, `codex-worktree-governance`, `codex-git-checkpoint`, and `codex-solution-memory`.
-- Add regression tests that check these gates remain present.
-- Record the Dong Skills improvement in `docs/improvements/backlog.md`.
-- Sync global installed skills after verification.
+- Add missing approval/execution fields to new project state templates.
+- Teach health-check to detect old state files missing those gate sections.
+- Add release-time text readability/mojibake scanning.
+- Synchronize root files and bootstrap asset copies.
+- Add regression tests and update Dong Skills improvement backlog/state files.
 
 ## Design
-- `brainstorming`: preserve continuation loop and add a default requirement to compare 2-3 approaches for directional, architecture, product, API, UX, or behavior-changing work unless clearly mechanical or skipped.
-- `writing-plans`: restore Superpowers-style plan discipline: scope check, file-structure ownership, test-first or characterization-first defaults, 2-5 minute task granularity, execution notes, test scenarios, acceptance-criteria mapping, and checkpoint guidance.
-- `systematic-debugging`: make reproduction a hard gate before code changes, with automated failing test preferred and manual reproduction/gap recorded when automation is impractical.
-- `executing-plans`: require critical plan review, test discovery before implementation-file edits, honoring execution notes, test update or recorded reason for behavior changes, checkpoint notes, and review/shipping gate before completion.
-- `requesting-code-review` / `codex-review-panel`: make review mandatory for high-risk, cross-file, API/security/migration/user-visible, or plan-completion delivery work; skipping review requires a recorded low-risk reason.
-- `codex-worktree-governance` / `codex-git-checkpoint`: add a Superpowers-inspired finishing menu adapted to Codex-managed worktrees.
-- `codex-solution-memory`: require evaluation after non-trivial verified fixes, repeated investigations, architecture decisions, or cross-session reusable solutions; record the reason when not saving.
+- Template schema: `spec.md` includes `Approval Status`; `plan-progress.md` includes `Execution Approval`.
+- Health check: required section checks make old projects visibly stale instead of silently missing phase-boundary fields; `Goal` and `Goals` are both accepted to match existing skill/spec variants.
+- Release check: scan active text assets for replacement characters, private-use mojibake, Latin mojibake, and a conservative set of Chinese mojibake markers. Exclude raw/archive runtime material.
+- Tests: cover bootstrap templates, health-check failures, and release-check readability failures.
 
 ## Acceptance Criteria
-- `tests/project-ops.test.mjs` guards the restored gates.
 - `node --test tests\project-ops.test.mjs` passes.
 - `node scripts\release-check.mjs .` passes.
 - `node .codex\hooks\project-ops.mjs asset-governance` passes or any advisory is resolved/recorded.
 - `git diff --check` passes.
-- Global installed skill copies are synced from source.
+- Residual risk around shell/script/generated edits is recorded.
 
 ## Open Questions
-- None blocking.
+- Whether to broaden PostToolUse to shell/script tools remains open; current recommendation is to defer until real usage shows Stop/PreCompact is too late.
 
 ## Next Step
-Commit and push the verified checkpoint.
+Checkpoint the verified repair.
