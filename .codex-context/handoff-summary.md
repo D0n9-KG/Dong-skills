@@ -1,10 +1,10 @@
 # Handoff Summary
 
 ## Objective
-Finish the Dong Skills optimization items that were previously discussed but not implemented in the last checkpoint.
+Audit whether the previously discussed Dong Skills optimization issues are resolved and clean up any remaining low-risk inconsistency.
 
 ## Latest User Instruction
-User corrected that the previous commit only fixed the skill-optimization deposit path and missed the rest of the optimization list.
+User asked whether the previously discussed issues are now solved and requested an overall review for remaining problems.
 
 ## Approved Scope / Spec
 - Living Spec mode and iterative brainstorming cadence.
@@ -12,9 +12,10 @@ User corrected that the previous commit only fixed the skill-optimization deposi
 - More precise Stop Git Checkpoint stale-handoff diagnostics.
 - One-step verification pruning command with archive pointer.
 - Backlog status cleanup so implemented items are not left as proposed.
+- Audit installed/source parity, hook/runtime health, learning-status routing, asset governance, and release readiness.
 
 ## Plan Status
-Implementation is done. Checkpoint commit and push are pending.
+Audit is done. One low-risk docs cleanup was made: `docs/improvements/backlog.md` now uses canonical `done` status for resolved items.
 
 ## Files Modified
 - `.agents/skills/brainstorming/SKILL.md`
@@ -34,12 +35,17 @@ Implementation is done. Checkpoint commit and push are pending.
 - `writing-plans`
 - `codex-verification-loop`
 - `codex-git-checkpoint`
+- `using-superpowers`
+- `brainstorming`
+- `codex-learning-memory`
 
 ## Decisions Made
 - Living Spec is enforced through the brainstorming skill, not a runtime hook.
 - Observation dedupe is conservative: suppress repeated status follow-ups for an already-seen topic, not every same-topic prompt.
 - `state-prune --archive` applies to verification pruning only.
 - Stop diagnostics should prefer the latest non-governance changed file when available.
+- The apparent Chinese mojibake in `brainstorming/SKILL.md` was display-channel corruption from the shell output; byte-level UTF-8 read confirmed the file contains correct `可以` and `继续`.
+- `docs/improvements/backlog.md` should use the review states it defines; resolved items are now `done`, not mixed `accepted` / `implemented`.
 
 ## Open Questions And Assumptions
 - Assumption: existing projects need a Dong Skills refresh/bootstrap to receive the new runtime scripts and project-local hook behavior.
@@ -52,27 +58,27 @@ Implementation is done. Checkpoint commit and push are pending.
 
 ## Verification Evidence
 - `node --test tests\project-ops.test.mjs`: pass, 23/23.
-- `node .codex\hooks\project-ops.mjs state-prune --verification --archive --keep-latest 8 --dry-run`: pass; no pruning needed at 8 entries.
 - `node scripts\release-check.mjs .`: pass.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
+- `node .codex\hooks\project-ops.mjs learning-status`: pass; source marker target found, 0 pending observations, 0 pending outbox items.
+- `node scripts\project-ops-health.mjs .`: pass.
 - `git diff --check`: pass.
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories after verification pruning.
-- Extra privacy scan: no real private path or secret findings; only documented examples and test fixtures matched.
-- Global install sync: pass; `.codex/hooks.json` stayed unchanged after installer idempotency fix.
+- Installed global `SKILL.md` files and project-ops assets match source.
 
 ## Git Checkpoint
-- Latest commit: pending remaining-optimization checkpoint.
-- Push state: pending push to `origin/main`.
-- Files included: skill rules, learning/runtime hooks, state-prune, tests, backlog, bootstrap copies, and state files.
+- Latest commit: `893da98 fix(governance): finish remaining Dong Skills optimizations`.
+- Push state: `origin/main` was aligned before this audit cleanup.
+- Files included: backlog status normalization and refreshed state files.
 - Files intentionally left uncommitted: none intended.
 - Deferred reason: none.
-- Next checkpoint: commit and push after final verification.
+- Next checkpoint: commit and push this audit cleanup, then report the final branch state.
 
 ## Learned Instincts To Preserve
 - User expects backlog items to be implemented when asking to optimize Dong Skills, not merely recorded.
 - Dong Skills optimization learning remains separate from project instincts.
 
 ## Next Action
-Commit, push, and report exactly which items are now implemented.
+Report audit result and remaining risk clearly.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`

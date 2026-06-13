@@ -1,13 +1,13 @@
 # Current State
 
 ## Objective
-Finish the remaining Dong Skills optimization items that were previously recorded but not implemented.
+Audit whether the previously discussed Dong Skills optimization issues are resolved and clean up any low-risk inconsistencies found during the audit.
 
 ## Latest User Instruction
-User corrected that the previous checkpoint only implemented the skill-optimization deposit path, while the earlier optimization list had several other actionable items.
+User asked whether the previously discussed issues are now solved and requested an overall review for remaining problems.
 
 ## Current Phase
-implementation
+review / verification
 
 ## Implemented
 - `brainstorming/SKILL.md` now requires Living Spec mode and one-question-at-a-time clarification.
@@ -17,6 +17,7 @@ implementation
 - `state-prune` now supports `--verification --archive --keep-latest 8 --apply` and writes an `Archived Evidence` pointer.
 - Bootstrap runtime copies are synced for changed hook/runtime scripts.
 - `docs/improvements/backlog.md` marks implemented optimization items accurately.
+- 2026-06-13 audit: `docs/improvements/backlog.md` had already-implemented items split between `accepted` and non-canonical `implemented`; statuses are now unified to `done`.
 
 ## Active Assumptions
 - These changes are scoped to already-discussed Dong Skills improvements; no new brainstorming is needed.
@@ -27,16 +28,17 @@ implementation
 - None.
 
 ## Verification Snapshot
-- `node --test tests\project-ops.test.mjs`: pass, 23/23 after the remaining optimization changes.
-- `node .codex\hooks\project-ops.mjs state-prune --verification --archive --keep-latest 8 --apply`: pass; active verification remains at 8 entries with archive pointers.
+- `node --test tests\project-ops.test.mjs`: pass, 23/23 after the audit cleanup.
 - `node scripts\release-check.mjs .`: pass.
-- `git diff --check`: pass.
 - `node .codex\hooks\project-ops.mjs asset-governance`: pass with no advisories.
-- Extra privacy scan: no real private path or secret findings.
-- Global install sync: pass; self-install no longer leaves `.codex/hooks.json` changed.
+- `node .codex\hooks\project-ops.mjs learning-status`: pass; target backlog detected from source marker; no pending observations or outbox items.
+- `node scripts\project-ops-health.mjs .`: pass.
+- `git diff --check`: pass.
+- Installed global `SKILL.md` files and project-ops bootstrap assets match source.
+- UTF-8 byte-level check showed `brainstorming/SKILL.md` contains correct `可以` / `继续`; the earlier mojibake was output-channel display, not file corruption.
 
 ## Next Action
-Commit and push the verified checkpoint.
+Report audit result and decide whether to commit/push the backlog status cleanup.
 
 ## Last Updated
-2026-06-13 17:18 +08:00
+2026-06-13 18:34 +08:00

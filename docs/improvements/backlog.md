@@ -32,7 +32,7 @@ Do not record ordinary project memory here. Use:
 
 ### 2026-06-12 - Preserve Handoff During Automatic PreCompact
 
-Status: accepted
+Status: done
 Affected area: hooks / PreCompact / recovery
 Source: user feedback
 
@@ -47,7 +47,7 @@ Add tests that assert the existing handoff remains in the main file after automa
 
 ### 2026-06-12 - Tighten What Counts As Memory
 
-Status: accepted
+Status: done
 Affected area: learning memory / solution memory / project governance
 Source: user feedback
 
@@ -62,7 +62,7 @@ Update `codex-learning-memory`, `codex-solution-memory`, and governance docs.
 
 ### 2026-06-12 - Separate Dong Skills Meta-Learning From Project Memory
 
-Status: accepted
+Status: done
 Affected area: learning memory / governance docs / README
 Source: user feedback
 
@@ -77,7 +77,7 @@ Update skill and project snippet guidance so future agents route Dong Skills opt
 
 ### 2026-06-12 - Add Asset Lifecycle Governance
 
-Status: accepted
+Status: done
 Affected area: skills / hooks / state files / raw lifecycle / docs governance
 Source: user feedback
 
@@ -92,7 +92,7 @@ Add tests for bootstrap installation, safe raw PreCompact snapshot pruning, and 
 
 ### 2026-06-13 - Add Living Spec Mode To Brainstorming
 
-Status: implemented
+Status: done
 Priority: P0
 Affected area: brainstorming / spec / compaction recovery
 Source: user feedback from downstream project usage
@@ -109,7 +109,7 @@ Add guidance and tests/manual checks showing that an unapproved discussion can b
 
 ### 2026-06-13 - Restore Iterative Brainstorming Cadence
 
-Status: implemented
+Status: done
 Priority: P0
 Affected area: brainstorming / user interaction
 Source: user feedback comparing Dong Skills to upstream Superpowers
@@ -126,7 +126,7 @@ Run prompt-level/manual tests where an ambiguous design request causes one focus
 
 ### 2026-06-13 - Add Executable Dong Skills Meta-Learning Routing
 
-Status: implemented
+Status: done
 Priority: P0
 Affected area: learning memory / source repo discovery / backlog routing
 Source: user feedback from downstream project usage
@@ -143,7 +143,7 @@ Agent can answer exactly where a Dong Skills improvement was recorded. If the so
 
 ### 2026-06-13 - Add Dong Skills Improvement Outbox
 
-Status: implemented
+Status: done
 Priority: P1
 Affected area: learning memory / project state / handoff
 Source: user feedback from downstream project usage
@@ -160,7 +160,7 @@ When the Dong Skills repo cannot be found, an improvement goes to the outbox and
 
 ### 2026-06-13 - Deduplicate Learning Observations By Topic
 
-Status: implemented
+Status: done
 Priority: P0
 Affected area: learning hooks / observations / learning-status
 Source: user feedback from downstream project usage
@@ -177,7 +177,7 @@ Verification:
 
 ### 2026-06-13 - Fix Raw Observation Chinese Encoding
 
-Status: implemented
+Status: done
 Priority: P1
 Affected area: learning hooks / raw observations / encoding
 Source: user feedback from downstream project usage
@@ -194,7 +194,7 @@ Chinese text in `observations.jsonl` remains readable after hook capture and lat
 
 ### 2026-06-13 - Improve Stop Hook Git Checkpoint Diagnostics
 
-Status: implemented
+Status: done
 Priority: P1
 Affected area: Stop hook / Git checkpoint / handoff
 Source: user feedback from downstream project usage
@@ -211,7 +211,7 @@ Agents can resolve Stop hook blocks from the hook output alone without reading s
 
 ### 2026-06-13 - Make Verification Pruning One-Step
 
-Status: implemented
+Status: done
 Priority: P1
 Affected area: state-prune / verification / asset governance
 Source: user feedback from downstream project usage
@@ -228,7 +228,7 @@ One command removes repeated verification bloat reports while preserving recent 
 
 ### 2026-06-13 - Add Learning Memory Status Answer Template
 
-Status: implemented
+Status: done
 Priority: P2
 Affected area: learning memory / user communication
 Source: user feedback from downstream project usage

@@ -5,6 +5,7 @@
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/dong-skills-outbox.md`: bootstrap template for target projects.
 - `.codex-context/archive/verification-2026-06-13-remaining-optimization.md`: archived older verification entries after `state-prune --verification --archive --keep-latest 8 --apply`.
 - `.codex-context/archive/verification-2026-06-13-final-remaining-optimization.md`: archived one older verification entry after final verification evidence was added.
+- `.codex-context/archive/verification-2026-06-13-audit-cleanup.md`: archived one older verification entry after the follow-up audit evidence was added.
 
 ## Modified
 - `.codex/scripts/lib/learning.mjs`: adds Dong Skills source discovery, installed-copy rejection, outbox status, and learning-status reporting.
@@ -30,7 +31,7 @@
 - `.agents/skills/codex-learning-memory/SKILL.md`: documents source discovery, fallback outbox, and status answer template.
 - `.agents/skills/codex-project-governance/SKILL.md`: routes Dong Skills meta-learning to backlog or outbox.
 - `AGENTS.project-ops.snippet.md`, onboarding copy, `AGENTS.md`, and `README.md`: document outbox/source marker behavior.
-- `docs/improvements/backlog.md`: records user-reported Dong Skills PRD items and marks implemented items accurately.
+- `docs/improvements/backlog.md`: records user-reported Dong Skills PRD items; 2026-06-13 audit unified all implemented/resolved item statuses to the canonical `done` state.
 - `.codex-context/*.md`: refreshed for this task.
 - `.codex-context/verification.md`: active command evidence pruned back to 8 entries with archive pointers.
 
