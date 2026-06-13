@@ -132,3 +132,14 @@ If work is not ready to commit, record the reason instead of pretending the arch
 ## GitHub Publish Boundary
 
 This skill covers checkpoint commit and optional push. If the user asks for a full GitHub publish flow with PR creation, use the GitHub plugin skill `github:yeet` after this checkpoint discipline has confirmed scope, commit quality, and verification evidence.
+
+## Branch Completion Boundary
+
+When the user wants to finish a branch, do not replace `codex-worktree-governance` with an ad hoc git sequence. Use this skill for commit/push discipline, then use `codex-worktree-governance` for the fixed finishing menu:
+
+1. Merge locally into the base branch.
+2. Push and create or prepare a PR.
+3. Keep the branch/worktree as-is.
+4. Discard this work.
+
+Before presenting or executing those options, verify current branch/worktree state, dirty files, upstream/ahead state, and latest verification evidence. Discard requires explicit typed confirmation. Host-managed worktrees such as Codex App worktrees are not cleaned up by this skill.

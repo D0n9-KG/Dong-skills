@@ -23,13 +23,19 @@ Also stop if `.codex-context/spec.md` has no approved scope for the current task
 1. Read `.codex-context/plan-progress.md` and any linked detailed plan.
 2. Confirm execution approval and approved scope.
 3. If this is a new/resumed worktree, hook source paths are confusing, or branch cleanup may be needed later, use `codex-worktree-governance` and refresh `.codex-context/worktree-state.md`.
-4. Critique the plan before editing. If it has a blocking gap, stop and ask or revise the plan first.
-5. Mark exactly one task as active.
-6. Implement the task using the repo's existing patterns.
-7. Run the task's verification command or record why it cannot be run.
-8. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
-9. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
-10. Repeat until the plan is complete or a blocker is reached.
+4. Critique the plan before editing. Check for missing file paths, missing tests, vague steps, unapproved scope, impossible commands, and acceptance criteria with no task. If it has a blocking gap, stop and ask or revise the plan first.
+5. Read and honor the plan's `Execution Note`. If the plan has no execution note for non-tiny work, derive one from the plan before editing and record it in `.codex-context/plan-progress.md`.
+6. Run Test Discovery before editing implementation files:
+   - identify the closest existing unit/e2e/CLI/API tests for the touched area
+   - identify the smallest command that proves the task
+   - for behavior changes, decide whether to add/update a test before implementation or record why that is impractical
+7. Mark exactly one task as active.
+8. Implement the task using the repo's existing patterns.
+9. For behavior-changing tasks, add/update the planned test or record the explicit reason no automated test was added.
+10. Run the task's verification command or record why it cannot be run.
+11. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
+12. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
+13. Repeat until the plan is complete or a blocker is reached.
 
 ## Checkpoints
 
@@ -45,6 +51,16 @@ Use a checkpoint after each meaningful task:
 ```
 
 If compaction risk is high, refresh `.codex-context/handoff-summary.md` before continuing.
+
+## Review And Shipping Gate
+
+Before claiming the plan is complete:
+
+- Re-read the spec, plan, and acceptance mapping.
+- Confirm every task is checked off or has a recorded deferral.
+- Confirm every acceptance criterion has verification evidence or an explicit gap.
+- Use `requesting-code-review` or `codex-review-panel` for meaningful, high-risk, cross-file, API/security/migration/user-visible, or plan-completion work. If review is skipped, record the low-risk reason in `.codex-context/verification.md` or `handoff-summary.md`.
+- Use `codex-worktree-governance` and `codex-git-checkpoint` before branch completion, PR, merge, discard, or long pause.
 
 ## Stop Conditions
 

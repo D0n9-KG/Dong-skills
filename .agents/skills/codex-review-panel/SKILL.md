@@ -24,6 +24,19 @@ Collect the smallest complete review bundle:
 - `AGENTS.md` and project standards relevant to the changed area
 - related `docs/solutions/` entries when available
 
+## Mandatory Panel Triggers
+
+Use this panel, not only the lightweight review checklist, when any of these apply:
+
+- cross-file or shared-module behavior changes
+- public API, schema, auth, permissions, security, privacy, migration, or data-loss risk
+- user-visible workflow/UI/CLI/API behavior changes
+- architecture, module-boundary, or dependency-direction changes
+- completed implementation plan before merge, PR, or final delivery
+- verification gaps, manual-only evidence, or failed checks that required judgment
+
+If the panel is intentionally skipped for a meaningful diff, record the low-risk reason and the skipped lenses in `.codex-context/verification.md` or `handoff-summary.md`.
+
 ## Review Team
 
 Always run these lenses:

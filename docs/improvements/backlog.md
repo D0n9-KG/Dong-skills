@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-13 - Restore Required Upstream Workflow Gates
+
+Status: done
+Priority: P0
+Affected area: borrowed workflow skills / Superpowers parity / CE-ECC adaptation
+Source: user feedback after comparing Dong Skills behavior with original Superpowers-style skills
+Implemented: `writing-plans`, `executing-plans`, `systematic-debugging`, review skills, worktree/checkpoint guidance, and `codex-solution-memory` now include explicit gates for test-first planning, reproduction-before-fix, test discovery, mandatory review triggers, branch finishing choices, and solution-memory evaluation. `tests/project-ops.test.mjs` guards these sections.
+
+Signal:
+Dong Skills should be lighter than upstream projects, but the lightening removed some necessary process constraints. Agents could still drift: start implementation from loose brainstorming, write vague plans, skip test discovery, fix without reproduction, treat review as optional, and finish branches without a fixed decision menu.
+
+Decision:
+Do not import heavy upstream-only machinery by default, such as mandatory subagents or visual companion flows. Preserve upstream gates that directly improve correctness, recoverability, and execution discipline.
+
+Verification:
+Add regression checks so future edits cannot remove these workflow gates unnoticed.
+
 ### 2026-06-13 - Preserve Upstream Brainstorming Continuation Loop
 
 Status: done

@@ -9,6 +9,14 @@ description: Use when encountering any bug, test failure, build failure, regress
 
 No fixes before root-cause investigation.
 
+Reproduction is the entry ticket to fixing. Do not edit implementation code for a bug, failing test, regression, or unexpected behavior until you have one of these:
+
+- a reliable automated failing test or command that demonstrates the issue
+- a reliable manual reproduction with exact steps and observed output
+- an explicit user-approved exception that records the risk of fixing without reproduction
+
+If the issue is intermittent, first gather enough logs, diagnostics, or repeated attempts to characterize when it happens. If it cannot be reproduced yet, keep investigating or record the blocked state; do not guess-patch.
+
 Do not propose a patch until you can state:
 
 - what failed
@@ -28,6 +36,7 @@ Do not propose a patch until you can state:
 
 1. Reproduce and read the evidence.
    Capture the exact command, error, stack, logs, changed files, environment/config, and whether the failure is consistent.
+   For bug fixes, add or identify the smallest reliable failing unit/e2e/CLI/API test before changing implementation when practical. If no automated reproduction is practical, record the manual reproduction and verification gap in `.codex-context/verification.md`.
 
 2. Trace to origin.
    Follow the bad value, state, event, dependency, or timing condition backwards until the first wrong source is identified. For deep call stacks, use `root-cause-tracing.md`.
@@ -39,7 +48,7 @@ Do not propose a patch until you can state:
    Write: "I think X is the root cause because Y evidence." Test one variable at a time.
 
 5. Fix the root cause.
-   Add or run the smallest reliable unit/e2e reproduction available. Then make one focused fix and verify.
+   Add or run the smallest reliable unit/e2e reproduction available. Confirm it fails for the expected reason when possible. Then make one focused fix and verify.
 
 6. If the fix fails, reset the hypothesis.
    Do not stack patches. After three failed fixes, stop and use `codex-architecture-governance` or discuss whether the current design is wrong.
@@ -50,6 +59,7 @@ Do not propose a patch until you can state:
 ## Evidence Discipline
 
 - Prefer real unit/e2e tests or the project'"'"'s normal verification commands.
+- A bug fix without an automated failing test needs a recorded reason, exact manual reproduction, and follow-up verification gap.
 - Do not change tests just to make them pass unless the user explicitly approved that scope.
 - Do not mock away the failure when real behavior can be tested.
 - If no automated reproduction is practical, record the exact manual evidence and the verification gap.

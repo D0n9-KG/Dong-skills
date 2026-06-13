@@ -19,6 +19,19 @@ The rule is the Compound Engineering rule: each solved unit of work should make 
 - Existing `docs/solutions/` entries may be stale, duplicate, misleading, or missing from project instructions.
 - A new session is about to work in an area where past solutions may exist.
 
+## Evaluation Gate
+
+After any verified non-trivial fix, repeated debugging investigation, architecture decision, workflow discovery, or cross-session reusable solution, evaluate solution memory before final delivery or compaction.
+
+Choose one outcome and record it in `.codex-context/current-state.md`, `.codex-context/verification.md`, or `.codex-context/handoff-summary.md`:
+
+- `save`: create or update a `docs/solutions/` entry.
+- `update`: refresh an existing solution or `CONCEPTS.md` term.
+- `absorb`: the learning already lives in current docs; link the existing location.
+- `drop`: not future-useful, too project-specific, unverified, or obvious from code.
+
+Do not let "maybe later" be the implicit outcome. If no solution doc is written after a non-trivial verified fix, record why.
+
 Do not save unverified speculation, raw chat, secrets, one-off typo fixes, or generic advice that is already obvious from `AGENTS.md`.
 
 Do not use this skill for Dong Skills hook, skill, README, installer, or governance improvement proposals. Record those in `docs/improvements/backlog.md` as Dong Skills meta-learning unless the user explicitly asks to implement the optimization immediately.

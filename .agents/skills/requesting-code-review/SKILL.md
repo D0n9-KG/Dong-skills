@@ -14,6 +14,19 @@ Run a focused review against the actual diff, spec, plan, and verification evide
 - After a complex bug fix.
 - When implementation drift from the plan is possible.
 
+## Mandatory Review Gate
+
+Run `requesting-code-review` or route directly to `codex-review-panel` before delivery when any of these are true:
+
+- the change touches multiple implementation files or shared modules
+- public API, schema, auth, permissions, security, migration, data loss, or privacy behavior changed
+- user-visible UI/CLI/API behavior changed
+- a plan was completed and the final diff has not had a fresh review
+- tests were skipped, limited, or only manual
+- the agent had to deviate from the approved plan
+
+If review is skipped, record the low-risk reason in `.codex-context/verification.md` or `handoff-summary.md`. "Looks small" is not enough; name why the blast radius is limited.
+
 ## Inputs
 
 Collect:

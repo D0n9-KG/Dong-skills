@@ -203,6 +203,52 @@ test("brainstorming skill preserves upstream continuation loop", () => {
   assert.match(skill, /After every user response during brainstorming/);
   assert.match(skill, /ask the next single highest-impact question/);
   assert.match(skill, /Do not end a brainstorming turn by only saying that files were updated/);
+  assert.match(skill, /compare 2-3 viable approaches/);
+  assert.match(skill, /"可以", "继续"/);
+});
+
+test("borrowed workflow skills retain required upstream gates", () => {
+  const readSkill = (name) => fs.readFileSync(path.join(root, ".agents", "skills", name, "SKILL.md"), "utf8");
+
+  const writing = readSkill("writing-plans");
+  assert.match(writing, /## Scope Check/);
+  assert.match(writing, /## Test-First Default/);
+  assert.match(writing, /## Execution Note/);
+  assert.match(writing, /2-5 minute steps/);
+  assert.match(writing, /## Acceptance Mapping/);
+
+  const debugging = readSkill("systematic-debugging");
+  assert.match(debugging, /Reproduction is the entry ticket to fixing/);
+  assert.match(debugging, /reliable automated failing test or command/);
+  assert.match(debugging, /manual reproduction and verification gap/);
+
+  const executing = readSkill("executing-plans");
+  assert.match(executing, /Run Test Discovery before editing implementation files/);
+  assert.match(executing, /For behavior-changing tasks, add\/update the planned test/);
+  assert.match(executing, /## Review And Shipping Gate/);
+
+  const requestingReview = readSkill("requesting-code-review");
+  assert.match(requestingReview, /## Mandatory Review Gate/);
+  assert.match(requestingReview, /record the low-risk reason/);
+
+  const reviewPanel = readSkill("codex-review-panel");
+  assert.match(reviewPanel, /## Mandatory Panel Triggers/);
+  assert.match(reviewPanel, /verification gaps, manual-only evidence/);
+
+  const worktree = readSkill("codex-worktree-governance");
+  assert.match(worktree, /## Branch Finishing Menu/);
+  assert.match(worktree, /Merge locally into <base-branch>/);
+  assert.match(worktree, /Discard this work/);
+  assert.match(worktree, /Never remove a `codex-managed-worktree`/);
+
+  const checkpoint = readSkill("codex-git-checkpoint");
+  assert.match(checkpoint, /## Branch Completion Boundary/);
+  assert.match(checkpoint, /fixed finishing menu/);
+
+  const solutionMemory = readSkill("codex-solution-memory");
+  assert.match(solutionMemory, /## Evaluation Gate/);
+  assert.match(solutionMemory, /After any verified non-trivial fix/);
+  assert.match(solutionMemory, /Do not let "maybe later" be the implicit outcome/);
 });
 
 test("published Windows hook commands are encoded project hook invocations", () => {

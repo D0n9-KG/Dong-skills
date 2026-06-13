@@ -68,6 +68,39 @@ Before final delivery, checkpoint, merge, PR, or cleanup:
 6. For `manual-worktree`, ask before cleanup.
 7. For detached HEAD, create/push a branch or leave clear handoff instructions; do not claim a normal branch merge is ready.
 
+## Branch Finishing Menu
+
+When implementation is verified and the next decision is branch completion, present a fixed menu after detecting role, branch, base branch, dirty state, upstream, and worktree ownership:
+
+```text
+Implementation is verified. What should happen to this branch?
+
+1. Merge locally into <base-branch>
+2. Push and create or prepare a PR
+3. Keep the branch/worktree as-is
+4. Discard this work
+```
+
+For detached HEAD or host-managed workspaces where local merge is not valid, collapse the menu to:
+
+```text
+Implementation is verified. This workspace cannot be merged as a normal named branch.
+
+1. Push as a new branch / prepare PR handoff
+2. Keep as-is
+3. Discard this work
+```
+
+Rules:
+
+- Do not show the menu until verification is fresh or the verification gap is explicit.
+- Do not merge, push, delete, discard, or clean up until the user chooses an option.
+- Option 1 requires re-running verification on the merged result before deleting any branch.
+- Option 2 keeps the worktree alive for PR iteration.
+- Option 3 records resume instructions in `worktree-state.md` and `handoff-summary.md`.
+- Option 4 requires explicit typed confirmation such as `discard`; list branch, commits, changed files, and worktree path first.
+- Never remove a `codex-managed-worktree`. For `dong-managed-worktree`, cleanup only after merge/discard succeeds and only from the primary checkout. For `manual-worktree`, ask before cleanup.
+
 ## State File
 
 Keep `.codex-context/worktree-state.md` compact. Required sections:

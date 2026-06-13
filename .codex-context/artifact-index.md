@@ -1,48 +1,31 @@
 # Artifact Index
 
 ## Created
-- `.codex-context/dong-skills-outbox.md`: fallback queue for Dong Skills improvement candidates when the real source repo is unavailable.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/dong-skills-outbox.md`: bootstrap template for target projects.
-- `.codex-context/archive/verification-2026-06-13-remaining-optimization.md`: archived older verification entries after `state-prune --verification --archive --keep-latest 8 --apply`.
-- `.codex-context/archive/verification-2026-06-13-final-remaining-optimization.md`: archived one older verification entry after final verification evidence was added.
-- `.codex-context/archive/verification-2026-06-13-audit-cleanup.md`: archived one older verification entry after the follow-up audit evidence was added.
-- `.codex-context/archive/verification-2026-06-13-brainstorming-continuation.md`: archived one older verification entry after the brainstorming continuation-loop fix evidence was added.
+- None.
 
 ## Modified
-- `.agents/skills/brainstorming/SKILL.md`: adds an explicit Continuation Loop preserving upstream Superpowers flow discipline; after each user answer, brainstorming must continue to the next single question, approaches, design section, final approval, `writing-plans`, pause, or blocker instead of stopping after state-file updates.
-- `tests/project-ops.test.mjs`: adds a regression test that guards the brainstorming continuation-loop requirement.
-- `docs/improvements/backlog.md`: records the user-reported brainstorming continuation defect as a completed Dong Skills improvement.
-- `.codex/scripts/lib/learning.mjs`: adds Dong Skills source discovery, installed-copy rejection, outbox status, and learning-status reporting.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/learning.mjs`: bootstrap runtime copy.
-- `.codex/scripts/lib/learning.mjs`: now also assigns observation topics, deduplicates status follow-ups, and reports grouped pending observations.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/learning.mjs`: bootstrap copy synced.
-- `.codex/scripts/lib/git.mjs`: improves Git Checkpoint diagnostics with stale handoff evidence and latest changed file details.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/git.mjs`: bootstrap copy synced.
-- `scripts/state-prune.mjs`: adds `--verification --archive --keep-latest` command shape and active archive pointers.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/state-prune.mjs`: bootstrap copy synced.
-- `.agents/skills/brainstorming/SKILL.md`: previously added Living Spec mode, one-question cadence, and section-by-section approval guidance.
-- `.agents/skills/codex-asset-governance/SKILL.md`: points verification bloat remediation to the new state-prune command.
-- `.codex/scripts/lib/templates.mjs`: adds `dong-skills-outbox.md` required file and template.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`: bootstrap runtime copy.
-- `.codex/scripts/lib/recovery.mjs`: recovery order mentions outbox only for Dong Skills improvement work.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/recovery.mjs`: bootstrap runtime copy.
-- `.codex/scripts/lib/assets.mjs`: includes outbox in active state file size governance.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/assets.mjs`: bootstrap runtime copy.
-- `scripts/install-windows.ps1`: writes global local source marker.
-- `scripts/install-windows.ps1`: now skips rewriting `.codex/hooks.json` when the merged hook configuration is semantically unchanged, avoiding self-install formatting churn.
-- `scripts/project-ops-health.mjs` and bootstrap copy: require `dong-skills-outbox.md`.
-- `tests/project-ops.test.mjs`: adds fallback outbox, source repo discovery, Chinese UTF-8, topic dedupe, stale checkpoint diagnostics, and state-prune archive pointer tests.
-- `.agents/skills/codex-learning-memory/SKILL.md`: documents source discovery, fallback outbox, and status answer template.
-- `.agents/skills/codex-project-governance/SKILL.md`: routes Dong Skills meta-learning to backlog or outbox.
-- `AGENTS.project-ops.snippet.md`, onboarding copy, `AGENTS.md`, and `README.md`: document outbox/source marker behavior.
-- `docs/improvements/backlog.md`: records user-reported Dong Skills PRD items; 2026-06-13 audit unified all implemented/resolved item statuses to the canonical `done` state.
-- `.codex-context/*.md`: refreshed for this task.
-- `.codex-context/verification.md`: active command evidence pruned back to 8 entries with archive pointers.
+- `.agents/skills/brainstorming/SKILL.md`: strengthens option comparison for directional or behavior-changing brainstorming while preserving the existing continuation loop and Living Spec behavior.
+- `.agents/skills/writing-plans/SKILL.md`: restores upstream-style scope check, file-structure mapping, test-first default, acceptance mapping, test scenarios, execution notes, 2-5 minute step guidance, and checkpoint notes.
+- `.agents/skills/systematic-debugging/SKILL.md`: makes reliable reproduction the gate before implementation fixes.
+- `.agents/skills/executing-plans/SKILL.md`: adds plan critique, Execution Note handling, Test Discovery, behavior-change test expectations, and review/shipping gate.
+- `.agents/skills/requesting-code-review/SKILL.md`: adds mandatory review triggers and skip-recording requirements.
+- `.agents/skills/codex-review-panel/SKILL.md`: adds mandatory panel triggers for high-risk, cross-file, user-visible, API/security/migration, and verification-gap work.
+- `.agents/skills/codex-worktree-governance/SKILL.md`: adds a fixed branch finishing menu adapted from Superpowers while preserving Codex-managed worktree ownership.
+- `.agents/skills/codex-git-checkpoint/SKILL.md`: links checkpoint discipline to the worktree finishing menu.
+- `.agents/skills/codex-solution-memory/SKILL.md`: adds explicit save/update/absorb/drop evaluation after non-trivial verified reusable work.
+- `tests/project-ops.test.mjs`: adds regression checks for the restored gates.
+- `docs/improvements/backlog.md`: records the Dong Skills meta-learning item as done.
+- `.codex-context/spec.md`, `.codex-context/plan-progress.md`, `.codex-context/current-state.md`, `.codex-context/verification.md`, `.codex-context/handoff-summary.md`, `.codex-context/decisions.md`: refreshed for this task.
 
 ## Read / Inspected
-- Current `brainstorming`, `codex-learning-memory`, `codex-project-governance`, and `codex-asset-governance` skills.
-- Learning, recovery, template, health-check, install, and test runtime files.
-- Upstream Superpowers brainstorming behavior for context.
+- Current Dong Skills source skills listed above.
+- Installed skill copies under `%USERPROFILE%\.agents\skills` via hash checks.
+- Local Superpowers originals: `writing-plans`, `executing-plans`, `systematic-debugging`, `requesting-code-review`, `finishing-a-development-branch`.
+- Local ECC `continuous-learning-v2` reference for learning-memory boundaries.
 
 ## Raw Outputs
-- No raw outputs added. Verification evidence is summarized in `.codex-context/verification.md`.
+- No raw outputs added.
+
+## Global Install
+- `scripts/install-windows.ps1 -TargetProjectRoot .` synced global skill copies to `%USERPROFILE%\.agents\skills`.
+- Changed installed `SKILL.md` files match source hashes.

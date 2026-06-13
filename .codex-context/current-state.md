@@ -1,48 +1,49 @@
 # Current State
 
 ## Objective
-Restore upstream Superpowers brainstorming continuation behavior in Dong Skills.
+Restore necessary upstream workflow gates in Dong Skills after comparing borrowed skills with their original Superpowers/ECC/CE behaviors.
 
 ## Latest User Instruction
-User reported that after one brainstorming question was answered, the agent updated living spec/state files and stopped instead of automatically asking the next question. User asked to compare original Superpowers and stop over-modifying useful upstream behavior.
+User said "修复吧" after asking to compare borrowed skills with originals and fix places where useful original behavior was over-lightened.
 
 ## Current Phase
-implementation / verification
+verification / checkpoint
 
 ## Implemented
-- `brainstorming/SKILL.md` now requires Living Spec mode, one-question-at-a-time clarification, and an explicit Continuation Loop after every user response.
-- The Continuation Loop requires the agent to ask the next single question, move to approaches/design/approval, transition to `writing-plans`, pause, or report a blocker; state-file updates alone are not a valid brainstorming turn ending.
-- `tests/project-ops.test.mjs` now includes a regression test that guards the continuation-loop requirement.
-- `docs/improvements/backlog.md` records this as a Dong Skills improvement, not project memory.
-- Global installed `brainstorming/SKILL.md` was synced from source and hash-checked.
-- Earlier completed work remains: `brainstorming/SKILL.md` requires Living Spec mode and one-question-at-a-time clarification.
-- `learning.mjs` now assigns topics to learning observations, deduplicates status follow-ups by topic, and reports grouped pending observations.
-- Chinese learning observation regression coverage verifies UTF-8 prompt excerpts remain readable.
-- `gitCheckpointStatus` now reports stale handoff basis, latest changed file, mtime evidence, and refresh guidance.
-- `state-prune` now supports `--verification --archive --keep-latest 8 --apply` and writes an `Archived Evidence` pointer.
-- Bootstrap runtime copies are synced for changed hook/runtime scripts.
-- `docs/improvements/backlog.md` marks implemented optimization items accurately.
-- 2026-06-13 audit: `docs/improvements/backlog.md` had already-implemented items split between `accepted` and non-canonical `implemented`; statuses are now unified to `done`.
+- `brainstorming` now defaults to comparing 2-3 approaches for directional, architecture, API, UX, data-model, workflow, product, or behavior-changing work unless the change is mechanical or the user skips comparison.
+- `writing-plans` now requires scope check, file-structure mapping, test-first/characterization-first defaults, acceptance mapping, test scenarios, execution notes, 2-5 minute step guidance, and checkpoint notes.
+- `systematic-debugging` now makes reliable reproduction the gate before implementation fixes.
+- `executing-plans` now requires plan critique, Execution Note handling, Test Discovery, test update or recorded reason for behavior changes, and review/shipping gate before completion.
+- `requesting-code-review` and `codex-review-panel` now have mandatory review triggers and require a recorded low-risk reason when skipped.
+- `codex-worktree-governance` and `codex-git-checkpoint` now include a Superpowers-inspired finishing menu adapted for Codex-managed worktrees.
+- `codex-solution-memory` now requires an explicit save/update/absorb/drop evaluation after non-trivial verified reusable work.
+- `tests/project-ops.test.mjs` now guards these restored gates.
+- Global installed skill copies were synced from source and hash-checked.
+- `docs/improvements/backlog.md` records this as Dong Skills meta-learning.
 
 ## Active Assumptions
-- This is a direct bug fix to Dong Skills behavior based on explicit user feedback; no new product brainstorming is needed.
-- Living Spec behavior is instruction-level, not a runtime hook.
-- The fix intentionally preserves useful upstream Superpowers flow discipline while omitting upstream-only heavy pieces such as visual companion and forced spec commit.
-- Chinese mojibake protection is verified through UTF-8 JSONL regression tests.
+- This task is a Dong Skills source-repo repair, not a target-project bootstrap update.
+- The restored gates are instruction-level constraints. They rely on agents loading the relevant skill.
+- Heavy upstream-only flows such as mandatory subagents, visual companion, and destructive cleanup automation remain intentionally out of scope.
 
 ## Blockers
 - None.
 
 ## Verification Snapshot
-- `node --test tests\project-ops.test.mjs`: pass, 24/24 after adding the brainstorming continuation-loop regression.
+- `node --test tests\project-ops.test.mjs`: pass, 25/25.
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -TargetProjectRoot .`: pass.
+- changed skill hash check against `%USERPROFILE%\.agents\skills`: pass.
 - `node scripts\release-check.mjs .`: pass.
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass with no blocking issues or advisories after state refresh.
-- `node .codex\hooks\project-ops.mjs learning-status`: pass; target backlog detected from source marker; no pending observations or outbox items.
-- Installed global `brainstorming/SKILL.md` hash matches source after install sync.
-- `git diff --check`: pass.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
+- `git diff --check`: pass after fixing the spec heading/template issue.
+- `codex-review-panel` review: pass, no actionable findings.
+
+## Solution Memory Evaluation
+- Outcome: drop.
+- Reason: this is Dong Skills meta-learning, recorded in `docs/improvements/backlog.md`; it should not become project `docs/solutions/` memory.
 
 ## Next Action
-Run final diff check, then commit and push the verified checkpoint.
+Run final verification after state refresh, then commit and push the checkpoint.
 
 ## Last Updated
-2026-06-13 21:45 +08:00
+2026-06-13 23:46 +08:00

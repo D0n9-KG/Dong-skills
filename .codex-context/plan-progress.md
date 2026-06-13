@@ -1,45 +1,52 @@
-# Dong Skills Remaining Optimization Plan
+# Dong Skills Upstream-Parity Gate Repair Plan
 
 ## Active Plan
-- Goal: implement the already-discussed Dong Skills optimization items beyond the source-repo deposit path.
+- Goal: restore necessary upstream Superpowers/ECC/CE workflow constraints that were weakened by Dong Skills lightening, without importing heavy upstream-only machinery.
 - Spec: `.codex-context/spec.md`
 
 ## Spec Approval
-Approved by user correction on 2026-06-13.
+Approved by user instruction: "修复吧".
 
 ## Execution Approval
-User asked to continue addressing the missed optimization items.
+plan-then-execute requested by user.
 
 ## Tasks
-- [x] Task 1: Implement Living Spec and iterative brainstorming cadence.
-  - Files: `.agents/skills/brainstorming/SKILL.md`
-  - Evidence: skill now requires Living Draft status, one important question per message, and section-by-section confirmation.
-- [x] Task 2: Implement learning observation topic dedupe and Chinese regression coverage.
-  - Files: `.codex/scripts/lib/learning.mjs`, bootstrap copy, `tests/project-ops.test.mjs`
-  - Evidence: tests confirm one grouped observation for repeated Dong Skills status follow-ups and readable Chinese excerpt.
-- [x] Task 3: Improve Stop Git Checkpoint diagnostics.
-  - Files: `.codex/scripts/lib/git.mjs`, bootstrap copy, `tests/project-ops.test.mjs`
-  - Evidence: tests confirm stale handoff output includes latest changed file and refresh instruction.
-- [x] Task 4: Add one-step verification pruning command shape.
-  - Files: `scripts/state-prune.mjs`, bootstrap copy, `tests/project-ops.test.mjs`, `codex-asset-governance`
-  - Evidence: tests confirm `--verification --archive --keep-latest --apply` archives old entries and writes an active pointer.
-- [x] Task 5: Mark implemented backlog items accurately.
+- [x] Task 1: Strengthen borrowed workflow skills.
+  - Files: `.agents/skills/brainstorming/SKILL.md`, `.agents/skills/writing-plans/SKILL.md`, `.agents/skills/systematic-debugging/SKILL.md`, `.agents/skills/executing-plans/SKILL.md`, `.agents/skills/requesting-code-review/SKILL.md`, `.agents/skills/codex-review-panel/SKILL.md`, `.agents/skills/codex-worktree-governance/SKILL.md`, `.agents/skills/codex-git-checkpoint/SKILL.md`, `.agents/skills/codex-solution-memory/SKILL.md`
+  - Steps: add explicit gates for option comparison, test-first planning, reproduction-before-fix, test discovery before implementation, mandatory review triggers, branch-finishing menu, and solution-memory evaluation.
+  - Verify: text regression test in `tests/project-ops.test.mjs`.
+  - Evidence: required gates were added to borrowed workflow skill docs.
+- [x] Task 2: Add regression coverage.
+  - Files: `tests/project-ops.test.mjs`
+  - Steps: assert the required sections and key phrases remain present in the borrowed workflow skills.
+  - Verify: `node --test tests\project-ops.test.mjs`.
+  - Evidence: `node --test tests\project-ops.test.mjs` passed 25/25 with new gate checks.
+- [x] Task 3: Record Dong Skills meta-learning.
   - Files: `docs/improvements/backlog.md`
-  - Evidence: implemented items no longer appear as proposed.
-- [x] Task 6: Sync global installation and avoid self-install hook formatting churn.
-  - Files: `scripts/install-windows.ps1`
-  - Evidence: self-install no longer leaves `.codex/hooks.json` changed when hook config is semantically unchanged.
+  - Steps: add a done item explaining why these upstream-parity gates were restored.
+  - Verify: included in release check and diff review.
+  - Evidence: `docs/improvements/backlog.md` has the done item `Restore Required Upstream Workflow Gates`.
+- [x] Task 4: Sync installation, verify, and checkpoint.
+  - Files: global skills under `%USERPROFILE%\.agents\skills`, `.codex-context/*.md`
+  - Steps: run installer, release checks, asset governance, diff check, then commit and push.
+  - Verify: `node scripts\release-check.mjs .`, `node .codex\hooks\project-ops.mjs asset-governance`, `git diff --check`, global hash spot checks.
+  - Evidence: global install sync completed; final release check, tests, asset governance, hash check, and diff check passed. Git checkpoint is the remaining action.
 
 ## Current Step
-Final checkpoint commit and push.
+Final Git checkpoint.
 
 ## Verification
-- `node --test tests\project-ops.test.mjs`: pass, 23/23.
+- `node --test tests\project-ops.test.mjs`: pass, 25/25.
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -TargetProjectRoot .`: pass; global skill copies synced.
+- changed skill hash check: pass; global installed copies match source for all changed skill files.
 - `node scripts\release-check.mjs .`: pass.
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories after pruning.
-- `git diff --check`: pass.
+- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
+- `git diff --check`: pass after fixing `spec.md` template heading.
+
+## Risks
+- This is instruction-level behavior. It improves compliance only when the relevant skill is loaded.
+- Over-tightening could make Dong Skills feel as heavy as upstream; changes should preserve gates, not upstream-only subagent/visual-companion requirements.
 
 ## Out Of Scope
-- No broad pre-edit hook.
-- No runtime enforcement for Living Spec beyond skill instructions.
-- No automatic migration from Dong Skills outbox to backlog.
+- Do not restore Superpowers visual companion, forced subagent dispatch, or automatic branch cleanup.
+- Do not add new runtime hooks for these instruction-only gates in this pass.
