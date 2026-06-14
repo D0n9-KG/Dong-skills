@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: MUST use before ambiguous, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work. Turns user intent into a discussed, explicit, user-approved spec before implementation; do not edit code until the design/spec is approved unless the user explicitly skips brainstorming or the change is a tiny mechanical edit with clear acceptance criteria.
+description: MUST use before ambiguous, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work. Turns user intent into a discussed, explicit, written, user-approved spec before implementation; do not edit code until the written spec is approved unless the user explicitly skips brainstorming or the change is a tiny mechanical edit with clear acceptance criteria.
 ---
 
 # Brainstorming
@@ -11,7 +11,7 @@ Use this skill to turn intent into an approved spec through collaborative discus
 
 Do not implement, scaffold, edit code, change configuration, or invoke implementation skills until one of these is true:
 
-- The user explicitly approves the presented design/spec in the current chat.
+- The user explicitly approves the written spec in the current chat.
 - `.codex-context/spec.md` records `Approval Status: Approved by user` for the current task.
 - The user explicitly says to skip brainstorming and proceed.
 - The task is a tiny mechanical edit with clear acceptance criteria and no design choice.
@@ -36,10 +36,10 @@ Read-only discovery is allowed before approval. If you are unsure whether a requ
 5. **Explore options.** For direction-setting, architecture, product behavior, API, UX, data model, workflow, or other behavior-changing work, assume there is a real choice and compare 2-3 viable approaches before selecting one. Skip comparison only for tiny mechanical edits, an already-approved approach, or an explicit user request to skip. Include trade-offs and a recommendation, then ask one focused follow-up question.
 6. **Present the design section by section.** Scale detail to complexity. Cover only relevant sections: behavior, boundaries, files/modules, data flow, UX/API, error handling, migration, verification, non-goals. For complex work, ask for confirmation after each section before moving to the next section.
 7. **Ask for final approval.** Ask the user to approve the complete design/spec or request changes. Do not treat silence, vague acknowledgement, or a question as approval.
-8. **Finalize the spec.** After final approval, update `.codex-context/spec.md` from `Living Draft / Not Approved` to `Approved by user on [date/time]`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` only when the spec is too large for the state file, then link it from `spec.md`.
-9. **Self-review the spec.** Remove placeholders, contradictions, hidden scope creep, and ambiguous requirements.
+8. **Finalize the spec draft.** After final discussion approval, rewrite `.codex-context/spec.md` from `Living Draft / Not Approved` into a clean written spec with `Approval Status: Pending written-spec approval`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` when the spec is too large for the state file, then link it from `spec.md`.
+9. **Run the Final Spec Gate.** Self-review the written spec, fix issues inline, then ask the user to review the written spec. If the user requests changes, update the spec and rerun the gate.
 10. **Update state.** Update `.codex-context/current-state.md`, `.codex-context/decisions.md`, `.codex-context/open-questions.md`, and `.codex-context/handoff-summary.md`.
-11. **Transition.** For multi-step work, use `writing-plans` next. Do not jump from brainstorming directly to implementation unless the approved spec is tiny and mechanical.
+11. **Transition only after written-spec approval.** For multi-step work, use `writing-plans` next. Do not jump from brainstorming directly to implementation unless the approved spec is tiny and mechanical.
 
 ## Continuation Loop
 
@@ -74,7 +74,8 @@ Living Spec mode starts when brainstorming begins and ends only when the user ap
 - Do not present living draft content as permission to implement.
 - Do not let living-spec maintenance interrupt the conversation. After writing the draft, continue to the next question or next phase.
 - If a discussion spans multiple turns, a likely compaction boundary, or a new session handoff, refresh `handoff-summary.md` with the current living draft status.
-- When final approval arrives, rewrite the spec into the approved shape and preserve the important confirmed decisions.
+- When final discussion approval arrives, rewrite the spec into the final written-spec shape and preserve the important confirmed decisions.
+- Final approval of the discussion is not enough to leave brainstorming. The written spec must pass the Final Spec Gate and be approved by the user as the written spec before `Approval Status` can become `Approved by user`.
 
 ## Spec Shape
 
@@ -90,7 +91,7 @@ Use this structure unless the project already has a stronger one:
 - [Observable outcome.]
 
 ## Approval Status
-Living Draft / Not Approved, or Approved by user on [date/time].
+Living Draft / Not Approved, Pending written-spec approval, or Approved by user on [date/time].
 
 ## User Decisions
 - [Decision, trade-off, and source.]
@@ -117,9 +118,29 @@ Living Draft / Not Approved, or Approved by user on [date/time].
 [writing-plans / executing-plans / direct tiny edit / pause]
 ```
 
+## Final Spec Gate
+
+After the user approves the discussed design, but before `writing-plans`:
+
+1. Rewrite the living draft into the final written spec. Keep confirmed decisions, remove abandoned options, and make unresolved questions explicit. Mark it `Approval Status: Pending written-spec approval` until the user approves the written file.
+2. Run this self-review and fix issues inline:
+   - no `TODO`, `TBD`, placeholder, or incomplete section remains
+   - no section contradicts another section
+   - design, architecture, data flow, UX/API behavior, and acceptance criteria match the approved goals
+   - non-goals and out-of-scope work are explicit
+   - acceptance criteria are observable and testable
+   - open questions are `None` or explicitly blocking
+   - scope fits one implementation plan; if not, split the work or return to brainstorming
+   - a fresh session could write a plan from the spec file without relying on chat memory
+3. Ask the user to review the written spec file before planning.
+4. If the user requests changes, update the spec and rerun this gate.
+5. Only after the user approves the written spec, update `Approval Status` to `Approved by user on [date/time]` and transition to `writing-plans`.
+
+Use this gate instead of relying on a vague "looks good" after a conversation. A section approval, approach choice, or casual acknowledgement is not written-spec approval.
+
 ## Approval Rules
 
-- "Looks good", "approved", "go with option B", or "yes, implement this spec" count as approval after the design/spec has been shown.
+- "Looks good", "approved", "go with option B", or "yes, implement this spec" count as the approval that was explicitly requested by the immediately preceding assistant message: section approval, final discussion approval, or written-spec approval.
 - "可以", "继续", or "sounds reasonable" count only if the immediately preceding message asked for design/spec approval.
 - "Keep discussing", "what about X", or "try exploring Y" do not count as approval.
 - If the user approves only one section, continue brainstorming remaining sections before writing the final spec.
@@ -138,9 +159,11 @@ Examples: typo fix, one clearly named config value, one obvious import path fix.
 
 Before leaving brainstorming, verify:
 
-- The user approved the design/spec or explicitly skipped brainstorming.
+- The user approved the written spec file or explicitly skipped brainstorming.
 - No `TODO`, `TBD`, or placeholder requirements remain.
+- The architecture/design matches the feature descriptions and accepted decisions.
 - The spec says what will not be done.
 - Acceptance criteria are observable.
 - Open questions are resolved or explicitly blocking.
+- Scope fits one implementation plan; otherwise the work is decomposed.
 - The next skill/action is recorded in `.codex-context/current-state.md`.

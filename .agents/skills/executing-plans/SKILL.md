@@ -11,20 +11,67 @@ Execute the plan without losing the thread. Keep progress, evidence, and next ac
 
 Do not execute a plan until `.codex-context/plan-progress.md` records one of these values under `## Execution Approval`:
 
-- `Approved by user`
-- `plan-then-execute requested`
+- `Approved by user for Traditional task-by-task execution`
+- `Approved by user for Codex Goal mode`
+- `plan-then-execute requested` with `## Execution Mode` set to `Traditional task-by-task execution`
 
 If execution approval is missing or pending, stop and ask the user whether to execute, revise the plan, or pause. Do not treat a written plan as permission to implement.
 
+If `## Execution Mode` is missing, ambiguous, or set to Codex Goal mode without explicit user selection, stop and ask for the execution mode. Do not infer Codex Goal mode from "continue", "execute", "go ahead", or plan-then-execute.
+
 Also stop if `.codex-context/spec.md` has no approved scope for the current task, unless the user explicitly skipped brainstorming or the task is a tiny mechanical edit.
+
+## Execution Modes
+
+### Traditional Task-By-Task Execution
+
+Use this mode when the user approves normal execution, asks to plan-then-execute without naming Goal mode, or the environment does not provide a Codex Goal mechanism.
+
+- Execute one planned task at a time.
+- Keep exactly one active task in `.codex-context/plan-progress.md`.
+- Verify each meaningful task before moving to the next.
+- Update state files after each meaningful task or before any pause.
+- Checkpoint after verified milestones, or record why checkpointing is deferred.
+
+### Codex Goal Mode
+
+Use this mode only when all conditions are true:
+
+- `.codex-context/spec.md` records an approved written spec, or the user explicitly skipped brainstorming.
+- `.codex-context/plan-progress.md` records an approved plan.
+- The user explicitly selected `Codex Goal mode` for execution.
+- The plan includes `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Stop Conditions`.
+- The current Codex environment provides a goal mechanism; otherwise ask before falling back to Traditional mode.
+
+Before launching Goal mode, write or refresh the Goal Objective from the plan. Include:
+
+- spec path
+- plan path
+- approved scope
+- non-goals
+- current task or starting step
+- verification commands and expected success signals
+- checkpoint cadence
+- required state updates
+- stop conditions
+
+Goal mode runtime constraints:
+
+- Follow the approved plan tasks in order unless a blocker requires replanning.
+- Keep `.codex-context/plan-progress.md`, `artifact-index.md`, `verification.md`, `current-state.md`, and `handoff-summary.md` current.
+- Refresh `worktree-state.md` when branch/worktree state matters.
+- Checkpoint after each meaningful verified milestone, or record a deferred reason in `handoff-summary.md`.
+- Re-read `spec.md` and `plan-progress.md` at milestones and compare current work against acceptance criteria.
+- Stop on ambiguity, repeated verification failure, scope change, destructive action, missing credentials, missing user decision, architecture conflict, or context/state contradiction.
+- Do not silently expand scope beyond the approved spec.
 
 ## Process
 
 1. Read `.codex-context/plan-progress.md` and any linked detailed plan.
-2. Confirm execution approval and approved scope.
+2. Confirm execution approval, execution mode, and approved scope.
 3. If this is a new/resumed worktree, hook source paths are confusing, or branch cleanup may be needed later, use `codex-worktree-governance` and refresh `.codex-context/worktree-state.md`.
 4. Critique the plan before editing. Check for missing file paths, missing tests, vague steps, unapproved scope, impossible commands, and acceptance criteria with no task. If it has a blocking gap, stop and ask or revise the plan first.
-5. Read and honor the plan's `Execution Note`. If the plan has no execution note for non-tiny work, derive one from the plan before editing and record it in `.codex-context/plan-progress.md`.
+5. Read and honor the plan's `Execution Mode`, `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Execution Note`. If any of these are missing for non-tiny work, derive the missing non-Goal constraints from the plan and record them before editing; if Goal mode details are missing, stop and ask.
 6. Run Test Discovery before editing implementation files:
    - identify the closest existing unit/e2e/CLI/API tests for the touched area
    - identify the smallest command that proves the task

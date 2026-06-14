@@ -14,7 +14,7 @@ Do not implement while writing the plan.
 Before planning, confirm one of these is true:
 
 - `.codex-context/spec.md` has `Approval Status: Approved by user` for the current task.
-- The current chat contains explicit approval of the presented design/spec.
+- The current chat contains explicit approval of the written spec file or inline written spec.
 - The user gave clear requirements and explicitly asked to skip brainstorming.
 - The work is a tiny mechanical edit that does not need a multi-step plan.
 
@@ -60,10 +60,13 @@ For bug fixes, behavior changes, API changes, migrations, and user-visible workf
 5. Break work into bite-sized tasks. Prefer 2-5 minute steps for risky code changes: write/adjust test, run expected failure, implement minimal change, run expected pass, update docs/state, checkpoint.
 6. Include exact commands and expected success signals where known.
 7. Include test scenarios: happy path, edge/error path, regression path, and any explicit non-goal that must remain unchanged.
-8. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, and rollback notes.
-9. Record risks, assumptions, rollback notes, and open questions.
-10. Update `.codex-context/artifact-index.md` with files that matter.
-11. Review the plan for gaps before offering execution.
+8. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
+9. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
+10. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
+11. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, and rollback notes.
+12. Record risks, assumptions, rollback notes, and open questions.
+13. Update `.codex-context/artifact-index.md` with files that matter.
+14. Review the plan for gaps before offering execution.
 
 ## Plan Header
 
@@ -73,14 +76,45 @@ For bug fixes, behavior changes, API changes, migrations, and user-visible workf
 **Goal:** [One sentence.]
 **Spec:** [Path to approved spec or inline requirement.]
 **Spec Approval:** [Approved by user / skipped by user / mechanical exception.]
+**Execution Mode:** Pending user choice.
 **Current Step:** Not started.
 **Verification:** [Commands or checks that prove success.]
-**Execution Approval:** Pending user choice.
+**Execution Approval:** Pending user choice and execution mode.
 ```
 
 Include these sections in the plan when the work is not tiny:
 
 ```markdown
+## Execution Mode
+- Pending user choice.
+- Option A: Traditional task-by-task execution.
+- Option B: Codex Goal mode.
+- Do not infer Codex Goal mode from vague "continue", "execute", or plan-then-execute language.
+
+## Goal Mode Objective Draft
+Use only if the user explicitly selects Codex Goal mode.
+- Objective:
+- Spec path:
+- Plan path:
+- Approved scope:
+- Non-goals:
+- Current step:
+- Verification commands:
+- Checkpoint cadence:
+- Required state updates:
+- Stop conditions:
+
+## Runtime Constraints
+- Follow the approved plan tasks in order unless a blocker requires replanning.
+- Keep `.codex-context/plan-progress.md`, `artifact-index.md`, `verification.md`, `current-state.md`, and `handoff-summary.md` current.
+- Stop on ambiguity, failed verification loops, scope changes, destructive actions, missing credentials, missing user decisions, or architecture conflicts.
+- Do not silently expand scope beyond the approved spec.
+- Re-read the spec and plan at milestones and compare progress against acceptance criteria.
+
+## Checkpoint Cadence
+- Checkpoint after each meaningful verified task or milestone.
+- If a checkpoint is deferred, record the reason and next checkpoint in `handoff-summary.md`.
+
 ## Acceptance Mapping
 - [Criterion] -> Task N -> Verification command/action.
 
@@ -138,6 +172,8 @@ Before offering execution:
 - Verification is realistic for the local project.
 - Risks and open questions are captured in `.codex-context/risks.md` and `.codex-context/open-questions.md`.
 - `.codex-context/plan-progress.md` names exactly one `Current Step`.
+- `.codex-context/plan-progress.md` records `Execution Mode`, `Goal Mode Objective`, `Runtime Constraints`, and `Checkpoint Cadence`.
+- Codex Goal mode is presented as an explicit user choice, not the default.
 
 ## Execution Handoff
 
@@ -149,11 +185,12 @@ Use this shape:
 Plan written to <path>.
 
 Execution choices:
-1. Execute now with `executing-plans`.
-2. Revise the plan first.
-3. Pause here.
+1. Execute now with `executing-plans` in Traditional task-by-task execution mode.
+2. Execute now with `executing-plans` in Codex Goal mode.
+3. Revise the plan first.
+4. Pause here.
 
 Which do you want?
 ```
 
-Only proceed to `executing-plans` after user approval or an explicit earlier instruction to plan-then-execute.
+Only proceed to `executing-plans` after user approval or an explicit earlier instruction to plan-then-execute. If the user previously asked to plan-then-execute but did not explicitly choose Codex Goal mode, record `Execution Mode: Traditional task-by-task execution`.

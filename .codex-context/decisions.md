@@ -40,6 +40,10 @@
 - Borrowed workflow skills should stay lighter than their upstream originals, but lightening must not remove gates that prevent drift, weak plans, missing reproduction, missing tests, optional high-risk review, unsafe branch finishing, or forgotten solution-memory evaluation.
 - `spec.md` `Approval Status` and `plan-progress.md` `Execution Approval` are required state schema fields, not optional prose. New templates include them and health checks flag old projects missing them.
 - Release checks include a text readability scan for active Dong Skills assets so mojibake or replacement-character regressions are caught before publishing.
+- Final discussion approval is not the same as written-spec approval. `brainstorming` must mark the final written spec as `Pending written-spec approval` until the user approves the written file or inline written spec.
+- Plans must record `Execution Mode`; Codex Goal mode is never inferred from vague continuation or plan-then-execute language.
+- `plan-then-execute` defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
+- Codex Goal mode is allowed only with an approved written spec, approved plan, explicit user selection, Goal objective, runtime constraints, checkpoint cadence, state update requirements, and stop conditions.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -55,3 +59,5 @@
 - Keeping duplicate or obsolete durable docs in archive folders when Git history is sufficient.
 - Treating `.codex-context/dong-skills-outbox.md` as project memory or an active project instinct.
 - Treating user-reported Dong Skills optimization backlog items as complete merely because they were recorded.
+- Treating a discussion-approved design as enough to start planning before the written spec is reviewed.
+- Treating Goal mode as a default or automatic escalation for long tasks.

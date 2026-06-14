@@ -1,42 +1,62 @@
-# Dong Skills State/Recovery Hardening Plan
+# Plan Progress
 
 ## Active Plan
-- Goal: audit Dong Skills for remaining practical drift/recovery/state-record risks and repair verified gaps.
+- Goal: harden Dong Skills workflow so non-trivial work must pass written spec approval, written planning, explicit execution-mode approval, and constrained execution.
 - Spec: `.codex-context/spec.md`
 
 ## Spec Approval
 Approved by user instruction on 2026-06-14.
 
 ## Execution Approval
-User asked for the audit; verified low-risk fixes were implemented directly as part of the audit.
+User asked to patch the workflow; proceeding as Traditional task-by-task execution for this Dong Skills source edit.
+
+## Execution Mode
+Traditional task-by-task execution.
+
+## Goal Mode Objective
+Not selected for this task. New Goal mode support is documented for future project execution only.
+
+If selected in a future task, the objective must include spec path, plan path, approved scope, non-goals, current step, verification commands, checkpoint cadence, required state updates, and stop conditions.
+
+## Runtime Constraints
+- Follow the approved plan and keep scope limited to workflow skill/template/test/docs hardening.
+- Keep `plan-progress.md`, `artifact-index.md`, `verification.md`, `current-state.md`, and `handoff-summary.md` current.
+- Stop if the external reference or Codex Goal mode behavior is unclear in a way that changes implementation.
+- Do not silently add new hooks or automatic Goal mode behavior beyond the approved scope.
+
+## Checkpoint Cadence
+- One checkpoint after final verification because this is one coherent cross-file workflow hardening change.
+- Record any deferred checkpoint reason in `handoff-summary.md`.
 
 ## Tasks
-- [x] Task 1: Inspect governance skills, hooks, templates, tests, and release tooling for state/recovery drift risks.
-  - Evidence: reviewed project governance, review panel, context budget, asset governance, templates, events, learning, health check, release check, hooks, tests, and state files.
-- [x] Task 2: Patch confirmed template/schema gap.
-  - Evidence: `spec.md` template now includes `Approval Status`; `plan-progress.md` template now includes `Execution Approval`; bootstrap asset copy synchronized.
-- [x] Task 3: Patch confirmed health-check gap.
-  - Evidence: `project-ops-health.mjs` now reports missing spec/plan gate sections while accepting both `Goal` and `Goals`; bootstrap asset copy synchronized.
-- [x] Task 4: Patch confirmed release-check gap.
-  - Evidence: `release-check.mjs` now runs a text readability/mojibake scan over active release assets; bootstrap asset copy synchronized.
-- [x] Task 5: Add regression coverage and backlog record.
-  - Evidence: `tests/project-ops.test.mjs` covers the new checks; `docs/improvements/backlog.md` records the hardening item.
-- [ ] Task 6: Final verification and checkpoint.
-  - Evidence pending after state refresh.
+- [x] Task 1: Compare local workflow gaps against upstream Superpowers behavior.
+  - Evidence: upstream written-spec gate behavior was checked; local gaps identified in `brainstorming`, `writing-plans`, and `executing-plans`.
+- [x] Task 2: Fix `brainstorming` written-spec gate.
+  - Evidence: `brainstorming/SKILL.md` now uses `Pending written-spec approval` and only marks Approved after written-spec user approval.
+- [x] Task 3: Add execution mode planning.
+  - Evidence: `writing-plans/SKILL.md` now requires execution mode, Goal objective draft, runtime constraints, and checkpoint cadence.
+- [x] Task 4: Add Traditional vs Codex Goal mode execution governance.
+  - Evidence: `executing-plans/SKILL.md` now has execution-mode rules, Goal mode objective requirements, runtime constraints, and stop conditions.
+- [x] Task 5: Sync router, lifecycle, AGENTS snippets, templates, health checks, README, and bootstrap assets.
+  - Evidence: modified `using-superpowers`, `codex-project-governance`, AGENTS snippets, README, templates, seed context files, and health checks.
+- [x] Task 6: Add regression coverage.
+  - Evidence: `tests/project-ops.test.mjs` covers written-spec gate, execution modes, bootstrap sections, and health-check failures.
+- [x] Task 7: Final verification.
+  - Evidence: Node tests, release check, asset governance, learning-status, context-budget, and diff whitespace checks passed or recorded advisory.
 
 ## Current Step
-Final verification and Git checkpoint.
+Git checkpoint.
 
 ## Verification
 - `node --test tests\project-ops.test.mjs`: pass, 28/28.
 - `node scripts\release-check.mjs .`: pass.
 - `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
 - `git diff --check`: pass.
-
-## Risks
-- PostToolUse immediate freshness enforcement is still limited to edit/write/apply_patch-style tools.
-- Existing target projects need a Dong Skills update/bootstrap to receive these changes.
+- `node scripts\project-ops-health.mjs .`: pass.
+- `node .codex\hooks\project-ops.mjs learning-status`: pass, no pending observations/outbox items.
+- `node .codex\hooks\project-ops.mjs context-budget`: pass/advisory, ~50,846 tokens across 54 files.
 
 ## Out Of Scope
-- Do not update target projects or global installed copies in this pass unless explicitly requested.
-- Do not broaden PostToolUse to shell/script tools without a separate trade-off decision.
+- No new runtime hooks for Goal mode.
+- No automatic use of Codex Goal mode.
+- No target-project or global installed-copy update in this pass.

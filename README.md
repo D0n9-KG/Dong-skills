@@ -22,7 +22,7 @@ Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solution
 ### 核心机制
 
 - 主流程治理：`codex-project-governance` 协调发现、澄清、计划、执行、调试、验证、评审、学习、提交、交接。
-- 阶段边界：非平凡工作先 `brainstorming` 形成用户确认的 spec，再用 `writing-plans` 写计划，计划执行前需要用户确认或明确的 plan-then-execute 指令。
+- 阶段边界：非平凡工作先 `brainstorming` 形成用户批准的 written spec，再用 `writing-plans` 写计划；执行前必须在 `plan-progress.md` 记录执行模式，`plan-then-execute` 默认传统逐项执行，Codex Goal mode 需要用户明确选择。
 - 上下文恢复：`SessionStart` 注入恢复顺序；压缩后由 `SessionStart` 的 `compact` 启动来源恢复上下文，`PostCompact` 只确认压缩事件完成。
 - 压缩前检查：`PreCompact` 检查 handoff、核心状态文件和学习审查是否新鲜。手动压缩不满足条件时会被拦住；自动压缩不硬拦，而是先写入应急 `handoff-summary.md` 再放行，避免上下文压力下静默卡住。
 - 文件变更追踪：`PostToolUse` 在非上下文文件变化后要求刷新 `artifact-index.md`。
@@ -47,7 +47,7 @@ Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solution
 | `using-superpowers` | 进入项目工作时选择合适流程 skill。 |
 | `brainstorming` | 模糊、创造性或行为变更任务先形成可恢复 spec。 |
 | `writing-plans` | 把明确需求转成可执行、可验证的计划。 |
-| `executing-plans` | 按计划逐项执行并维护进度。 |
+| `executing-plans` | 按计划逐项执行，或在用户明确选择后按 Codex Goal mode 执行并维护进度。 |
 | `systematic-debugging` | 遇到 bug、失败或异常时先定位根因。 |
 | `verification-before-completion` | 完成声明前要求验证证据。 |
 | `codex-codebase-onboarding` | 新项目启动、bootstrap 项目级 hooks、建立项目地图。 |
@@ -177,7 +177,7 @@ It helps with:
 ### Core Workflow
 
 - `codex-project-governance` is the main lifecycle skill.
-- Non-trivial work has explicit phase gates: `brainstorming` produces a user-approved spec, `writing-plans` produces a verifiable plan, and execution waits for user approval unless the user explicitly requested plan-then-execute.
+- Non-trivial work has explicit phase gates: `brainstorming` produces a user-approved written spec, `writing-plans` produces a verifiable plan with an execution mode, and execution waits for mode approval. `plan-then-execute` defaults to Traditional task-by-task execution; Codex Goal mode requires an explicit user choice.
 - `.codex-context/` stores recoverable project state.
 - `STRATEGY.md` anchors product/project direction when adopted.
 - `docs/solutions/` stores verified reusable solutions.

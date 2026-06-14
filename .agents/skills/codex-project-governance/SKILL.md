@@ -32,9 +32,10 @@ If those files conflict with the latest user instruction, the latest user instru
 Do not skip gates for non-trivial work:
 
 1. **Scope gate:** unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work uses `brainstorming` first.
-2. **Approval gate:** implementation waits until the design/spec is explicitly approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria.
+2. **Written spec gate:** multi-step or behavior-changing implementation waits until the written spec is approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria. A discussion approval or section approval is not enough.
 3. **Plan gate:** multi-step work uses `writing-plans` before implementation.
-4. **Execution gate:** execute a written plan only after the user approves execution or explicitly asked earlier to plan-then-execute.
+4. **Execution mode gate:** the written plan must record `Execution Mode`: `Traditional task-by-task execution` or `Codex Goal mode`.
+5. **Execution gate:** execute a written plan only after the user approves execution mode or explicitly asked earlier to plan-then-execute. Plan-then-execute defaults to Traditional mode unless the user explicitly selects Codex Goal mode.
 
 Tiny mechanical edits can use a compact spec and direct implementation. If the boundary is uncertain, treat it as non-trivial and use the gates.
 
@@ -44,7 +45,7 @@ Tiny mechanical edits can use a compact spec and direct implementation. If the b
 - `brainstorming`: unclear requirements, creative work, behavior changes.
 - `codex-codebase-onboarding`: bootstrap Dong Skills project config when needed, then map an unfamiliar repo.
 - `writing-plans`: approved spec or multi-step implementation.
-- `executing-plans`: execute a written plan task by task.
+- `executing-plans`: execute a written plan in Traditional task-by-task mode or explicit Codex Goal mode.
 - `codex-worktree-governance`: detect worktree role, branch state, primary/worktree relationship, hook root mismatch, and cleanup ownership.
 - `systematic-debugging`: bug, test failure, build failure, unexpected behavior.
 - `codex-architecture-governance`: structural changes, large files, flat directories, unclear boundaries, refactors, or repeated fixes caused by coupling.
@@ -69,10 +70,10 @@ Load only the skill needed for the current phase.
 
 1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, worktree state, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
 2. Recover: if the latest context is missing and project files are insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
-3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with approval status.
-4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; ask for execution approval unless the user explicitly requested plan-then-execute.
+3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status and require written-spec approval before planning.
+4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; ask for execution mode approval unless the user explicitly requested plan-then-execute.
 5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
-6. Implement: only after the approval and plan gates are satisfied; follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
+6. Implement: only after the written spec, plan, and execution mode gates are satisfied; follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
 7. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
 8. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
 9. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`.

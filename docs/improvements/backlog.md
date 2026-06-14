@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-14 - Gate Written Specs And Goal Mode Execution
+
+Status: done
+Priority: P0
+Affected area: brainstorming / planning / executing-plans / project governance / templates / health checks
+Source: user feedback about Living Spec finalization, Superpowers parity, and safe Codex Goal mode execution for full plans
+Implemented: `brainstorming` now separates final discussion approval from written-spec approval; `writing-plans` requires execution mode, Goal objective draft, runtime constraints, and checkpoint cadence; `executing-plans` supports Traditional task-by-task execution and explicit Codex Goal mode with objective/state/checkpoint/stop-condition constraints; router/governance/AGENTS/README/templates/health checks/tests were synchronized.
+
+Signal:
+Living Spec is useful during discussion, but there must be a clear final written-spec gate before planning. Full-project execution can benefit from Codex Goal mode, but only if the goal objective carries approved scope, non-goals, plan path, verification commands, checkpoint cadence, state update requirements, and stop conditions.
+
+Decision:
+Preserve the useful upstream Superpowers gate: write the spec, self-review it, ask the user to approve the written spec, then plan. Add two execution modes after planning. Plan-then-execute defaults to Traditional task-by-task execution; Codex Goal mode requires explicit user selection and a complete Goal objective.
+
+Verification:
+`node --test tests\project-ops.test.mjs` covers the written-spec gate, execution mode planning, Goal mode execution constraints, bootstrap plan-progress sections, and health-check schema failures.
+
 ### 2026-06-14 - Harden State Gate Templates And Readability Checks
 
 Status: done

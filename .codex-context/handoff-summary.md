@@ -1,27 +1,38 @@
 # Handoff Summary
 
 ## Objective
-Audit Dong Skills for real-use drift, stale state, delayed record updates, compaction/session recovery confusion, and missing guardrails; repair verified gaps.
+Harden Dong Skills workflow so non-trivial work has explicit written-spec approval, written planning, execution-mode approval, and constrained execution.
 
 ## Latest User Instruction
-Review the whole Dong Skills system again for practical problems that could make Codex drift, forget important state, or recover incorrectly after compaction or other events.
+Add self-review around spec/planning/execution; support both traditional execution and Codex Goal mode; ensure Goal mode has strong runtime constraints; stop for ambiguous requirements; reuse high-quality external skills where useful.
 
 ## Approved Scope / Spec
-- Repair confirmed low-risk gaps in the Dong Skills source kit.
-- Keep workflow lighter than upstream systems, but preserve hard phase boundaries.
-- Do not broaden noisy hooks without a separate trade-off decision.
-- Do not update target projects or global installed copies in this pass unless separately requested.
+- Spec: `.codex-context/spec.md`
+- Approved by user instruction on 2026-06-14.
+- Scope: workflow skill docs, project governance/router docs, templates, health checks, README/AGENTS guidance, tests, backlog, and state files.
 
 ## Plan Status
-All implementation tasks are complete. Final verification/checkpoint remains.
+- Execution mode for this edit: Traditional task-by-task execution.
+- Goal mode was not used for this task; support was added for future tasks.
+- All implementation and verification tasks are complete.
+- Remaining action: commit and push checkpoint.
 
 ## Files Modified
+- `.agents/skills/brainstorming/SKILL.md`
+- `.agents/skills/writing-plans/SKILL.md`
+- `.agents/skills/executing-plans/SKILL.md`
+- `.agents/skills/using-superpowers/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
 - `.codex/scripts/lib/templates.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/spec.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/plan-progress.md`
 - `scripts/project-ops-health.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
-- `scripts/release-check.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`
+- `AGENTS.md`
+- `AGENTS.project-ops.snippet.md`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
+- `README.md`
 - `tests/project-ops.test.mjs`
 - `docs/improvements/backlog.md`
 - `.codex-context/current-state.md`
@@ -34,56 +45,53 @@ All implementation tasks are complete. Final verification/checkpoint remains.
 - `.codex-context/handoff-summary.md`
 
 ## Files Read But Not Changed
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/codex-review-panel/SKILL.md`
-- `.agents/skills/codex-context-budget/SKILL.md`
-- `.agents/skills/codex-asset-governance/SKILL.md`
-- `.codex/scripts/lib/events.mjs`
-- `.codex/scripts/lib/learning.mjs`
-- `.codex/hooks.json`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
+- `.agents/skills/codex-git-checkpoint/SKILL.md`
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`
+- `scripts/install-windows.ps1`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- Existing `.codex-context/` state files
 
 ## Decisions Made
-- `spec.md` `Approval Status` and `plan-progress.md` `Execution Approval` are required state schema fields.
-- Old projects missing those fields should be diagnosed by `project-ops-health`.
-- `release-check` should catch common text readability/mojibake regressions before publishing.
-- Do not broaden PostToolUse to shell/script tools in this pass because the noise trade-off needs a separate decision.
+- Final discussion approval is not written-spec approval. A spec can be `Pending written-spec approval` before it becomes `Approved by user`.
+- `writing-plans` must include `Execution Mode`, `Goal Mode Objective Draft`, `Runtime Constraints`, and `Checkpoint Cadence`.
+- `plan-then-execute` defaults to Traditional task-by-task execution.
+- Codex Goal mode requires explicit user selection and a complete Goal objective with scope, non-goals, verification, checkpoint cadence, state updates, and stop conditions.
+- Existing project health checks should flag missing execution-mode schema sections.
 
 ## Open Questions And Assumptions
-- Open question: whether shell/script/generated edits need immediate PostToolUse enforcement or whether Stop/PreCompact is sufficient in practice.
-- Assumption: existing target projects need a Dong Skills update/bootstrap to get these changes.
+- No blocking open questions.
+- Future question: whether Goal mode needs dedicated hook telemetry after real usage.
+- Assumption: existing projects need a Dong Skills update/bootstrap to receive new local templates and AGENTS snippets.
 
 ## Risks
-- Shell/script/formatter/generated file changes may bypass immediate PostToolUse artifact-index blocks.
-- Readability scanning is heuristic and may need narrow allow comments for legitimate rare Unicode.
-- Existing sessions that already loaded older skill text or hook assets may need a fresh session/update.
+- Goal mode support is currently enforced through skill/state guidance, not a dedicated runtime hook.
+- Existing sessions that already loaded older skills/hooks may need a fresh session or project update.
+- Context budget rose to ~50,846 tokens across 54 files; context-budget suggests future split consideration for large hook helper modules.
 
 ## Verification Evidence
 - `node --test tests\project-ops.test.mjs`: pass, 28/28.
-- `node --check scripts\release-check.mjs`: pass.
-- `node --check scripts\project-ops-health.mjs`: pass.
-- `node --check .codex\scripts\lib\templates.mjs`: pass.
 - `node scripts\release-check.mjs .`: pass.
 - `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
-- `node .codex\hooks\project-ops.mjs context-budget`: pass/advisory, ~48,084 tokens across 54 files.
-- `node .codex\hooks\project-ops.mjs learning-status`: pass, no pending observations or outbox items.
 - `git diff --check`: pass.
+- `node scripts\project-ops-health.mjs .`: pass.
+- `node .codex\hooks\project-ops.mjs learning-status`: pass, no pending observations/outbox items.
+- `node .codex\hooks\project-ops.mjs context-budget`: pass/advisory, ~50,846 tokens across 54 files.
 
 ## Git Checkpoint
-- Latest commit: `c2ae61a fix(skills): restore upstream workflow gates`
-- Push state: origin/main was aligned before this pass; this repair is not committed yet.
-- Files included: pending commit should include the files listed under Files Modified.
+- Latest commit: previous checkpoint `0dd8f8d fix(governance): harden state recovery checks`
+- Push state: this hardening change is verified and ready to commit/push.
+- Files included: all files listed under Files Modified.
 - Files intentionally left uncommitted: none intended.
-- Deferred reason: checkpoint pending final verification after state refresh.
-- Next checkpoint: commit and push this verified hardening repair.
+- Deferred reason: none; checkpoint is next.
+- Next checkpoint: commit `fix(workflow): gate written specs and goal execution`, then push `origin/main`.
 
 ## Learned Instincts To Preserve
-- State-file templates must expose the same gates that skills require; otherwise compaction recovery can miss approval boundaries.
-- Release checks should guard readable text, not only syntax, privacy, and runtime artifacts.
+- For borrowed skills, preserve upstream gates that directly prevent drift, even when Dong Skills stays lighter than the original.
+- Treat written spec approval, plan approval, and execution mode approval as separate recoverable states.
 - Dong Skills improvement findings belong in `docs/improvements/backlog.md`, not project instincts.
 
 ## Next Action
-Run final verification after this state refresh, then commit and push the checkpoint if verification still passes.
+Commit and push the verified checkpoint.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
@@ -92,7 +100,7 @@ Run final verification after this state refresh, then commit and push the checkp
 4. `.codex-context/plan-progress.md`
 5. `.codex-context/artifact-index.md`
 6. `.codex-context/verification.md`
-7. `scripts/release-check.mjs`
-8. `scripts/project-ops-health.mjs`
-9. `.codex/scripts/lib/templates.mjs`
+7. `.agents/skills/brainstorming/SKILL.md`
+8. `.agents/skills/writing-plans/SKILL.md`
+9. `.agents/skills/executing-plans/SKILL.md`
 10. `tests/project-ops.test.mjs`

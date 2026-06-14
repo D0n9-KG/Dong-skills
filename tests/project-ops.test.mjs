@@ -166,14 +166,32 @@ Continue.
 ## Active Plan
 Fixture.
 
-## Execution Approval
+## Spec Approval
 Approved by fixture.
+
+## Execution Approval
+Approved by user for Traditional task-by-task execution.
+
+## Execution Mode
+Traditional task-by-task execution.
+
+## Goal Mode Objective
+Not selected.
+
+## Runtime Constraints
+- Follow the fixture plan.
+
+## Checkpoint Cadence
+- Checkpoint after verified fixture work.
 
 ## Tasks
 - [x] Fixture task.
 
 ## Current Step
 None.
+
+## Verification
+- Fixture check.
 
 ## Out Of Scope
 - None.
@@ -247,6 +265,10 @@ test("brainstorming skill preserves upstream continuation loop", () => {
   assert.match(skill, /ask the next single highest-impact question/);
   assert.match(skill, /Do not end a brainstorming turn by only saying that files were updated/);
   assert.match(skill, /compare 2-3 viable approaches/);
+  assert.match(skill, /## Final Spec Gate/);
+  assert.match(skill, /Pending written-spec approval/);
+  assert.match(skill, /fresh session could write a plan from the spec file/);
+  assert.match(skill, /written-spec approval/);
   assert.match(skill, /"可以", "继续"/);
 });
 
@@ -259,6 +281,12 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(writing, /## Execution Note/);
   assert.match(writing, /2-5 minute steps/);
   assert.match(writing, /## Acceptance Mapping/);
+  assert.match(writing, /## Execution Mode/);
+  assert.match(writing, /Traditional task-by-task execution/);
+  assert.match(writing, /Codex Goal mode/);
+  assert.match(writing, /## Goal Mode Objective Draft/);
+  assert.match(writing, /## Runtime Constraints/);
+  assert.match(writing, /## Checkpoint Cadence/);
 
   const debugging = readSkill("systematic-debugging");
   assert.match(debugging, /Reproduction is the entry ticket to fixing/);
@@ -269,6 +297,19 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /Run Test Discovery before editing implementation files/);
   assert.match(executing, /For behavior-changing tasks, add\/update the planned test/);
   assert.match(executing, /## Review And Shipping Gate/);
+  assert.match(executing, /## Execution Modes/);
+  assert.match(executing, /Traditional Task-By-Task Execution/);
+  assert.match(executing, /Codex Goal mode/);
+  assert.match(executing, /Goal Mode Objective/);
+  assert.match(executing, /Runtime Constraints/);
+  assert.match(executing, /Checkpoint Cadence/);
+  assert.match(executing, /## Stop Conditions/);
+
+  const router = readSkill("using-superpowers");
+  assert.match(router, /written spec is approved/);
+  assert.match(router, /Execution Mode/);
+  assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
+  assert.match(router, /Codex Goal mode requires an explicit user choice/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -376,6 +417,10 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "dong-skills-outbox.md")), true);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Approval Status/);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Execution Approval/);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Execution Mode/);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Goal Mode Objective/);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Runtime Constraints/);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Checkpoint Cadence/);
 
   const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
   const recovery = execFileSync(process.execPath, [installedHook], {
@@ -599,7 +644,12 @@ test("health check requires state files to preserve approval gates", () => {
   } catch (error) {
     failed = true;
     assert.match(String(error.stdout), /spec\.md missing section: Approval Status/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Spec Approval/);
     assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Approval/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Mode/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Goal Mode Objective/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Runtime Constraints/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Checkpoint Cadence/);
   }
   assert.equal(failed, true);
 });

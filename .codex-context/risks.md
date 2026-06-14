@@ -14,6 +14,8 @@
 - Raw snapshot pruning is intentionally narrow; `observations.jsonl` remains governed by learning review, not generic raw cleanup.
 - Dong Skills improvement outbox entries can become stale if the real source repo remains unavailable; migrate them after source discovery works.
 - Living Spec mode is a skill instruction rather than a technical lock; sessions that skip or fail to load `brainstorming` can still drift.
+- Written-spec approval and execution-mode approval are skill/state gates rather than universal technical locks; sessions that skip the curated skills can still violate the intended flow.
+- Codex Goal mode is powerful for full-plan execution but can amplify drift if the Goal objective omits approved scope, non-goals, checkpoint cadence, state update requirements, or stop conditions.
 - Topic-based learning dedupe is heuristic; real usage may show topics that need splitting or merging.
 - Shell/script/formatter/generated file changes may bypass the immediate `PostToolUse` artifact-index freshness block because the matcher remains scoped to edit/write/apply_patch-style tools. Stop and PreCompact still catch stale state before stopping or compacting.
 
@@ -36,6 +38,7 @@
 - The generated Dong Skills source marker can become stale if the source checkout moves; reinstall or set `DONG_SKILLS_REPO` / `DONG_SKILLS_HOME`.
 - Existing projects need a runtime refresh before they get the improved Stop diagnostics, grouped learning status, and new state-prune behavior.
 - Text readability scanning is heuristic. It may need narrow allow comments for legitimate rare Unicode sequences, but disabling the scan would re-open the mojibake publication risk.
+- No dedicated hook currently enforces Goal mode cadence at runtime; the first safeguard is the written Goal objective plus Stop/PreCompact/state checks.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.

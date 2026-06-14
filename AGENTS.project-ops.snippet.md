@@ -11,11 +11,11 @@ For non-trivial project work, use `codex-project-governance` first. It coordinat
 For non-trivial work, keep the phase boundary explicit:
 
 1. Use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work.
-2. Do not implement until the design/spec is approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria.
+2. Do not implement until the written spec is approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria. Discussion approval is not enough for non-trivial work.
 3. Use `writing-plans` before multi-step implementation.
-4. Do not execute the plan until the user approves execution or explicitly requested plan-then-execute.
+4. Do not execute the plan until the user approves the execution mode or explicitly requested plan-then-execute. Plan-then-execute defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
 
-Record spec approval in `.codex-context/spec.md` and execution approval in `.codex-context/plan-progress.md`.
+Record spec approval in `.codex-context/spec.md`; record `Execution Mode`, `Goal Mode Objective` when applicable, and execution approval in `.codex-context/plan-progress.md`.
 
 ## Curated Skills
 

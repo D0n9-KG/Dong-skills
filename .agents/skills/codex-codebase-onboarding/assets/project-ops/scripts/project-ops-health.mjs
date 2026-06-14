@@ -55,9 +55,15 @@ const REQUIRED_SPEC_SECTIONS = [
 
 const REQUIRED_PLAN_SECTIONS = [
   ["Active Plan"],
+  ["Spec Approval"],
   ["Execution Approval"],
+  ["Execution Mode"],
+  ["Goal Mode Objective"],
+  ["Runtime Constraints"],
+  ["Checkpoint Cadence"],
   ["Tasks"],
   ["Current Step"],
+  ["Verification"],
   ["Out Of Scope"]
 ];
 
