@@ -2,6 +2,8 @@
 
 Dong Skills is a Codex project-operations skill kit for long-running software work. It keeps project truth outside the chat window, makes context recoverable after compaction or new sessions, and turns verified work into reusable project knowledge.
 
+Current scope: Dong Skills is maintained as an OpenAI Codex-specific kit. Claude Code compatibility would require a separate adapter for `.claude/skills`, `CLAUDE.md`, and Claude hook settings; it is not part of this Codex-only release line.
+
 It combines a curated subset of [Superpowers](https://github.com/obra/superpowers), learning/onboarding ideas adapted from [ECC](https://github.com/affaan-m/ECC), context-governance patterns inspired by [agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering), and workflow ideas adapted from [Compound Engineering](https://github.com/everyinc/compound-engineering-plugin).
 
 ## 中文

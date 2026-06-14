@@ -62,11 +62,12 @@ For bug fixes, behavior changes, API changes, migrations, and user-visible workf
 7. Include test scenarios: happy path, edge/error path, regression path, and any explicit non-goal that must remain unchanged.
 8. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
 9. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
-10. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
-11. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, and rollback notes.
-12. Record risks, assumptions, rollback notes, and open questions.
-13. Update `.codex-context/artifact-index.md` with files that matter.
-14. Review the plan for gaps before offering execution.
+10. State that Codex Goal mode requires a real goal mechanism in the current Codex session, such as available `create_goal` and `update_goal` tools. If that mechanism is absent, Goal mode is not selectable.
+11. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
+12. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, and rollback notes.
+13. Record risks, assumptions, rollback notes, and open questions.
+14. Update `.codex-context/artifact-index.md` with files that matter.
+15. Review the plan for gaps before offering execution.
 
 ## Plan Header
 
@@ -93,6 +94,7 @@ Include these sections in the plan when the work is not tiny:
 
 ## Goal Mode Objective Draft
 Use only if the user explicitly selects Codex Goal mode.
+- Goal mechanism available in this session:
 - Objective:
 - Spec path:
 - Plan path:
@@ -103,6 +105,8 @@ Use only if the user explicitly selects Codex Goal mode.
 - Checkpoint cadence:
 - Required state updates:
 - Stop conditions:
+
+Goal mode is unavailable if the current Codex session does not expose an actual goal mechanism. Do not treat this draft as permission to simulate Goal mode manually.
 
 ## Runtime Constraints
 - Follow the approved plan tasks in order unless a blocker requires replanning.

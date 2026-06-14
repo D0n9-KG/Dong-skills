@@ -118,6 +118,9 @@ Living Draft / Not Approved. Use Pending written-spec approval after final discu
 ## Active Plan
 [Path to detailed plan/spec, or "No formal plan yet".]
 
+## Spec Approval
+[Approved by user / skipped by user / mechanical exception / pending.]
+
 ## Execution Approval
 Not approved yet. Record "Approved by user for Traditional task-by-task execution on [date/time]", "Approved by user for Codex Goal mode on [date/time]", or "plan-then-execute requested; Traditional task-by-task execution" before implementation.
 
@@ -125,7 +128,7 @@ Not approved yet. Record "Approved by user for Traditional task-by-task executio
 Pending user choice. Allowed values: Traditional task-by-task execution; Codex Goal mode. Do not infer Codex Goal mode from "continue", "execute", or plan-then-execute.
 
 ## Goal Mode Objective
-Not selected. If Codex Goal mode is explicitly selected, include objective, spec path, plan path, approved scope, non-goals, current step, verification commands, checkpoint cadence, required state updates, and stop conditions.
+Not selected. If Codex Goal mode is explicitly selected, include the goal mechanism available in the current Codex session, objective, spec path, plan path, approved scope, non-goals, current step, verification commands, checkpoint cadence, required state updates, and stop conditions. Goal mode is unavailable when the current session does not expose an actual goal mechanism.
 
 ## Runtime Constraints
 - Follow the approved plan tasks in order unless a blocker requires replanning.

@@ -41,10 +41,11 @@ Use this mode only when all conditions are true:
 - `.codex-context/plan-progress.md` records an approved plan.
 - The user explicitly selected `Codex Goal mode` for execution.
 - The plan includes `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Stop Conditions`.
-- The current Codex environment provides a goal mechanism; otherwise ask before falling back to Traditional mode.
+- The current Codex session exposes an actual goal mechanism, such as available `create_goal` and `update_goal` tools. If those tools are not available, Goal mode is unavailable; ask before falling back to Traditional mode.
 
 Before launching Goal mode, write or refresh the Goal Objective from the plan. Include:
 
+- the exact Codex goal mechanism to use in this session
 - spec path
 - plan path
 - approved scope
@@ -54,6 +55,8 @@ Before launching Goal mode, write or refresh the Goal Objective from the plan. I
 - checkpoint cadence
 - required state updates
 - stop conditions
+
+Launching Goal mode means creating one concrete Codex goal from this objective and then working inside that goal until it is complete or genuinely blocked. Do not simulate Goal mode by merely writing a heading in `plan-progress.md`.
 
 Goal mode runtime constraints:
 

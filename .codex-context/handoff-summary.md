@@ -1,42 +1,38 @@
 # Handoff Summary
 
 ## Objective
-Harden Dong Skills workflow so non-trivial work has explicit written-spec approval, written planning, execution-mode approval, and constrained execution.
+Fix validated external review findings for Dong Skills while preserving the Codex-only release scope.
 
 ## Latest User Instruction
-Add self-review around spec/planning/execution; support both traditional execution and Codex Goal mode; ensure Goal mode has strong runtime constraints; stop for ambiguous requirements; reuse high-quality external skills where useful.
+Fix the validated issues; do not implement cross-platform installation; keep this as a Codex-specific version.
 
 ## Approved Scope / Spec
-- Spec: `.codex-context/spec.md`
 - Approved by user instruction on 2026-06-14.
-- Scope: workflow skill docs, project governance/router docs, templates, health checks, README/AGENTS guidance, tests, backlog, and state files.
+- In scope: Codex runtime/CLI bugs, skill wording defects, Goal mode definition, template consistency, README scope clarification, tests, backlog, and state files.
+- Out of scope: Claude Code adapter, `.claude` layout, `CLAUDE.md` shim, Claude hook conversion, macOS/Linux installer, and top-level legal license selection.
 
 ## Plan Status
-- Execution mode for this edit: Traditional task-by-task execution.
-- Goal mode was not used for this task; support was added for future tasks.
-- All implementation and verification tasks are complete.
-- Remaining action: commit and push checkpoint.
+- Execution mode: Traditional task-by-task execution.
+- Tasks completed: review triage, code fixes, skill/doc/template fixes, regression tests, release verification, state refresh.
+- Remaining action: commit and push checkpoint if requested/appropriate.
 
 ## Files Modified
-- `.agents/skills/brainstorming/SKILL.md`
+- `.codex/scripts/lib/core.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/core.mjs`
+- `.codex/hooks/project-ops.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
+- `.agents/skills/systematic-debugging/SKILL.md`
+- `.agents/skills/codex-evidence-capture/SKILL.md`
 - `.agents/skills/writing-plans/SKILL.md`
 - `.agents/skills/executing-plans/SKILL.md`
 - `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
 - `.codex/scripts/lib/templates.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/spec.md`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/plan-progress.md`
-- `scripts/project-ops-health.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
-- `AGENTS.md`
-- `AGENTS.project-ops.snippet.md`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
 - `README.md`
 - `tests/project-ops.test.mjs`
 - `docs/improvements/backlog.md`
 - `.codex-context/current-state.md`
-- `.codex-context/spec.md`
 - `.codex-context/plan-progress.md`
 - `.codex-context/artifact-index.md`
 - `.codex-context/verification.md`
@@ -45,62 +41,65 @@ Add self-review around spec/planning/execution; support both traditional executi
 - `.codex-context/handoff-summary.md`
 
 ## Files Read But Not Changed
-- `.agents/skills/codex-git-checkpoint/SKILL.md`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
-- `scripts/install-windows.ps1`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- Existing `.codex-context/` state files
+- External review attachment supplied by the user.
+- `.codex/scripts/lib/events.mjs`
+- `.codex/scripts/lib/git.mjs`
+- `scripts/project-ops-health.mjs`
+- `scripts/release-check.mjs`
+- relevant skill files and state files.
 
 ## Decisions Made
-- Final discussion approval is not written-spec approval. A spec can be `Pending written-spec approval` before it becomes `Approved by user`.
-- `writing-plans` must include `Execution Mode`, `Goal Mode Objective Draft`, `Runtime Constraints`, and `Checkpoint Cadence`.
-- `plan-then-execute` defaults to Traditional task-by-task execution.
-- Codex Goal mode requires explicit user selection and a complete Goal objective with scope, non-goals, verification, checkpoint cadence, state updates, and stop conditions.
-- Existing project health checks should flag missing execution-mode schema sections.
+- Keep Dong Skills Codex-only for this release line; Claude Code support should be a separate adapter if needed.
+- Do not add cross-platform installers in this pass.
+- Use nearest existing ancestor mtime for deleted files instead of `Date.now()` in staleness checks.
+- Make `session-history` parse explicit project roots consistently with other CLI modes.
+- Treat direct shipped CLI/API/workflow use as product evidence, while not relabeling generic test framework output as a demo.
+- Require actual current-session Codex goal tools before selecting Goal mode; do not simulate Goal mode with headings alone.
+- Defer top-level legal license selection to the repo owner.
 
 ## Open Questions And Assumptions
 - No blocking open questions.
-- Future question: whether Goal mode needs dedicated hook telemetry after real usage.
-- Assumption: existing projects need a Dong Skills update/bootstrap to receive new local templates and AGENTS snippets.
+- Global installed skills were refreshed with `scripts\install-windows.ps1`; existing target projects still need project-local refresh/bootstrap to receive the hook/template fixes.
+- Top-level license selection remains a future owner decision.
 
 ## Risks
-- Goal mode support is currently enforced through skill/state guidance, not a dedicated runtime hook.
-- Existing sessions that already loaded older skills/hooks may need a fresh session or project update.
-- Context budget rose to ~50,846 tokens across 54 files; context-budget suggests future split consideration for large hook helper modules.
+- Older target projects can still show deleted-file stale false positives or `session-history <root>` failures until refreshed.
+- Goal mode remains enforced by skill/state guidance and actual goal tool availability, not a dedicated hook.
+- Context budget is ~51,524 tokens across 54 files; future cleanup may split large helper modules if context pressure grows.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs`: pass, 28/28.
-- `node scripts\release-check.mjs .`: pass.
+- `node --test tests\project-ops.test.mjs`: pass, 30/30.
+- `node scripts\release-check.mjs .`: pass before commit.
+- `node scripts\project-ops-health.mjs .`: pass.
 - `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
 - `git diff --check`: pass.
-- `node scripts\project-ops-health.mjs .`: pass.
 - `node .codex\hooks\project-ops.mjs learning-status`: pass, no pending observations/outbox items.
-- `node .codex\hooks\project-ops.mjs context-budget`: pass/advisory, ~50,846 tokens across 54 files.
+- `node .codex\hooks\project-ops.mjs context-budget`: pass/advisory, ~51,524 tokens across 54 files.
 
 ## Git Checkpoint
-- Latest commit: previous checkpoint `0dd8f8d fix(governance): harden state recovery checks`
-- Push state: this hardening change is verified and ready to commit/push.
+- Latest commit: this checkpoint commit, `fix(workflow): address review-validated gaps`
+- Push state: prepared for push to `origin/main`.
 - Files included: all files listed under Files Modified.
 - Files intentionally left uncommitted: none intended.
-- Deferred reason: none; checkpoint is next.
-- Next checkpoint: commit `fix(workflow): gate written specs and goal execution`, then push `origin/main`.
+- Deferred reason: none.
+- Next checkpoint: push `origin/main` and verify remote branch.
 
 ## Learned Instincts To Preserve
-- For borrowed skills, preserve upstream gates that directly prevent drift, even when Dong Skills stays lighter than the original.
-- Treat written spec approval, plan approval, and execution mode approval as separate recoverable states.
 - Dong Skills improvement findings belong in `docs/improvements/backlog.md`, not project instincts.
+- Review feedback must be triaged against the actual target harness; Claude Code compatibility concerns are not automatically Codex bugs.
+- State files must avoid private local paths because release privacy scans cover active context files.
 
 ## Next Action
-Commit and push the verified checkpoint.
+Push `origin/main` and verify remote branch.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
 2. `.codex-context/current-state.md`
-3. `.codex-context/spec.md`
-4. `.codex-context/plan-progress.md`
-5. `.codex-context/artifact-index.md`
-6. `.codex-context/verification.md`
-7. `.agents/skills/brainstorming/SKILL.md`
-8. `.agents/skills/writing-plans/SKILL.md`
-9. `.agents/skills/executing-plans/SKILL.md`
+3. `.codex-context/plan-progress.md`
+4. `.codex-context/artifact-index.md`
+5. `.codex-context/verification.md`
+6. `.codex/scripts/lib/core.mjs`
+7. `.codex/hooks/project-ops.mjs`
+8. `.agents/skills/executing-plans/SKILL.md`
+9. `.agents/skills/codex-evidence-capture/SKILL.md`
 10. `tests/project-ops.test.mjs`

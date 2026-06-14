@@ -39,6 +39,9 @@
 - Existing projects need a runtime refresh before they get the improved Stop diagnostics, grouped learning status, and new state-prune behavior.
 - Text readability scanning is heuristic. It may need narrow allow comments for legitimate rare Unicode sequences, but disabling the scan would re-open the mojibake publication risk.
 - No dedicated hook currently enforces Goal mode cadence at runtime; the first safeguard is the written Goal objective plus Stop/PreCompact/state checks.
+- Existing projects with older hook runtimes may still hit deleted-file freshness false positives until their `.codex/scripts/lib/core.mjs` is updated.
+- Existing projects with older `project-ops.mjs` may still fail `session-history <root> ...` until hooks are refreshed.
+- If a future release wants Claude Code support, it should be a deliberate adapter layer, not a partial rename of the Codex-specific layout.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.
@@ -49,6 +52,7 @@
 
 ## Documentation Risks
 - README, skill docs, AGENTS snippets, and bootstrap templates now all describe phase gates; future changes must keep these aligned or agents may receive conflicting workflow instructions.
+- README now declares Codex-only scope; future Claude adapter documentation must not imply the existing `.codex`/`.agents` layout is Claude-native.
 - README, AGENTS snippet, project-map, and skill routing can diverge after future changes.
 - Generated context archives may preserve outdated command evidence; keep main `verification.md` current.
 - `docs/solutions/` can accumulate overlapping or stale entries unless `codex-solution-memory` refresh/consolidation is used.

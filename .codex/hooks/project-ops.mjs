@@ -53,8 +53,8 @@ if (cliMode && cliMode.startsWith("solution-")) {
 }
 
 if (cliMode === "session-history") {
-  const root = gitRoot(process.cwd());
-  runProjectOpsScript(root, "session-history.mjs", process.argv.slice(3), import.meta.url);
+  const root = gitRoot(parseRootArg(process.argv, process.cwd()));
+  runProjectOpsScript(root, "session-history.mjs", parseExtraArgs(process.argv, process.cwd()), import.meta.url);
   process.exit(0);
 }
 

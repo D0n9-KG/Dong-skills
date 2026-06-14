@@ -14,7 +14,7 @@ Use this when a change has observable behavior: web UI, CLI output, API response
 ## Rules
 
 - Use the product, command, API, or workflow directly.
-- Never label test output as a demo or product evidence.
+- Do not label test framework output as demo/product evidence. Direct product use can count as product evidence even when it is command-line or scripted, such as invoking the shipped CLI, calling the local API with safe data, rendering a generated artifact, or exercising the real workflow.
 - Never record secrets, tokens, private URLs, customer data, auth headers, `.env` contents, or credential setup.
 - If real evidence requires unavailable credentials, services, or deployment, state the blocker and capture the safest fallback.
 - Save local evidence paths under `.codex-context/raw/` or an ignored temp location unless the project has a public artifact convention.
@@ -22,8 +22,8 @@ Use this when a change has observable behavior: web UI, CLI output, API response
 ## Evidence Types
 
 - Web app: browser screenshot, Playwright/browser verification, before/after states.
-- CLI: command invocation and output, terminal screenshot when useful.
-- API: request/response using safe local data, with secrets omitted.
+- CLI: direct invocation of the shipped CLI or operator command and its output, terminal screenshot when useful.
+- API: direct request/response against the local or approved safe endpoint using safe data, with secrets omitted.
 - Generated file: render or inspect the artifact, not just its existence.
 - Bug fix: original failing scenario plus fixed behavior when reproducible.
 

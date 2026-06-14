@@ -58,7 +58,7 @@ Do not propose a patch until you can state:
 
 ## Evidence Discipline
 
-- Prefer real unit/e2e tests or the project'"'"'s normal verification commands.
+- Prefer real unit/e2e tests or the project's normal verification commands.
 - A bug fix without an automated failing test needs a recorded reason, exact manual reproduction, and follow-up verification gap.
 - Do not change tests just to make them pass unless the user explicitly approved that scope.
 - Do not mock away the failure when real behavior can be tested.

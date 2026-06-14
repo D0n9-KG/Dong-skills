@@ -41,9 +41,18 @@ export function latestChangedMtime(root, files) {
   for (const file of files) {
     const abs = path.join(root, file);
     if (fs.existsSync(abs)) latest = Math.max(latest, mtimeMs(abs));
-    else latest = Math.max(latest, Date.now());
+    else latest = Math.max(latest, nearestExistingAncestorMtime(abs));
   }
   return latest;
+}
+
+function nearestExistingAncestorMtime(file) {
+  let current = path.dirname(file);
+  while (current && current !== path.dirname(current)) {
+    if (fs.existsSync(current)) return mtimeMs(current);
+    current = path.dirname(current);
+  }
+  return 0;
 }
 
 export function fileFresh(ctx, name, latest) {

@@ -25,6 +25,10 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "dong-skills-test-"));
 }
@@ -292,6 +296,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(debugging, /Reproduction is the entry ticket to fixing/);
   assert.match(debugging, /reliable automated failing test or command/);
   assert.match(debugging, /manual reproduction and verification gap/);
+  assert.doesNotMatch(debugging, /'"'"'/);
 
   const executing = readSkill("executing-plans");
   assert.match(executing, /Run Test Discovery before editing implementation files/);
@@ -304,12 +309,15 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /Runtime Constraints/);
   assert.match(executing, /Checkpoint Cadence/);
   assert.match(executing, /## Stop Conditions/);
+  assert.match(executing, /create_goal/);
+  assert.match(executing, /Do not simulate Goal mode/);
 
   const router = readSkill("using-superpowers");
   assert.match(router, /written spec is approved/);
   assert.match(router, /Execution Mode/);
   assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
   assert.match(router, /Codex Goal mode requires an explicit user choice/);
+  assert.match(router, /actual goal mechanism/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -328,6 +336,10 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const checkpoint = readSkill("codex-git-checkpoint");
   assert.match(checkpoint, /## Branch Completion Boundary/);
   assert.match(checkpoint, /fixed finishing menu/);
+
+  const evidence = readSkill("codex-evidence-capture");
+  assert.match(evidence, /Direct product use can count as product evidence/);
+  assert.match(evidence, /shipped CLI/);
 
   const solutionMemory = readSkill("codex-solution-memory");
   assert.match(solutionMemory, /## Evaluation Gate/);
@@ -357,6 +369,43 @@ test("published Windows hook commands are encoded project hook invocations", () 
       }
     }
   }
+});
+
+test("session-history CLI accepts an explicit project root argument", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+
+  const out = execFileSync(process.execPath, [hook, "session-history", project, "scan", "--days", "1", "--keywords", "test"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Dong Skills session history scan/);
+  assert.match(out.replace(/\\/g, "/"), new RegExp(`Root: ${escapeRegExp(project.replace(/\\/g, "/"))}`));
+});
+
+test("deleted project files still preserve freshness after state refresh", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+
+  write(path.join(project, "tracked.txt"), "tracked\n");
+  git(project, ["add", "tracked.txt"]);
+  git(project, ["commit", "-m", "init"]);
+
+  fs.unlinkSync(path.join(project, "tracked.txt"));
+  readyState(project, `- Latest commit: not ready
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: tracked.txt
+- Deferred reason: deletion is part of the current work
+- Next checkpoint: commit after fixture completes
+`);
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.continue, true);
 });
 
 test("Windows hook command survives outer PowerShell invocation", () => {
@@ -416,11 +465,14 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "worktree-state.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "dong-skills-outbox.md")), true);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Approval Status/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Execution Approval/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Execution Mode/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Goal Mode Objective/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Runtime Constraints/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8"), /## Checkpoint Cadence/);
+  const planProgress = fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8");
+  assert.match(planProgress, /## Spec Approval/);
+  assert.match(planProgress, /## Execution Approval/);
+  assert.match(planProgress, /## Execution Mode/);
+  assert.match(planProgress, /## Goal Mode Objective/);
+  assert.match(planProgress, /goal mechanism available in the current Codex session/);
+  assert.match(planProgress, /## Runtime Constraints/);
+  assert.match(planProgress, /## Checkpoint Cadence/);
 
   const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
   const recovery = execFileSync(process.execPath, [installedHook], {

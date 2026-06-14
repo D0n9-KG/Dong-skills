@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-14 - Fix Review-Validated Runtime And Workflow Gaps
+
+Status: done
+Priority: P0
+Affected area: hooks / CLI / borrowed workflow skills / templates / README / tests
+Source: external review feedback triaged against the current Codex-only Dong Skills scope
+Implemented: deleted-file freshness now uses nearest existing ancestor mtime instead of `Date.now()`; `session-history` accepts explicit project roots; `systematic-debugging` typo is fixed; evidence capture distinguishes test framework output from direct product use; Goal mode requires a real current-session Codex goal mechanism; plan-progress templates include `Spec Approval` and Goal mechanism notes; README states the release is Codex-only.
+
+Signal:
+The external review identified several valid internal issues mixed with out-of-scope Claude Code compatibility concerns. The high-risk valid items were deleted-file stale false positives and inconsistent `session-history` CLI root parsing. Several documentation issues could also cause drift: direct CLI/API behavior evidence was underspecified, Goal mode could be interpreted as a label rather than an actual Codex goal mechanism, and the README did not explicitly state that Claude Code support is outside the current release line.
+
+Decision:
+Fix the valid Codex-specific defects and clarify release scope. Do not add `.claude` layout, `CLAUDE.md` shim, Claude hook conversion, or cross-platform installers in this pass. Defer top-level legal license selection to the repo owner.
+
+Verification:
+`node --test tests\project-ops.test.mjs` covers deleted-file freshness, `session-history <root>`, evidence wording, Goal mode mechanism wording, and bootstrap template text.
+
 ### 2026-06-14 - Gate Written Specs And Goal Mode Execution
 
 Status: done

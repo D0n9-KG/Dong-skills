@@ -44,6 +44,11 @@
 - Plans must record `Execution Mode`; Codex Goal mode is never inferred from vague continuation or plan-then-execute language.
 - `plan-then-execute` defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
 - Codex Goal mode is allowed only with an approved written spec, approved plan, explicit user selection, Goal objective, runtime constraints, checkpoint cadence, state update requirements, and stop conditions.
+- Dong Skills remains a Codex-specific release line for now. Claude Code compatibility requires a separate adapter and is not mixed into the Codex project layout.
+- Deleted project files should use a stable filesystem freshness basis, such as nearest existing ancestor mtime, rather than `Date.now()`, so state files can become fresh after one update.
+- `session-history` should accept an explicit project root argument consistently with other `project-ops.mjs` CLI modes.
+- Direct use of a shipped CLI, local API, generated artifact, or real workflow can count as product evidence; generic test framework output must not be relabeled as a demo.
+- Codex Goal mode requires an actual goal mechanism exposed in the current session. If `create_goal` / `update_goal`-style tools are unavailable, Goal mode is unavailable and the agent must ask before falling back.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -61,3 +66,5 @@
 - Treating user-reported Dong Skills optimization backlog items as complete merely because they were recorded.
 - Treating a discussion-approved design as enough to start planning before the written spec is reviewed.
 - Treating Goal mode as a default or automatic escalation for long tasks.
+- Adding cross-platform installers in this pass.
+- Adding Claude Code `.claude` / `CLAUDE.md` adapter files to the Codex-only release line.

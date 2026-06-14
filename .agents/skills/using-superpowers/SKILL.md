@@ -61,7 +61,7 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 - For non-trivial work, final discussion approval is not enough; the user must approve the written spec before planning.
 - A plan is not execution-approved until the user chooses execution mode or explicitly asked earlier to plan-then-execute.
 - Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution.
-- Codex Goal mode requires an explicit user choice and a Goal Mode Objective in `plan-progress.md`.
+- Codex Goal mode requires an explicit user choice, a Goal Mode Objective in `plan-progress.md`, and an actual goal mechanism exposed in the current Codex session. If goal tools are unavailable, ask before falling back to Traditional task-by-task execution.
 - If the user says "continue" after a question, treat it as continuing the current phase, not approval to skip later gates.
 - If there is doubt, ask one short question and wait.
 
