@@ -21,7 +21,7 @@ Fix all confirmed Dong Skills review findings.
 - Runtime/hook: `.codex/hooks/project-ops.mjs`, `.codex/hooks.json`, `.codex/scripts/lib/workflow.mjs`, `.codex/scripts/lib/learning.mjs`.
 - Scripts: `scripts/install-windows.ps1`, `scripts/project-ops-health.mjs`, `scripts/release-check.mjs`.
 - Bootstrap assets: matching files under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`.
-- Guidance/tests/state: `AGENTS.project-ops.snippet.md`, `tests/project-ops.test.mjs`, and `.codex-context/*.md|yaml`.
+- Guidance/tests/state: `AGENTS.md`, `AGENTS.project-ops.snippet.md`, `tests/project-ops.test.mjs`, and `.codex-context/*.md|yaml`.
 - Full list: `.codex-context/artifact-index.md`.
 
 ## Files Read But Not Changed

@@ -11,7 +11,7 @@
 - `scripts/install-windows.ps1`: uses explicit UTF-8 strict/no-BOM helpers, preserves existing Chinese `AGENTS.md`, writes hooks/config via UTF-8, and replaces global skill directories through staging/backup instead of delete-then-copy.
 - `scripts/project-ops-health.mjs`: validates all workflow-state enum fields instead of only checking presence.
 - `scripts/release-check.mjs`: resolves helper scripts from both `scripts/` and `.codex/scripts/`, scans `tests/` for secrets, adds broader secret/PII patterns, adds an oversized text-file gate, and keeps fixture allow markers explicit.
-- `AGENTS.project-ops.snippet.md`: tells agents to run `workflow-state recover` when resume/compaction state is ambiguous.
+- `AGENTS.md` and `AGENTS.project-ops.snippet.md`: tell agents to run `workflow-state recover` when resume/compaction state is ambiguous.
 - Bootstrap asset mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized copies of changed hooks, runtime libraries, scripts, hooks.json, and AGENTS snippet for new/updated projects.
 - `tests/project-ops.test.mjs`: adds regressions for no-root workflow commands, missing workflow-state behavior, installer UTF-8 preservation, shell matcher coverage, project-level release-check resolution, release privacy scan over tests, oversized docs, stricter health validation, and expanded learning redaction.
 - `.codex-context/current-state.md`, `plan-progress.md`, `artifact-index.md`, `verification.md`, `workflow-state.yaml`, and `handoff-summary.md`: refreshed for this hardening patch.
