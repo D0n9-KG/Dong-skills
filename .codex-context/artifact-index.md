@@ -1,48 +1,29 @@
 # Artifact Index
 
 ## Created
-- `.codex/scripts/lib/workflow.mjs`: workflow-state runtime library.
-- `scripts/workflow-state.mjs`: CLI wrapper for workflow state commands.
-- `.codex-context/workflow-state.yaml`: current repo workflow state.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/workflow.mjs`: bootstrap runtime copy.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/workflow-state.mjs`: bootstrap CLI copy.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/workflow-state.yaml`: new project workflow-state seed.
-- `licenses/COMET-LICENSE`: MIT license attribution for Comet inspiration.
+- None. This patch hardens existing Dong Skills runtime, installer, release checks, and tests.
 
 ## Modified
-- `.codex/hooks/project-ops.mjs`: forwards `workflow-state` CLI commands.
-- `.codex/scripts/lib/templates.mjs`: adds workflow state required file and template.
-- `.codex/scripts/lib/events.mjs`: reports malformed workflow state in Stop/PreCompact.
-- `.codex/scripts/lib/recovery.mjs`: injects workflow recovery and updated recovery order.
-- `.codex/scripts/lib/assets.mjs`: includes workflow state in active state file lifecycle.
-- `scripts/project-ops-health.mjs`: validates workflow-state schema and helper script presence.
-- `scripts/install-windows.ps1`: copies `workflow-state.mjs` to project `.codex/scripts`.
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`: copies `workflow-state.mjs`.
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`: adds workflow-state bootstrap/update guidance.
-- `.agents/skills/using-superpowers/SKILL.md`: adds workflow state gate and decision-point protocol.
-- `.agents/skills/codex-project-governance/SKILL.md`: adds workflow-state lifecycle integration.
-- `.agents/skills/brainstorming/SKILL.md`: records `spec-living`, `spec-ready`, and `spec-approved` transitions.
-- `.agents/skills/writing-plans/SKILL.md`: records `plan-ready` and execution approval transitions.
-- `.agents/skills/executing-plans/SKILL.md`: checks execution phase and transitions to verification.
-- `.agents/skills/codex-verification-loop/SKILL.md`: records verification result transitions.
-- `.agents/skills/verification-before-completion/SKILL.md`: re-reads workflow state before completion claims.
-- `.agents/skills/codex-review-panel/SKILL.md`: records review-complete/skipped transitions.
-- `.agents/skills/codex-git-checkpoint/SKILL.md`: records checkpoint-done/deferred transitions.
-- `AGENTS.md` and `AGENTS.project-ops.snippet.md`: include workflow state and recovery order.
-- Bootstrap asset copies under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized runtime/docs/scripts.
-- `README.md`: documents Comet inspiration and workflow-state commands.
-- `docs/improvements/backlog.md`: records the Comet-inspired workflow-state item.
-- `tests/project-ops.test.mjs`: adds workflow state regression coverage.
-- `.codex-context/spec.md`, `current-state.md`, `plan-progress.md`, `artifact-index.md`, `verification.md`, `decisions.md`, `risks.md`, and `handoff-summary.md`: refreshed for this task.
-- Final state refresh and push verification now record the completed checkpoint in `current-state.md`, `plan-progress.md`, `verification.md`, and `handoff-summary.md`.
+- `.codex/hooks/project-ops.mjs`: fixes CLI root/subcommand parsing for `workflow-state next/recover/transition`, supports no-root `session-history scan`, avoids hook-time context auto-creation, and keeps `learning-status` from hiding pending observations.
+- `.codex/scripts/lib/workflow.mjs`: makes non-init workflow-state reads strict, reports missing state without recreating it, expands valid `next_skill` values, and makes recovery output safe when state is missing.
+- `.codex/scripts/lib/learning.mjs`: expands raw-observation redaction for local Windows user paths, email, phone-like values, Anthropic/GitLab/npm/Google/Stripe/Hugging Face tokens, and preserves URL host/path while redacting credentials/query.
+- `.codex/hooks.json`: expands `PostToolUse` matcher to include shell/Bash/PowerShell-style tools so shell file writes still trigger artifact freshness checks.
+- `scripts/install-windows.ps1`: uses explicit UTF-8 strict/no-BOM helpers, preserves existing Chinese `AGENTS.md`, writes hooks/config via UTF-8, and replaces global skill directories through staging/backup instead of delete-then-copy.
+- `scripts/project-ops-health.mjs`: validates all workflow-state enum fields instead of only checking presence.
+- `scripts/release-check.mjs`: resolves helper scripts from both `scripts/` and `.codex/scripts/`, scans `tests/` for secrets, adds broader secret/PII patterns, adds an oversized text-file gate, and keeps fixture allow markers explicit.
+- `AGENTS.project-ops.snippet.md`: tells agents to run `workflow-state recover` when resume/compaction state is ambiguous.
+- Bootstrap asset mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized copies of changed hooks, runtime libraries, scripts, hooks.json, and AGENTS snippet for new/updated projects.
+- `tests/project-ops.test.mjs`: adds regressions for no-root workflow commands, missing workflow-state behavior, installer UTF-8 preservation, shell matcher coverage, project-level release-check resolution, release privacy scan over tests, oversized docs, stricter health validation, and expanded learning redaction.
+- `.codex-context/current-state.md`, `plan-progress.md`, `artifact-index.md`, `verification.md`, `workflow-state.yaml`, and `handoff-summary.md`: refreshed for this hardening patch.
 
 ## Read / Inspected
-- Local Comet clone under `%TEMP%\comet-inspect`: `comet/SKILL.md`, `comet-state.sh`, decision-point protocol, phase guard rules.
-- Existing Dong Skills hook/runtime/templates/tests/skills relevant to routing and recovery.
+- `.codex-context/spec.md`, `plan-progress.md`, `current-state.md`, and `workflow-state.yaml`: recovered approved scope and execution mode.
+- `.codex/hooks/project-ops.mjs`, `.codex/scripts/lib/{workflow,events,learning}.mjs`, `scripts/{install-windows,project-ops-health,release-check}.mjs`, `.codex/hooks.json`, bootstrap assets, and `tests/project-ops.test.mjs`: implementation and regression surfaces.
+- `codex-project-governance`, `executing-plans`, `codex-review-panel`, and `codex-git-checkpoint` skills: phase, review, and checkpoint requirements.
 
 ## Raw Outputs
 - No raw outputs added.
 
 ## Residual Watchpoints
-- Existing target projects need project-local refresh/bootstrap to receive `workflow-state.yaml` and new scripts.
-- Future use may reveal additional transition events, but current commands cover the main Dong Skills phases.
+- Existing target projects need a project-local Dong Skills refresh/bootstrap to receive these runtime and hook fixes.
+- Release privacy phone detection is intentionally conservative in release-check to avoid date/time false positives; learning redaction remains broader.

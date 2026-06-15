@@ -9,6 +9,7 @@ import test from "node:test";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
 const bootstrap = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "scripts", "bootstrap-project-ops.ps1");
+const installWindows = path.join(root, "scripts", "install-windows.ps1");
 const statePrune = path.join(root, "scripts", "state-prune.mjs");
 const solutions = path.join(root, "scripts", "solutions.mjs");
 const health = path.join(root, "scripts", "project-ops-health.mjs");
@@ -63,6 +64,22 @@ function readyState(projectRoot, checkpoint) {
   write(path.join(ctx, "artifact-index.md"), "# Artifact Index\n\n## Modified\n- `work.txt`: test change.\n");
   write(path.join(ctx, "verification.md"), "# Verification\n\n## Commands Run\n- Test fixture.\n\n## Not Yet Verified\n- None.\n");
   write(path.join(ctx, "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- Last reviewed raw observations: now.\n");
+  write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
+phase: execution
+next_skill: executing-plans
+auto_next: true
+decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
   write(path.join(ctx, "handoff-summary.md"), `# Handoff Summary
 
 ## Objective
@@ -403,6 +420,24 @@ test("published Windows hook commands are encoded project hook invocations", () 
   }
 });
 
+test("PostToolUse hook matcher covers shell-based file writes", () => {
+  const hookJsonFiles = [
+    path.join(root, ".codex", "hooks.json"),
+    path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks.json")
+  ];
+
+  for (const file of hookJsonFiles) {
+    const config = readJson(file);
+    const matcher = config.hooks.PostToolUse[0].matcher;
+    assert.match(matcher, /Edit/);
+    assert.match(matcher, /Write/);
+    assert.match(matcher, /apply_patch/);
+    assert.match(matcher, /shell_command/);
+    assert.match(matcher, /Bash/);
+    assert.match(matcher, /PowerShell/);
+  }
+});
+
 test("session-history CLI accepts an explicit project root argument", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -526,6 +561,31 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.match(context, /Workflow recovery:/);
 });
 
+test("Windows installer preserves existing UTF-8 Chinese AGENTS.md", () => {
+  const project = tempProject();
+  const skillsRoot = path.join(tempProject(), "skills");
+  const originalChinese = "中文规则：保持原文。";
+  write(path.join(project, "AGENTS.md"), `# Project Instructions\n\n${originalChinese}\n`);
+
+  execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    installWindows,
+    "-TargetProjectRoot",
+    project,
+    "-TargetSkillsRoot",
+    skillsRoot
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  const agents = fs.readFileSync(path.join(project, "AGENTS.md"), "utf8");
+  assert.match(agents, new RegExp(escapeRegExp(originalChinese)));
+  assert.doesNotMatch(agents, /\uFFFD/);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, ".dong-skills-source.json")), true);
+});
+
 test("hook launcher dispatches using hook input cwd rather than launcher cwd", () => {
   const source = tempProject();
   const target = tempProject();
@@ -603,15 +663,72 @@ test("workflow-state exposes deterministic transition, next, recover, and hash c
 
 test("project hook forwards workflow-state commands", () => {
   const project = tempProject();
+  git(project, ["init"]);
 
-  const out = execFileSync(process.execPath, [hook, "workflow-state", project, "next"], {
-    cwd: root,
+  let out = execFileSync(process.execPath, [hook, "workflow-state", "init"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Initialized workflow state/);
+
+  out = execFileSync(process.execPath, [hook, "workflow-state", "next"], {
+    cwd: project,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
 
   assert.match(out, /NEXT: auto/);
   assert.match(out, /SKILL: codex-codebase-onboarding/);
+
+  out = execFileSync(process.execPath, [hook, "workflow-state", "recover"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Workflow recovery/);
+  assert.match(out, /next: auto/);
+
+  out = execFileSync(process.execPath, [hook, "workflow-state", project, "next"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /NEXT: auto/);
+});
+
+test("workflow-state checks report missing state without recreating it", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  const workflowFile = path.join(project, ".codex-context", "workflow-state.yaml");
+
+  let out = execFileSync(process.execPath, [hook, "workflow-state", "next"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /NEXT: manual/);
+  assert.match(out, /workflow-state\.yaml needs repair/);
+  assert.equal(fs.existsSync(workflowFile), false);
+
+  out = execFileSync(process.execPath, [hook, "workflow-state", "recover"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Workflow recovery/);
+  assert.match(out, /workflow-state\.yaml is missing/);
+  assert.equal(fs.existsSync(workflowFile), false);
+
+  const stopOutput = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(stopOutput.decision, "block");
+  assert.match(stopOutput.reason, /workflow-state\.yaml is missing/);
+  assert.equal(fs.existsSync(workflowFile), false);
+
+  const compactOutput = runHook(project, { hook_event_name: "PreCompact", trigger: "manual" });
+  assert.equal(compactOutput.continue, false);
+  assert.match(compactOutput.systemMessage, /workflow-state\.yaml is missing/);
+  assert.equal(fs.existsSync(workflowFile), false);
 });
 
 test("health check reports linked worktree diagnostics without failing", () => {
@@ -650,10 +767,10 @@ test("learning observations redact private key bodies and URL userinfo", () => {
   const project = tempProject();
   const prompt = [
     "remember this rule",
-    "-----BEGIN PRIVATE KEY-----",
+    "-----BEGIN PRIVATE KEY----- codex-release-check: allow-secret-fixture",
     "ABCDEF1234567890SECRET",
     "-----END PRIVATE KEY-----",
-    "https://user:pass@example.com/path?token=abc#frag"
+    "https://user:pass@example.com/path?token=abc#frag" // codex-release-check: allow-secret-fixture
   ].join("\n");
 
   runHook(project, {
@@ -666,6 +783,35 @@ test("learning observations redact private key bodies and URL userinfo", () => {
   assert.doesNotMatch(obs, /user:pass@example\.com/);
   assert.match(obs, /\[redacted-private-key\]/);
   assert.match(obs, /example\.com/);
+});
+
+test("learning observations redact common PII and platform tokens", () => {
+  const project = tempProject();
+  const email = ["alice", "private.test"].join("@");
+  const phone = ["+1", "(415)", "555-1212"].join(" ");
+  const githubToken = ["ghp", "A".repeat(24)].join("_");
+  const anthropicKey = ["sk-ant", "B".repeat(28)].join("-");
+  const prompt = [
+    "remember this rule",
+    `C:\\Users\\Alice ${email} ${phone} ${githubToken} ${anthropicKey}`
+  ].join(" ");
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: prompt
+  });
+
+  const obs = fs.readFileSync(path.join(project, ".codex-context", "raw", "observations.jsonl"), "utf8");
+  const event = JSON.parse(obs.trim());
+  assert.doesNotMatch(event.prompt_excerpt, /Alice/);
+  assert.doesNotMatch(event.prompt_excerpt, new RegExp(escapeRegExp(email)));
+  assert.doesNotMatch(event.prompt_excerpt, new RegExp(escapeRegExp(githubToken)));
+  assert.doesNotMatch(event.prompt_excerpt, new RegExp(escapeRegExp(anthropicKey)));
+  assert.ok(event.prompt_excerpt.includes("C:\\Users\\[redacted]"));
+  assert.match(event.prompt_excerpt, /\[redacted-email\]/);
+  assert.match(event.prompt_excerpt, /\[redacted-phone\]/);
+  assert.match(event.prompt_excerpt, /\[redacted-github-token\]/);
+  assert.match(event.prompt_excerpt, /\[redacted-anthropic-key\]/);
 });
 
 test("learning observations preserve Chinese UTF-8 and dedupe status follow-ups by topic", () => {
@@ -853,9 +999,16 @@ test("health check rejects invalid workflow state", () => {
   readyHealthFixture(project);
   write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
 phase: flying
-next_skill: executing-plans
+next_skill: freestyle-agent
 auto_next: true
 decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: improvise
+execution_approval: approved-traditional
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
 `);
 
   let failed = false;
@@ -868,8 +1021,8 @@ decision_required: none
   } catch (error) {
     failed = true;
     assert.match(String(error.stdout), /workflow-state\.yaml invalid phase: flying/);
-    assert.match(String(error.stdout), /workflow-state\.yaml missing field: spec_status/);
-    assert.match(String(error.stdout), /workflow-state\.yaml missing field: execution_approval/);
+    assert.match(String(error.stdout), /workflow-state\.yaml invalid next_skill: freestyle-agent/);
+    assert.match(String(error.stdout), /workflow-state\.yaml invalid execution_mode: improvise/);
   }
   assert.equal(failed, true);
 });
@@ -894,6 +1047,69 @@ This line contains ${marker}
     failed = true;
     assert.match(String(error.stdout), /FAIL text readability scan/);
     assert.match(String(error.stdout), /README\.md:3: Chinese mojibake marker/);
+  }
+  assert.equal(failed, true);
+});
+
+test("bootstrapped project hook release-check resolves .codex helper scripts", () => {
+  const project = tempProject();
+  execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    bootstrap,
+    "-TargetProjectRoot",
+    project
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
+  const out = execFileSync(process.execPath, [installedHook, "release-check"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /PASS health-check/);
+  assert.match(out, /Result: pass/);
+});
+
+test("release check scans tests for secrets", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const fakeToken = ["ghp", "A".repeat(24)].join("_");
+  write(path.join(project, "tests", "secret.test.mjs"), `// ${fakeToken}\n`);
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [releaseCheck, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /FAIL privacy scan/);
+    assert.match(String(error.stdout), /tests\/secret\.test\.mjs:1: GitHub token/);
+  }
+  assert.equal(failed, true);
+});
+
+test("release check rejects oversized text assets", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "docs", "huge.md"), `# Huge\n\n${"x".repeat(513 * 1024)}\n`);
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [releaseCheck, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /FAIL large file scan/);
+    assert.match(String(error.stdout), /docs\/huge\.md:/);
   }
   assert.equal(failed, true);
 });

@@ -1,57 +1,63 @@
 # Spec
 
 ## Problem
-Dong Skills already had Markdown-based phase gates, but it lacked a single script-readable workflow state like Comet's `.comet.yaml`. After compaction or a new session, Codex could still infer the current phase from scattered files instead of reading one authoritative phase/next-skill contract.
+The multi-agent review found several Dong Skills reliability gaps in workflow routing, compaction recovery, Windows installation, release checks, hook coverage, and privacy gates. Existing tests passed, but multiple real usage paths could fail or silently drift.
 
 ## Goals
-- Add a Codex-only workflow state file under `.codex-context/`.
-- Provide a small CLI for state initialization, transition, checking, next-step routing, recovery, and context hashing.
-- Connect the state file to hooks, recovery, health checks, bootstrap assets, and core workflow skills.
-- Preserve Dong Skills' existing `.codex-context` model without importing OpenSpec change directories or Claude/cross-platform adapters.
+- Fix `project-ops.mjs workflow-state next/recover/transition` so documented no-root commands work from a target project.
+- Make missing or malformed `workflow-state.yaml` visible to Stop/PreCompact/health checks instead of silently resetting state.
+- Make project-level `release-check` work in bootstrapped projects where helper scripts live under `.codex/scripts/`.
+- Make Windows installation preserve UTF-8 Chinese text and reduce global skill replacement risk.
+- Expand PostToolUse coverage for shell/Bash writes.
+- Strengthen release privacy, size, and learning redaction gates.
+- Keep root files, bootstrap assets, docs, and tests synchronized.
 
 ## Approval Status
-Approved by user instruction on 2026-06-15: absorb Comet's useful workflow-state ideas into Dong Skills.
+Approved by user instruction on 2026-06-15: fix all confirmed Dong Skills review findings.
 
 ## User Decisions
-- Borrow Comet's useful phase-state, guard, `next`, recovery, and decision-point ideas.
-- Do not import OpenSpec wholesale.
-- Keep this release Codex-only; no cross-platform/Claude adapter work in this change.
-- Do not make workflow state a noisy per-file freshness gate.
+- Fix all confirmed review findings, not only the highest-severity items.
+- Keep the kit Codex-only; no cross-platform installer expansion in this patch.
+- Preserve project-level hooks rather than reintroducing global hooks.
 
 ## Candidate Options
-- Import Comet/OpenSpec layout directly: rejected as too heavy and not aligned with Dong Skills' Codex-only `.codex-context` structure.
-- Keep only prose gates: rejected because recovery and routing remain too inferential.
-- Add a compact `workflow-state.yaml` plus CLI/checks inside Dong Skills: selected.
+- Patch only P1 issues: rejected because user asked to fix all confirmed findings.
+- Redesign the workflow state model: rejected as too broad; current model is sound enough and needs hardening.
+- Focused hardening with regression tests: selected.
 
 ## Non-Goals
-- No `.comet.yaml`, `openspec/changes`, or OpenSpec archive flow.
-- No cross-platform installer changes beyond the existing Windows/Codex flow.
-- No new global hooks.
-- No hook that blocks before every file edit.
+- No Claude Code adapter.
+- No macOS/Linux installer.
+- No wholesale OpenSpec/Comet import.
+- No destructive cleanup of user projects.
 
 ## Approved Scope
-- Add `.codex-context/workflow-state.yaml` template and current repo state.
-- Add `workflow-state` runtime library and CLI.
-- Add hook forwarding, recovery injection, health-check validation, bootstrap asset sync, and tests.
-- Update `using-superpowers`, governance, brainstorming, planning, execution, verification, review, checkpoint, onboarding, README, AGENTS snippets, and backlog docs.
+- `.codex/hooks/project-ops.mjs`, `.codex/hooks.json`, `.codex/scripts/lib/*.mjs`.
+- `scripts/install-windows.ps1`, `scripts/project-ops-health.mjs`, `scripts/release-check.mjs`, and related helper scripts.
+- Bootstrap asset mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`.
+- AGENTS guidance where commands or recovery rules change.
+- `tests/project-ops.test.mjs` regression coverage.
 
 ## Design
-- `workflow-state.yaml` stores `phase`, `next_skill`, `decision_required`, spec/plan/execution status, verification result, review status, checkpoint status, and a context hash.
-- `workflow-state.mjs` supports `init`, `status`, `get`, `set`, `transition`, `check`, `next`, `recover`, and `hash`.
-- `using-superpowers` reads `workflow-state next` before routing non-trivial project work.
-- Skill phase boundaries call semantic transitions such as `spec-ready`, `spec-approved`, `plan-ready`, `execution-approved-traditional`, `execution-complete`, `verification-pass`, and `checkpoint-ready`.
-- `SessionStart` includes workflow recovery output; `PreCompact`/`Stop` report malformed workflow state but do not require it to be newer than every source edit.
-- Bootstrap assets include the new state file, runtime library, CLI script, and updated guidance.
+- Fix hook CLI argument parsing by treating known subcommands as commands, not roots.
+- Make workflow state reads strict for status/check/recover/hook paths while preserving explicit `workflow-state init`.
+- Mirror workflow enum validation in health checks.
+- Resolve helper scripts from both `scripts/` and `.codex/scripts/` in release checks.
+- Use explicit UTF-8 read/write helpers in `install-windows.ps1`; replace global skills through a staging directory and backup rather than delete-then-copy.
+- Include shell/Bash/PowerShell-style tool names in PostToolUse matcher.
+- Scan tests and archive for secrets, preserve raw runtime conventions, add file-size release gates, and extend learning redaction.
 
 ## Acceptance Criteria
-- `node --test tests\project-ops.test.mjs` passes and covers workflow transitions, `next`, recovery, hash, hook forwarding, bootstrap install, and health-check validation.
-- `node scripts\project-ops-health.mjs .` passes.
-- `node scripts\release-check.mjs .` passes.
-- `git diff --check` passes.
-- README/backlog/license source attribution includes Comet.
+- No-root workflow commands work: `node .codex/hooks/project-ops.mjs workflow-state next` and `recover`.
+- Stop/PreCompact/health-check report missing/invalid workflow state instead of recreating it silently.
+- A freshly bootstrapped target project can run `node .codex/hooks/project-ops.mjs release-check`.
+- Windows installer preserves existing Chinese `AGENTS.md` content.
+- Release check fails for secrets in tests and oversized docs.
+- Learning observation redacts expanded PII/token samples.
+- `node --test tests\project-ops.test.mjs`, `node scripts\project-ops-health.mjs .`, `node scripts\release-check.mjs .`, and `git diff --check` pass.
 
 ## Open Questions
 - None blocking.
 
 ## Next Step
-Commit and push a checkpoint after state refresh.
+Checkpoint the verified hardening patch, then deliver the result.

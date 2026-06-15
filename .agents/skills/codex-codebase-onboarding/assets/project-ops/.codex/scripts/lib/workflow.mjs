@@ -47,12 +47,23 @@ const ALLOWED = {
     "brainstorming",
     "writing-plans",
     "executing-plans",
+    "codex-worktree-governance",
     "systematic-debugging",
+    "codex-architecture-governance",
     "codex-verification-loop",
+    "codex-evidence-capture",
     "verification-before-completion",
+    "requesting-code-review",
+    "receiving-code-review",
     "codex-review-panel",
     "codex-git-checkpoint",
+    "codex-learning-memory",
+    "codex-solution-memory",
+    "codex-session-history",
+    "codex-strategy-anchor",
     "codex-docs-stewardship",
+    "codex-context-budget",
+    "codex-asset-governance",
     "none"
   ],
   auto_next: ["true", "false"],
@@ -158,7 +169,10 @@ export function ensureWorkflowState(root, ctx) {
 
 export function loadWorkflowState(root, ctx) {
   const contextDir = ctxFor(root, ctx);
-  const file = ensureWorkflowState(root, contextDir);
+  const file = workflowPath(contextDir);
+  if (!fs.existsSync(file)) {
+    throw new Error(`${WORKFLOW_FILE} is missing; run workflow-state init only if initializing this project state is intentional.`);
+  }
   return parseWorkflowYaml(fs.readFileSync(file, "utf8"));
 }
 
@@ -198,7 +212,17 @@ export function validateWorkflowState(state) {
 
 export function workflowStatus(root, ctx) {
   const contextDir = ctxFor(root, ctx);
-  const file = ensureWorkflowState(root, contextDir);
+  const file = workflowPath(contextDir);
+  if (!fs.existsSync(file)) {
+    const issue = `${WORKFLOW_FILE} is missing; run workflow-state init only if initializing this project state is intentional.`;
+    return {
+      ok: false,
+      file,
+      state: {},
+      issues: [issue],
+      summary: `Workflow state needs review: ${issue}`
+    };
+  }
   const state = parseWorkflowYaml(readText(file));
   const validation = validateWorkflowState(state);
   return {
@@ -565,27 +589,35 @@ function excerpt(ctx, name, heading, max) {
 
 export function recoverWorkflowContext(root, ctx) {
   const contextDir = ctxFor(root, ctx);
-  const state = loadWorkflowState(root, contextDir);
-  const next = nextWorkflowStep(root, contextDir);
+  const status = workflowStatus(root, contextDir);
+  const state = status.state;
+  const next = status.ok
+    ? nextWorkflowStep(root, contextDir)
+    : {
+        next: "manual",
+        skill: "using-superpowers",
+        hint: `workflow-state.yaml needs repair: ${status.issues.join("; ")}`
+      };
   const hash = workflowContextHash(root, contextDir, false);
   const sections = [
     `Workflow recovery`,
-    `phase: ${state.phase}`,
-    `workflow: ${state.workflow}`,
+    `phase: ${state.phase || "missing"}`,
+    `workflow: ${state.workflow || "missing"}`,
     `next_skill: ${next.skill}`,
     `next: ${next.next}`,
-    `decision_required: ${state.decision_required}`,
-    `spec_status: ${state.spec_status}`,
-    `plan_status: ${state.plan_status}`,
-    `execution_mode: ${state.execution_mode}`,
-    `execution_approval: ${state.execution_approval}`,
-    `verify_result: ${state.verify_result}`,
-    `review_status: ${state.review_status}`,
+    `decision_required: ${state.decision_required || "missing"}`,
+    `spec_status: ${state.spec_status || "missing"}`,
+    `plan_status: ${state.plan_status || "missing"}`,
+    `execution_mode: ${state.execution_mode || "missing"}`,
+    `execution_approval: ${state.execution_approval || "missing"}`,
+    `verify_result: ${state.verify_result || "missing"}`,
+    `review_status: ${state.review_status || "missing"}`,
     `context_hash: ${hash.combined}`,
+    status.issues.length ? `issues: ${status.issues.join("; ")}` : "",
     "",
     "Recovery action:",
     next.next === "manual"
-      ? `- Stop for ${state.decision_required === "none" ? next.skill : state.decision_required}.`
+      ? `- Stop for ${(state.decision_required || "none") === "none" ? next.skill : state.decision_required}.`
       : next.next === "done"
         ? "- Workflow is complete; verify final handoff/checkpoint if needed."
         : `- Load ${next.skill} and continue from phase ${state.phase}.`,

@@ -17,7 +17,7 @@
 - Written-spec approval and execution-mode approval are skill/state gates rather than universal technical locks; sessions that skip the curated skills can still violate the intended flow.
 - Codex Goal mode is powerful for full-plan execution but can amplify drift if the Goal objective omits approved scope, non-goals, checkpoint cadence, state update requirements, or stop conditions.
 - Topic-based learning dedupe is heuristic; real usage may show topics that need splitting or merging.
-- Shell/script/formatter/generated file changes may bypass the immediate `PostToolUse` artifact-index freshness block because the matcher remains scoped to edit/write/apply_patch-style tools. Stop and PreCompact still catch stale state before stopping or compacting.
+- Shell/Bash/PowerShell-style Codex tool writes now trigger `PostToolUse`; file changes made by external processes outside Codex hook visibility can still bypass the immediate block. Stop and PreCompact still catch stale state before stopping or compacting.
 - Workflow-state routing improves recovery, but it still depends on agents using `using-superpowers` or project governance before substantive work.
 
 ## Technical Risks
@@ -39,6 +39,7 @@
 - The generated Dong Skills source marker can become stale if the source checkout moves; reinstall or set `DONG_SKILLS_REPO` / `DONG_SKILLS_HOME`.
 - Existing projects need a runtime refresh before they get the improved Stop diagnostics, grouped learning status, and new state-prune behavior.
 - Text readability scanning is heuristic. It may need narrow allow comments for legitimate rare Unicode sequences, but disabling the scan would re-open the mojibake publication risk.
+- Release phone-number scanning is intentionally conservative to avoid treating verification timestamps as PII; token, key, local-path, email, and learning-memory redaction checks remain stricter.
 - No dedicated hook currently enforces Goal mode cadence at runtime; the first safeguard is the written Goal objective plus Stop/PreCompact/state checks.
 - Existing projects with older hook runtimes may still hit deleted-file freshness false positives until their `.codex/scripts/lib/core.mjs` is updated.
 - Existing projects with older `project-ops.mjs` may still fail `session-history <root> ...` until hooks are refreshed.

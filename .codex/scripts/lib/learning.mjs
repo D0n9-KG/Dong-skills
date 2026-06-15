@@ -21,38 +21,63 @@ export function containsPotentialSecret(text) {
     /-----BEGIN [A-Z ]*PRIVATE KEY-----/i,
     /\b(?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*\S{6,}/i,
     /\bbearer\s+[A-Za-z0-9._~+/-]{12,}/i,
+    /C:\\Users\\[A-Za-z0-9_.-]+/i,
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
+    /\b(?:\+?\d[\d\s().-]{8,}\d)\b/,
+    /\bsk-ant-[A-Za-z0-9_-]{20,}\b/,
     /\bsk-[A-Za-z0-9_-]{20,}/i,
     /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/,
     /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/,
     /\bgithub_pat_[A-Za-z0-9_]{20,}\b/,
+    /\bglpat-[A-Za-z0-9_-]{20,}\b/,
+    /\bnpm_[A-Za-z0-9-]{36,}\b/,
+    /\bAIza[0-9A-Za-z_-]{35}\b/,
+    /\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b/,
+    /\bhf_[A-Za-z0-9]{20,}\b/,
     /\bxox[abprs]-[A-Za-z0-9-]{20,}\b/,
     /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/
-  ].some((pattern) => pattern.test(text || ""));
+  ].some((pattern) => {
+    const match = String(text || "").match(pattern);
+    if (!match) return false;
+    if (pattern.source.includes("\\d[\\d\\s().-]")) return match[0].replace(/\D/g, "").length >= 10;
+    return true;
+  });
 }
 
 export function sanitizeLearningExcerpt(text) {
   let value = normalizeWhitespace(text);
   value = value.replace(/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/gi, "[redacted-private-key]");
-  value = value.replace(/\b((?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*)\S+/gi, "$1[redacted]");
-  value = value.replace(/\bbearer\s+[A-Za-z0-9._~+/-]{12,}/gi, "Bearer [redacted]");
-  value = value.replace(/\bsk-[A-Za-z0-9_-]{20,}/g, "[redacted-openai-key]");
-  value = value.replace(/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, "[redacted-aws-key]");
-  value = value.replace(/\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/g, "[redacted-github-token]");
-  value = value.replace(/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, "[redacted-github-token]");
-  value = value.replace(/\bxox[abprs]-[A-Za-z0-9-]{20,}\b/g, "[redacted-slack-token]");
-  value = value.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[redacted-jwt]");
   value = value.replace(/https?:\/\/\S+/gi, (url) => {
     try {
       const parsed = new URL(url);
       parsed.username = "";
       parsed.password = "";
-      parsed.search = parsed.search ? "?[redacted-query]" : "";
+      parsed.search = parsed.search ? "?redacted-query" : "";
       parsed.hash = "";
       return parsed.toString();
     } catch {
       return "[redacted-url]";
     }
   });
+  value = value.replace(/\b((?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*)\S+/gi, "$1[redacted]");
+  value = value.replace(/\bbearer\s+[A-Za-z0-9._~+/-]{12,}/gi, "Bearer [redacted]");
+  value = value.replace(/C:\\Users\\[A-Za-z0-9_.-]+/gi, "C:\\Users\\[redacted]");
+  value = value.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[redacted-email]");
+  value = value.replace(/\b(?:\+?\d[\d\s().-]{8,}\d)\b/g, (phone) =>
+    phone.replace(/\D/g, "").length >= 10 ? "[redacted-phone]" : phone
+  );
+  value = value.replace(/\bsk-ant-[A-Za-z0-9_-]{20,}\b/g, "[redacted-anthropic-key]");
+  value = value.replace(/\bsk-[A-Za-z0-9_-]{20,}/g, "[redacted-openai-key]");
+  value = value.replace(/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, "[redacted-aws-key]");
+  value = value.replace(/\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/g, "[redacted-github-token]");
+  value = value.replace(/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, "[redacted-github-token]");
+  value = value.replace(/\bglpat-[A-Za-z0-9_-]{20,}\b/g, "[redacted-gitlab-token]");
+  value = value.replace(/\bnpm_[A-Za-z0-9-]{36,}\b/g, "[redacted-npm-token]");
+  value = value.replace(/\bAIza[0-9A-Za-z_-]{35}\b/g, "[redacted-google-api-key]");
+  value = value.replace(/\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g, "[redacted-stripe-key]");
+  value = value.replace(/\bhf_[A-Za-z0-9]{20,}\b/g, "[redacted-huggingface-token]");
+  value = value.replace(/\bxox[abprs]-[A-Za-z0-9-]{20,}\b/g, "[redacted-slack-token]");
+  value = value.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[redacted-jwt]");
   return truncate(value, 160);
 }
 

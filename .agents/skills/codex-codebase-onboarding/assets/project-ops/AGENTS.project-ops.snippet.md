@@ -76,7 +76,7 @@ Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions
 
 Use `.codex-context/worktree-state.md` to record whether the current workspace is the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, a submodule, or unknown. Refresh it before execution, checkpoint, branch completion, cleanup, or whenever hook UI source paths differ from the actual Git root.
 
-Use `.codex-context/workflow-state.yaml` as the script-readable phase state. Before routing non-trivial work, run `node .codex/hooks/project-ops.mjs workflow-state next` or read the file directly. Update it at phase boundaries with `workflow-state transition <event>` so compaction recovery can identify the current phase, blocking decision, and next skill.
+Use `.codex-context/workflow-state.yaml` as the script-readable phase state. Before routing non-trivial work, run `node .codex/hooks/project-ops.mjs workflow-state next` or read the file directly. If phase, next action, or compaction recovery is ambiguous, run `node .codex/hooks/project-ops.mjs workflow-state recover` before acting. Update state at phase boundaries with `workflow-state transition <event>` so compaction recovery can identify the current phase, blocking decision, and next skill.
 
 If present:
 

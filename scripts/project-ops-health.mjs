@@ -77,6 +77,74 @@ const REQUIRED_CHECKPOINT_FIELDS = [
   ["Next checkpoint"]
 ];
 
+const WORKFLOW_ALLOWED = {
+  workflow: ["standard", "hotfix", "tweak"],
+  phase: [
+    "discovery",
+    "brainstorming",
+    "spec",
+    "planning",
+    "execution",
+    "debugging",
+    "verification",
+    "review",
+    "delivery",
+    "handoff",
+    "blocked",
+    "complete"
+  ],
+  next_skill: [
+    "using-superpowers",
+    "codex-codebase-onboarding",
+    "brainstorming",
+    "writing-plans",
+    "executing-plans",
+    "codex-worktree-governance",
+    "systematic-debugging",
+    "codex-architecture-governance",
+    "codex-verification-loop",
+    "codex-evidence-capture",
+    "verification-before-completion",
+    "requesting-code-review",
+    "receiving-code-review",
+    "codex-review-panel",
+    "codex-git-checkpoint",
+    "codex-learning-memory",
+    "codex-solution-memory",
+    "codex-session-history",
+    "codex-strategy-anchor",
+    "codex-docs-stewardship",
+    "codex-context-budget",
+    "codex-asset-governance",
+    "none"
+  ],
+  auto_next: ["true", "false"],
+  decision_required: [
+    "none",
+    "clarify-scope",
+    "written-spec-approval",
+    "execution-approval",
+    "verification-failure-choice",
+    "branch-handling-choice",
+    "archive-confirmation",
+    "user-choice"
+  ],
+  spec_status: [
+    "not-started",
+    "living-draft",
+    "pending-approval",
+    "approved",
+    "skipped",
+    "mechanical-exception"
+  ],
+  plan_status: ["not-started", "drafting", "drafted", "approved"],
+  execution_mode: ["pending", "traditional", "codex-goal"],
+  execution_approval: ["pending", "approved-traditional", "approved-goal", "plan-then-execute-traditional"],
+  verify_result: ["pending", "pass", "fail", "gap-recorded"],
+  review_status: ["pending", "done", "skipped"],
+  checkpoint_status: ["pending", "done", "deferred"]
+};
+
 function gitRoot(cwd) {
   try {
     return execFileSync("git", ["rev-parse", "--show-toplevel"], {
@@ -379,28 +447,9 @@ function checkContext(root, issues) {
   }
 
   const workflow = parseFlatYaml(readText(path.join(ctx, "workflow-state.yaml")));
-  requireWorkflowValue(workflow, "workflow", ["standard", "hotfix", "tweak"], issues);
-  requireWorkflowValue(workflow, "phase", [
-    "discovery",
-    "brainstorming",
-    "spec",
-    "planning",
-    "execution",
-    "debugging",
-    "verification",
-    "review",
-    "delivery",
-    "handoff",
-    "blocked",
-    "complete"
-  ], issues);
-  requireWorkflowValue(workflow, "next_skill", null, issues);
-  requireWorkflowValue(workflow, "decision_required", null, issues);
-  requireWorkflowValue(workflow, "spec_status", null, issues);
-  requireWorkflowValue(workflow, "plan_status", null, issues);
-  requireWorkflowValue(workflow, "execution_mode", null, issues);
-  requireWorkflowValue(workflow, "execution_approval", null, issues);
-  requireWorkflowValue(workflow, "verify_result", null, issues);
+  for (const [field, allowed] of Object.entries(WORKFLOW_ALLOWED)) {
+    requireWorkflowValue(workflow, field, allowed, issues);
+  }
 }
 
 function checkAssetParity(root, issues) {

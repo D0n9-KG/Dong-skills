@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const EXCLUDED_DIRS = new Set([".git", ".codegraph", "node_modules", "dist", "build", ".next", "__pycache__"]);
 const TEXT_EXTENSIONS = new Set([".md", ".mjs", ".js", ".json", ".ps1", ".txt", ".toml", ".yml", ".yaml"]);
@@ -19,6 +20,7 @@ const READABILITY_SCAN_FILES = new Set([
   "AGENTS.md",
   "AGENTS.project-ops.snippet.md"
 ]);
+const MAX_TEXT_FILE_BYTES = 512 * 1024;
 
 function gitRoot(cwd) {
   try {
@@ -47,6 +49,17 @@ function walk(root, relDir = "", out = []) {
 
 function rel(root, file) {
   return path.relative(root, file).replace(/\\/g, "/");
+}
+
+function findHelperScript(root, scriptName) {
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(root, "scripts", scriptName),
+    path.join(root, ".codex", "scripts", scriptName),
+    path.join(scriptDir, scriptName),
+    path.join(scriptDir, "..", ".codex", "scripts", scriptName)
+  ];
+  return candidates.find((file) => fs.existsSync(file));
 }
 
 function runCommand(label, command, args, options = {}) {
@@ -128,28 +141,62 @@ function powershellParseChecks(root) {
 function privacyScan(root) {
   const issues = [];
   const patterns = [
+    { name: "private key block", regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/i },
     { name: "local Windows user path", regex: /C:\\Users\\[A-Za-z0-9_.-]+/i },
     { name: "OpenAI key", regex: /\bsk-[A-Za-z0-9_-]{20,}\b/ },
+    { name: "Anthropic key", regex: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/ },
     { name: "GitHub token", regex: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b/ },
+    { name: "GitLab token", regex: /\bglpat-[A-Za-z0-9_-]{20,}\b/ },
+    { name: "npm token", regex: /\bnpm_[A-Za-z0-9-]{36,}\b/ },
     { name: "Bearer token", regex: /\bbearer\s+[A-Za-z0-9._~+/-]{20,}/i },
-    { name: "key/value secret", regex: /\b(?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*\S{8,}/i }
+    { name: "key/value secret", regex: /\b(?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*\S{8,}/i },
+    {
+      name: "email address",
+      regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
+      validate: (value) => !/@(?:example\.(?:com|org|net)|example\.test|test\.invalid)$/i.test(value)
+    },
+    {
+      name: "phone number",
+      regex: /\b(?:\+?\d[\d\s().-]{8,}\d)\b/,
+      validate: (value) => value.replace(/\D/g, "").length >= 10 &&
+        /[()+]/.test(value) &&
+        !/^\d{4}-\d{2}-\d{2}/.test(value.trim())
+    }
   ];
 
   for (const file of walk(root)) {
     const relative = rel(root, file);
     if (relative.startsWith(".codex-context/raw/")) continue;
-    if (relative.startsWith("tests/")) continue;
     if (/\.(png|jpg|jpeg|gif|zip|tar|gz|pdf|docx|pptx|xlsx)$/i.test(file)) continue;
     const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
       if (relative === "README.md" && line.includes("rg -n -i -uuu")) continue;
+      if (line.includes("codex-release-check: allow-secret-fixture")) continue;
       for (const pattern of patterns) {
-        if (pattern.regex.test(line)) issues.push(`${relative}:${index + 1}: ${pattern.name}`);
+        const match = line.match(pattern.regex);
+        if (match && (!pattern.validate || pattern.validate(match[0], line))) {
+          issues.push(`${relative}:${index + 1}: ${pattern.name}`);
+        }
       }
     }
   }
 
+  return issues;
+}
+
+function largeFileScan(root) {
+  const issues = [];
+  for (const file of walk(root)) {
+    const relative = rel(root, file);
+    if (relative.startsWith(".codex-context/raw/")) continue;
+    if (relative.startsWith(".codex-context/archive/")) continue;
+    if (!READABILITY_SCAN_FILES.has(relative) && !TEXT_EXTENSIONS.has(path.extname(file))) continue;
+    const stat = fs.statSync(file);
+    if (stat.size > MAX_TEXT_FILE_BYTES) {
+      issues.push(`${relative}: ${stat.size} bytes exceeds ${MAX_TEXT_FILE_BYTES} byte release limit`);
+    }
+  }
   return issues;
 }
 
@@ -195,7 +242,8 @@ function runTests(root) {
 
 function main(root) {
   const checks = [];
-  checks.push(runCommand("health-check", process.execPath, [path.join(root, "scripts", "project-ops-health.mjs"), root], { cwd: root }));
+  const healthScript = findHelperScript(root, "project-ops-health.mjs");
+  checks.push(runCommand("health-check", process.execPath, [healthScript || path.join(root, "scripts", "project-ops-health.mjs"), root], { cwd: root }));
   checks.push(...syntaxChecks(root));
   checks.push(...powershellParseChecks(root));
   checks.push(...runTests(root));
@@ -212,6 +260,13 @@ function main(root) {
     ok: readabilityIssues.length === 0,
     label: "text readability scan",
     details: readabilityIssues.join("\n")
+  });
+
+  const largeFileIssues = largeFileScan(root);
+  checks.push({
+    ok: largeFileIssues.length === 0,
+    label: "large file scan",
+    details: largeFileIssues.join("\n")
   });
 
   const runtimeArtifacts = runtimeArtifactScan(root);

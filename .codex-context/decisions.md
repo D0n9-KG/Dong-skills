@@ -51,6 +51,12 @@
 - Codex Goal mode requires an actual goal mechanism exposed in the current session. If `create_goal` / `update_goal`-style tools are unavailable, Goal mode is unavailable and the agent must ask before falling back.
 - Comet is borrowed as a workflow-state pattern only: Dong Skills uses `.codex-context/workflow-state.yaml` plus `workflow-state` commands, not OpenSpec change directories or `.comet.yaml`.
 - `workflow-state.yaml` records phase, next skill, blocking decision, and verification/review/checkpoint status; it is not a per-file artifact freshness log.
+- Missing `workflow-state.yaml` is now reported by status/recover/check/hooks instead of being silently recreated; explicit `workflow-state init` is the intentional initialization path.
+- `PostToolUse` matches shell/Bash/PowerShell-style Codex tools in addition to edit/write/apply_patch tools, while actual blocking still depends on Git-detected non-context file changes.
+- Release privacy scanning includes `tests/`; test fixtures that intentionally contain secret-like text must use a narrow `codex-release-check: allow-secret-fixture` marker.
+- Release large-file scanning blocks oversized text assets, while `.codex-context/raw/` and `.codex-context/archive/` remain governed by raw/archive lifecycle rules.
+- Windows installation uses strict UTF-8 reads and UTF-8 no-BOM writes; unreadable legacy-encoded managed files should fail explicitly rather than be silently corrupted.
+- Global skill replacement during Windows install uses staging and backup directories under the target skills root instead of delete-then-copy.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
