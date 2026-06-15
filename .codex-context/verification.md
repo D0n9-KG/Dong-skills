@@ -16,7 +16,7 @@
 - `node scripts\release-check.mjs .`
   - Result: pass
   - Evidence: health check, Node syntax checks, PowerShell parse checks, full Node test suite, privacy scan, text readability scan, and runtime artifact scan passed.
-  - Date: 2026-06-15 17:28 +08:00
+  - Date: 2026-06-15 17:38 +08:00
 
 ## Product Evidence
 - CLI behavior is covered by direct command/test execution:

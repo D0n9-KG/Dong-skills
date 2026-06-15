@@ -34,6 +34,7 @@
 - `docs/improvements/backlog.md`: records the Comet-inspired workflow-state item.
 - `tests/project-ops.test.mjs`: adds workflow state regression coverage.
 - `.codex-context/spec.md`, `current-state.md`, `plan-progress.md`, `artifact-index.md`, `verification.md`, `decisions.md`, `risks.md`, and `handoff-summary.md`: refreshed for this task.
+- Final state refresh and push verification now record the completed checkpoint in `current-state.md`, `plan-progress.md`, `verification.md`, and `handoff-summary.md`.
 
 ## Read / Inspected
 - Local Comet clone under `%TEMP%\comet-inspect`: `comet/SKILL.md`, `comet-state.sh`, decision-point protocol, phase guard rules.

@@ -43,16 +43,17 @@ Not selected for this task.
 - [x] Task 7: Run release verification.
   - Evidence: health check, diff whitespace check, and release check passed.
 - [x] Task 8: Refresh state and checkpoint.
-  - Evidence: state files refreshed; checkpoint commit/push remains.
+  - Evidence: state files refreshed; checkpoint commit/push completed.
 
 ## Current Step
-Commit and push checkpoint.
+None.
 
 ## Verification
 - `node --test tests\project-ops.test.mjs`: pass, 33/33.
 - `node scripts\project-ops-health.mjs .`: pass.
 - `git diff --check`: pass.
 - `node scripts\release-check.mjs .`: pass.
+- `git push origin main`: pass, remote `main` updated to `3382ec9a2b65cfe027333ec1a0145d764a3a0677`.
 
 ## Out Of Scope
 - OpenSpec directories and archive flow.

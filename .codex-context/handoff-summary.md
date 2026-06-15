@@ -13,8 +13,8 @@ Continue and absorb Comet's advantages into Dong Skills.
 
 ## Plan Status
 - Execution mode: Traditional task-by-task execution.
-- Tasks completed: state runtime, CLI, hook forwarding, recovery, health/bootstrap integration, skill docs, README/backlog/license, tests, release checks, state refresh.
-- Remaining action: commit and push checkpoint.
+- Tasks completed: state runtime, CLI, hook forwarding, recovery, health/bootstrap integration, skill docs, README/backlog/license, tests, release checks, state refresh, commit, push, and install refresh.
+- Remaining action: none.
 
 ## Files Modified
 - See `.codex-context/artifact-index.md` for the full created/modified list.
@@ -46,19 +46,19 @@ Continue and absorb Comet's advantages into Dong Skills.
 - `node scripts\release-check.mjs .`: pass.
 
 ## Git Checkpoint
-- Latest commit: pending.
-- Push state: not pushed yet.
+- Latest commit: `3382ec9 feat(workflow): add Comet-inspired state machine`
+- Push state: pushed to `origin/main`
 - Files included: all current Dong Skills workflow-state changes after final staging.
 - Files intentionally left uncommitted: none intended.
-- Deferred reason: none; checkpoint is the next action.
-- Next checkpoint: commit and push `origin/main`, then verify remote branch.
+- Deferred reason: none.
+- Next checkpoint: no further checkpoint planned after this state-sync commit.
 
 ## Learned Instincts To Preserve
 - Comet-style state machines are useful when adapted as a compact Codex phase state, not when copied wholesale with unrelated platform structure.
 - State files should distinguish phase/routing truth from per-edit artifact freshness.
 
 ## Next Action
-Commit and push checkpoint, then verify remote branch.
+None.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
