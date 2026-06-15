@@ -49,6 +49,8 @@
 - `session-history` should accept an explicit project root argument consistently with other `project-ops.mjs` CLI modes.
 - Direct use of a shipped CLI, local API, generated artifact, or real workflow can count as product evidence; generic test framework output must not be relabeled as a demo.
 - Codex Goal mode requires an actual goal mechanism exposed in the current session. If `create_goal` / `update_goal`-style tools are unavailable, Goal mode is unavailable and the agent must ask before falling back.
+- Comet is borrowed as a workflow-state pattern only: Dong Skills uses `.codex-context/workflow-state.yaml` plus `workflow-state` commands, not OpenSpec change directories or `.comet.yaml`.
+- `workflow-state.yaml` records phase, next skill, blocking decision, and verification/review/checkpoint status; it is not a per-file artifact freshness log.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -68,3 +70,5 @@
 - Treating Goal mode as a default or automatic escalation for long tasks.
 - Adding cross-platform installers in this pass.
 - Adding Claude Code `.claude` / `CLAUDE.md` adapter files to the Codex-only release line.
+- Importing Comet/OpenSpec wholesale for Dong Skills.
+- Blocking every source edit until `workflow-state.yaml` mtime is refreshed.

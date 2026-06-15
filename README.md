@@ -4,7 +4,7 @@ Dong Skills is a Codex project-operations skill kit for long-running software wo
 
 Current scope: Dong Skills is maintained as an OpenAI Codex-specific kit. Claude Code compatibility would require a separate adapter for `.claude/skills`, `CLAUDE.md`, and Claude hook settings; it is not part of this Codex-only release line.
 
-It combines a curated subset of [Superpowers](https://github.com/obra/superpowers), learning/onboarding ideas adapted from [ECC](https://github.com/affaan-m/ECC), context-governance patterns inspired by [agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering), and workflow ideas adapted from [Compound Engineering](https://github.com/everyinc/compound-engineering-plugin).
+It combines a curated subset of [Superpowers](https://github.com/obra/superpowers), learning/onboarding ideas adapted from [ECC](https://github.com/affaan-m/ECC), context-governance patterns inspired by [agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering), workflow ideas adapted from [Compound Engineering](https://github.com/everyinc/compound-engineering-plugin), and a Codex-only phase-state pattern adapted from [Comet](https://github.com/rpamis/comet).
 
 ## 中文
 
@@ -157,6 +157,7 @@ node scripts/release-check.mjs "."
 - ECC onboarding and continuous-learning concepts are adapted from [affaan-m/ECC](https://github.com/affaan-m/ECC).
 - Context governance ideas are adapted from [muratcankoylan/agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering).
 - Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).
+- Workflow-state ideas are adapted from [rpamis/comet](https://github.com/rpamis/comet).
 - License files are included under `licenses/`.
 
 ## English
@@ -181,6 +182,8 @@ It helps with:
 - `codex-project-governance` is the main lifecycle skill.
 - Non-trivial work has explicit phase gates: `brainstorming` produces a user-approved written spec, `writing-plans` produces a verifiable plan with an execution mode, and execution waits for mode approval. `plan-then-execute` defaults to Traditional task-by-task execution; Codex Goal mode requires an explicit user choice.
 - `.codex-context/` stores recoverable project state.
+- `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash.
+- `workflow-state` commands provide a Comet-inspired state interface: `init`, `status`, `get`, `set`, `transition`, `check`, `next`, `recover`, and `hash`.
 - `STRATEGY.md` anchors product/project direction when adopted.
 - `docs/solutions/` stores verified reusable solutions.
 - `CONCEPTS.md` stores stable project vocabulary.
@@ -239,6 +242,9 @@ node .codex/hooks/project-ops.mjs solution-status
 node .codex/hooks/project-ops.mjs solution-status --update-index
 node .codex/hooks/project-ops.mjs solution-validate
 node .codex/hooks/project-ops.mjs session-history scan --days 7 --keywords auth,token
+node .codex/hooks/project-ops.mjs workflow-state next
+node .codex/hooks/project-ops.mjs workflow-state recover
+node .codex/hooks/project-ops.mjs workflow-state transition spec-approved
 node .codex/hooks/project-ops.mjs health-check
 ```
 
@@ -250,6 +256,7 @@ node scripts/asset-governance.mjs "C:\path\to\repo"
 node scripts/instincts.mjs status "C:\path\to\repo"
 node scripts/solutions.mjs "C:\path\to\repo" status
 node scripts/session-history.mjs "C:\path\to\repo" scan --days 7 --keywords auth,token
+node scripts/workflow-state.mjs "C:\path\to\repo" next
 node scripts/project-ops-health.mjs "C:\path\to\repo"
 node scripts/release-check.mjs "."
 ```

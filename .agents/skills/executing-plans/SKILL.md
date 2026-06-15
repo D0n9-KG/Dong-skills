@@ -21,6 +21,14 @@ If `## Execution Mode` is missing, ambiguous, or set to Codex Goal mode without 
 
 Also stop if `.codex-context/spec.md` has no approved scope for the current task, unless the user explicitly skipped brainstorming or the task is a tiny mechanical edit.
 
+When workflow state is available, run this before editing implementation files:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state check execution
+```
+
+If the check fails, repair the state or ask for the missing decision before editing.
+
 ## Execution Modes
 
 ### Traditional Task-By-Task Execution
@@ -86,6 +94,7 @@ Goal mode runtime constraints:
 11. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
 12. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
 13. Repeat until the plan is complete or a blocker is reached.
+14. When implementation tasks are complete and verification is next, run `node .codex/hooks/project-ops.mjs workflow-state transition execution-complete`.
 
 ## Checkpoints
 

@@ -1,0 +1,15 @@
+workflow: standard
+phase: handoff
+next_skill: codex-git-checkpoint
+auto_next: true
+decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pending
+review_status: done
+checkpoint_status: pending
+handoff_hash: cc2defa7968f3b4316b16c371868234a5b28e10cbe51a1739ed3dd4797ba6e27
+updated_at: 2026-06-15T09:29:13.173Z
+note: Context hash refreshed

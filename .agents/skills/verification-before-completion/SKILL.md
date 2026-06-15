@@ -14,12 +14,14 @@ If fresh verification cannot be run, say it is unverified and record the blocker
 ## Required Loop
 
 1. Re-read the relevant spec, plan, and acceptance criteria.
-2. Identify the smallest reliable command or product action that proves the claim.
-3. Run the command/action in the current turn, or record why it is blocked.
-4. Read the full output and exit code.
-5. Update `.codex-context/verification.md` with the command/action, result, short evidence summary, timestamp, and gaps.
-6. If verification fails, use `systematic-debugging` before further fixes.
-7. Only then report the verified state.
+2. Re-read `workflow-state.yaml` and confirm the current phase matches the claim.
+3. Identify the smallest reliable command or product action that proves the claim.
+4. Run the command/action in the current turn, or record why it is blocked.
+5. Read the full output and exit code.
+6. Update `.codex-context/verification.md` with the command/action, result, short evidence summary, timestamp, and gaps.
+7. Update `workflow-state.yaml` when the result changes the phase, next skill, or blocking decision.
+8. If verification fails, use `systematic-debugging` before further fixes.
+9. Only then report the verified state.
 
 ## Evidence Standards
 

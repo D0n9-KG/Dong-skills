@@ -18,6 +18,12 @@ Do not implement, scaffold, edit code, change configuration, or invoke implement
 
 Read-only discovery is allowed before approval. If you are unsure whether a request is mechanical, treat it as brainstorming.
 
+When Dong Skills project hooks are installed, start or refresh the workflow state before the first substantive brainstorming response:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition brainstorming-start
+```
+
 ## What Good Brainstorming Does
 
 - Understand the real problem, not just the first requested implementation.
@@ -32,11 +38,11 @@ Read-only discovery is allowed before approval. If you are unsure whether a requ
 1. **Discover context.** Read `AGENTS.md`, `.codex-context/current-state.md`, `.codex-context/project-map.md`, relevant docs/code, and recent changes. Do not read the whole repo.
 2. **Restate the objective.** One sentence, including the user-visible outcome.
 3. **Clarify.** Ask exactly one important question per assistant message when the answer changes scope, UX, architecture, data model, API, verification, or delivery. You may include 2-3 concrete choices for that one question, but do not bundle multiple questions.
-4. **Update the living spec, then continue.** As soon as the user confirms a decision, boundary, non-goal, acceptance criterion, or open question, update `.codex-context/spec.md` with `Approval Status: Living Draft / Not Approved`. Also refresh `.codex-context/decisions.md`, `.codex-context/open-questions.md`, `.codex-context/current-state.md`, and `.codex-context/handoff-summary.md` when the discussion is long enough that compaction would lose context. After updating state, immediately continue the brainstorming loop in the same assistant response unless a tool failure or user instruction blocks you.
+4. **Update the living spec, then continue.** As soon as the user confirms a decision, boundary, non-goal, acceptance criterion, or open question, update `.codex-context/spec.md` with `Approval Status: Living Draft / Not Approved`. Also refresh `.codex-context/decisions.md`, `.codex-context/open-questions.md`, `.codex-context/current-state.md`, and `.codex-context/handoff-summary.md` when the discussion is long enough that compaction would lose context. Run `workflow-state transition spec-living` when the workflow state is available. After updating state, immediately continue the brainstorming loop in the same assistant response unless a tool failure or user instruction blocks you.
 5. **Explore options.** For direction-setting, architecture, product behavior, API, UX, data model, workflow, or other behavior-changing work, assume there is a real choice and compare 2-3 viable approaches before selecting one. Skip comparison only for tiny mechanical edits, an already-approved approach, or an explicit user request to skip. Include trade-offs and a recommendation, then ask one focused follow-up question.
 6. **Present the design section by section.** Scale detail to complexity. Cover only relevant sections: behavior, boundaries, files/modules, data flow, UX/API, error handling, migration, verification, non-goals. For complex work, ask for confirmation after each section before moving to the next section.
 7. **Ask for final approval.** Ask the user to approve the complete design/spec or request changes. Do not treat silence, vague acknowledgement, or a question as approval.
-8. **Finalize the spec draft.** After final discussion approval, rewrite `.codex-context/spec.md` from `Living Draft / Not Approved` into a clean written spec with `Approval Status: Pending written-spec approval`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` when the spec is too large for the state file, then link it from `spec.md`.
+8. **Finalize the spec draft.** After final discussion approval, rewrite `.codex-context/spec.md` from `Living Draft / Not Approved` into a clean written spec with `Approval Status: Pending written-spec approval`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` when the spec is too large for the state file, then link it from `spec.md`. Run `workflow-state transition spec-ready`; this records `decision_required: written-spec-approval`.
 9. **Run the Final Spec Gate.** Self-review the written spec, fix issues inline, then ask the user to review the written spec. If the user requests changes, update the spec and rerun the gate.
 10. **Update state.** Update `.codex-context/current-state.md`, `.codex-context/decisions.md`, `.codex-context/open-questions.md`, and `.codex-context/handoff-summary.md`.
 11. **Transition only after written-spec approval.** For multi-step work, use `writing-plans` next. Do not jump from brainstorming directly to implementation unless the approved spec is tiny and mechanical.
@@ -134,7 +140,7 @@ After the user approves the discussed design, but before `writing-plans`:
    - a fresh session could write a plan from the spec file without relying on chat memory
 3. Ask the user to review the written spec file before planning.
 4. If the user requests changes, update the spec and rerun this gate.
-5. Only after the user approves the written spec, update `Approval Status` to `Approved by user on [date/time]` and transition to `writing-plans`.
+5. Only after the user approves the written spec, update `Approval Status` to `Approved by user on [date/time]`, run `workflow-state transition spec-approved`, and transition to `writing-plans`.
 
 Use this gate instead of relying on a vague "looks good" after a conversation. A section approval, approach choice, or casual acknowledgement is not written-spec approval.
 
@@ -144,6 +150,8 @@ Use this gate instead of relying on a vague "looks good" after a conversation. A
 - "可以", "继续", or "sounds reasonable" count only if the immediately preceding message asked for design/spec approval.
 - "Keep discussing", "what about X", or "try exploring Y" do not count as approval.
 - If the user approves only one section, continue brainstorming remaining sections before writing the final spec.
+
+At the written-spec approval decision point, do not infer approval from silence, history, or the fact that a recommendation was presented. Ask for approval/revision and stop until the user answers.
 
 ## Lightweight Exceptions
 

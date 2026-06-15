@@ -53,6 +53,7 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
    - `artifact-index.md`: files changed and why they matter.
    - `verification.md`: fresh command evidence or explicit gap.
    - `worktree-state.md`: current workspace role, branch state, and cleanup owner when worktree state matters.
+   - `workflow-state.yaml`: phase, next skill, and checkpoint status.
    - `handoff-summary.md`: current state, next action, and `Git Checkpoint`.
 5. Stage intentionally:
    - Prefer `git add -- path1 path2 ...`.
@@ -128,6 +129,8 @@ Before compaction, long pauses, or final delivery, keep this section meaningful:
 
 If work is ready and committed, record the commit and push state.
 If work is not ready to commit, record the reason instead of pretending the archive is clean.
+
+When workflow state is available, run `workflow-state transition checkpoint-done` after a successful checkpoint, or `workflow-state transition checkpoint-deferred` after recording a deferred reason.
 
 ## GitHub Publish Boundary
 

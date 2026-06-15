@@ -1,105 +1,73 @@
 # Handoff Summary
 
 ## Objective
-Fix validated external review findings for Dong Skills while preserving the Codex-only release scope.
+Absorb Comet's useful workflow-state ideas into Dong Skills while preserving the Codex-only project-ops model.
 
 ## Latest User Instruction
-Fix the validated issues; do not implement cross-platform installation; keep this as a Codex-specific version.
+Continue and absorb Comet's advantages into Dong Skills.
 
 ## Approved Scope / Spec
-- Approved by user instruction on 2026-06-14.
-- In scope: Codex runtime/CLI bugs, skill wording defects, Goal mode definition, template consistency, README scope clarification, tests, backlog, and state files.
-- Out of scope: Claude Code adapter, `.claude` layout, `CLAUDE.md` shim, Claude hook conversion, macOS/Linux installer, and top-level legal license selection.
+- Approved by user instruction on 2026-06-15.
+- In scope: Codex-only `workflow-state.yaml`, CLI state interface, routing/recovery integration, bootstrap assets, health checks, skill guidance, README/backlog/license/test updates.
+- Out of scope: OpenSpec layout import, `.comet.yaml`, Claude Code adapter, global hooks, cross-platform installer work, and per-edit workflow-state freshness blocking.
 
 ## Plan Status
 - Execution mode: Traditional task-by-task execution.
-- Tasks completed: review triage, code fixes, skill/doc/template fixes, regression tests, release verification, state refresh.
-- Remaining action: commit and push checkpoint if requested/appropriate.
+- Tasks completed: state runtime, CLI, hook forwarding, recovery, health/bootstrap integration, skill docs, README/backlog/license, tests, release checks, state refresh.
+- Remaining action: commit and push checkpoint.
 
 ## Files Modified
-- `.codex/scripts/lib/core.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/core.mjs`
-- `.codex/hooks/project-ops.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks/project-ops.mjs`
-- `.agents/skills/systematic-debugging/SKILL.md`
-- `.agents/skills/codex-evidence-capture/SKILL.md`
-- `.agents/skills/writing-plans/SKILL.md`
-- `.agents/skills/executing-plans/SKILL.md`
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.codex/scripts/lib/templates.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/templates.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/plan-progress.md`
-- `README.md`
-- `tests/project-ops.test.mjs`
-- `docs/improvements/backlog.md`
-- `.codex-context/current-state.md`
-- `.codex-context/plan-progress.md`
-- `.codex-context/artifact-index.md`
-- `.codex-context/verification.md`
-- `.codex-context/decisions.md`
-- `.codex-context/risks.md`
-- `.codex-context/handoff-summary.md`
+- See `.codex-context/artifact-index.md` for the full created/modified list.
+- Key files: `.codex/scripts/lib/workflow.mjs`, `scripts/workflow-state.mjs`, `.codex-context/workflow-state.yaml`, `.codex/hooks/project-ops.mjs`, `.codex/scripts/lib/{templates,events,recovery,assets}.mjs`, `scripts/project-ops-health.mjs`, workflow skill docs, bootstrap assets, README, tests, backlog, and `licenses/COMET-LICENSE`.
 
 ## Files Read But Not Changed
-- External review attachment supplied by the user.
-- `.codex/scripts/lib/events.mjs`
-- `.codex/scripts/lib/git.mjs`
-- `scripts/project-ops-health.mjs`
-- `scripts/release-check.mjs`
-- relevant skill files and state files.
+- Local Comet clone under `%TEMP%\comet-inspect`, including `comet-state.sh`, decision-point protocol, and phase guard rules.
 
 ## Decisions Made
-- Keep Dong Skills Codex-only for this release line; Claude Code support should be a separate adapter if needed.
-- Do not add cross-platform installers in this pass.
-- Use nearest existing ancestor mtime for deleted files instead of `Date.now()` in staleness checks.
-- Make `session-history` parse explicit project roots consistently with other CLI modes.
-- Treat direct shipped CLI/API/workflow use as product evidence, while not relabeling generic test framework output as a demo.
-- Require actual current-session Codex goal tools before selecting Goal mode; do not simulate Goal mode with headings alone.
-- Defer top-level legal license selection to the repo owner.
+- Adapt Comet's state-machine idea, not its OpenSpec directory layout.
+- Keep workflow state under `.codex-context/workflow-state.yaml`.
+- Use machine values for phase/status fields so hooks and scripts can validate them.
+- Make workflow-state malformed/missing checks part of Stop/PreCompact, but do not require the workflow file to be newer than every source edit.
+- Use `workflow-state next` as the router contract and `workflow-state recover` as the compaction/new-session recovery summary.
 
 ## Open Questions And Assumptions
 - No blocking open questions.
-- Global installed skills were refreshed with `scripts\install-windows.ps1`; existing target projects still need project-local refresh/bootstrap to receive the hook/template fixes.
-- Top-level license selection remains a future owner decision.
+- Assumption: current transition set is enough for the main Dong Skills lifecycle; future usage can add more semantic transition events.
 
 ## Risks
-- Older target projects can still show deleted-file stale false positives or `session-history <root>` failures until refreshed.
-- Goal mode remains enforced by skill/state guidance and actual goal tool availability, not a dedicated hook.
-- Context budget is ~51,524 tokens across 54 files; future cleanup may split large helper modules if context pressure grows.
+- Existing target projects need project-local update/bootstrap before they receive the new workflow-state files.
+- If agents ignore `using-superpowers` and project `AGENTS.md`, workflow-state guidance can still be bypassed.
+- Transition names are now part of the internal contract; future renames need migration or compatibility handling.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs`: pass, 30/30.
-- `node scripts\release-check.mjs .`: pass before commit.
+- `node --test tests\project-ops.test.mjs`: pass, 33/33.
 - `node scripts\project-ops-health.mjs .`: pass.
-- `node .codex\hooks\project-ops.mjs asset-governance`: pass, no advisories.
 - `git diff --check`: pass.
-- `node .codex\hooks\project-ops.mjs learning-status`: pass, no pending observations/outbox items.
-- `node .codex\hooks\project-ops.mjs context-budget`: pass/advisory, ~51,524 tokens across 54 files.
+- `node scripts\release-check.mjs .`: pass.
 
 ## Git Checkpoint
-- Latest commit: this checkpoint commit, `fix(workflow): address review-validated gaps`
-- Push state: prepared for push to `origin/main`.
-- Files included: all files listed under Files Modified.
+- Latest commit: pending.
+- Push state: not pushed yet.
+- Files included: all current Dong Skills workflow-state changes after final staging.
 - Files intentionally left uncommitted: none intended.
-- Deferred reason: none.
-- Next checkpoint: push `origin/main` and verify remote branch.
+- Deferred reason: none; checkpoint is the next action.
+- Next checkpoint: commit and push `origin/main`, then verify remote branch.
 
 ## Learned Instincts To Preserve
-- Dong Skills improvement findings belong in `docs/improvements/backlog.md`, not project instincts.
-- Review feedback must be triaged against the actual target harness; Claude Code compatibility concerns are not automatically Codex bugs.
-- State files must avoid private local paths because release privacy scans cover active context files.
+- Comet-style state machines are useful when adapted as a compact Codex phase state, not when copied wholesale with unrelated platform structure.
+- State files should distinguish phase/routing truth from per-edit artifact freshness.
 
 ## Next Action
-Push `origin/main` and verify remote branch.
+Commit and push checkpoint, then verify remote branch.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
-2. `.codex-context/current-state.md`
-3. `.codex-context/plan-progress.md`
-4. `.codex-context/artifact-index.md`
-5. `.codex-context/verification.md`
-6. `.codex/scripts/lib/core.mjs`
-7. `.codex/hooks/project-ops.mjs`
-8. `.agents/skills/executing-plans/SKILL.md`
-9. `.agents/skills/codex-evidence-capture/SKILL.md`
+2. `.codex-context/workflow-state.yaml`
+3. `.codex-context/current-state.md`
+4. `.codex-context/plan-progress.md`
+5. `.codex-context/artifact-index.md`
+6. `.codex-context/verification.md`
+7. `.codex/scripts/lib/workflow.mjs`
+8. `scripts/workflow-state.mjs`
+9. `.agents/skills/using-superpowers/SKILL.md`
 10. `tests/project-ops.test.mjs`

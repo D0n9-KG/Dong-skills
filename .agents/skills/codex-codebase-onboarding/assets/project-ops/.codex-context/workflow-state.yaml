@@ -1,0 +1,15 @@
+workflow: standard
+phase: discovery
+next_skill: codex-codebase-onboarding
+auto_next: true
+decision_required: none
+spec_status: not-started
+plan_status: not-started
+execution_mode: pending
+execution_approval: pending
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: not-started
+note: initialized

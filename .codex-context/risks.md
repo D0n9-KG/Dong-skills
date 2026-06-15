@@ -18,6 +18,7 @@
 - Codex Goal mode is powerful for full-plan execution but can amplify drift if the Goal objective omits approved scope, non-goals, checkpoint cadence, state update requirements, or stop conditions.
 - Topic-based learning dedupe is heuristic; real usage may show topics that need splitting or merging.
 - Shell/script/formatter/generated file changes may bypass the immediate `PostToolUse` artifact-index freshness block because the matcher remains scoped to edit/write/apply_patch-style tools. Stop and PreCompact still catch stale state before stopping or compacting.
+- Workflow-state routing improves recovery, but it still depends on agents using `using-superpowers` or project governance before substantive work.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -42,6 +43,7 @@
 - Existing projects with older hook runtimes may still hit deleted-file freshness false positives until their `.codex/scripts/lib/core.mjs` is updated.
 - Existing projects with older `project-ops.mjs` may still fail `session-history <root> ...` until hooks are refreshed.
 - If a future release wants Claude Code support, it should be a deliberate adapter layer, not a partial rename of the Codex-specific layout.
+- Transition event names are now part of the internal workflow contract; future changes should preserve compatibility or include migration guidance for existing projects.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.
@@ -52,6 +54,7 @@
 
 ## Documentation Risks
 - README, skill docs, AGENTS snippets, and bootstrap templates now all describe phase gates; future changes must keep these aligned or agents may receive conflicting workflow instructions.
+- README, AGENTS snippets, workflow skills, `workflow-state.yaml`, and `workflow-state.mjs` must stay aligned when phases or transition names change.
 - README now declares Codex-only scope; future Claude adapter documentation must not imply the existing `.codex`/`.agents` layout is Claude-native.
 - README, AGENTS snippet, project-map, and skill routing can diverge after future changes.
 - Generated context archives may preserve outdated command evidence; keep main `verification.md` current.

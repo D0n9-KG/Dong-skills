@@ -14,6 +14,7 @@ Before onboarding a project, check whether these files exist in the target proje
 - `.codex-context/project-map.md`
 - `.codex-context/solution-index.md`
 - `.codex-context/worktree-state.md`
+- `.codex-context/workflow-state.yaml`
 - `.codex/hooks/project-ops.mjs`
 - `.codex/hooks.json`
 - `AGENTS.md` containing `<!-- codex-project-ops:start -->`
@@ -30,7 +31,7 @@ When the shell is already in the target repository, keep the working directory t
 & "<resolved-skill-dir>\scripts\bootstrap-project-ops.ps1" -TargetProjectRoot (Get-Location).Path
 ```
 
-The bootstrap script installs project hooks and split hook libraries, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data.
+The bootstrap script installs project hooks and split hook libraries, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files including `workflow-state.yaml`, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data.
 
 If all Bootstrap Gate files exist, run a health check before assuming the installed project configuration is current:
 
@@ -45,7 +46,7 @@ After bootstrapping, continue onboarding in the same turn. Tell the user they sh
 ## Probe Order
 
 1. Run the Bootstrap Gate if needed.
-2. Read `AGENTS.md` and key docs if present.
+2. Read `AGENTS.md`, `.codex-context/workflow-state.yaml`, and key docs if present.
 3. Detect current workspace role and update `.codex-context/worktree-state.md` when the repo is a worktree or hook source/root paths may be confusing.
 4. Read `STRATEGY.md`, `CONCEPTS.md`, and `docs/solutions/README.md` if present; otherwise record them as absent, not required.
 5. List top-level files and directories.
@@ -76,6 +77,7 @@ Update `.codex-context/project-map.md` with:
 After onboarding:
 
 - update `.codex-context/current-state.md` with the current understanding and next action
+- update `.codex-context/workflow-state.yaml` with `phase: discovery` or the next workflow phase and `next_skill`
 - update `.codex-context/worktree-state.md` with current workspace role and branch state when relevant
 - update `.codex-context/open-questions.md` with unresolved unknowns
 - update `.codex-context/artifact-index.md` if key files were inspected or created

@@ -20,6 +20,12 @@ Before planning, confirm one of these is true:
 
 If the task is behavior-changing or multi-file and no approved spec exists, return to `brainstorming`.
 
+When workflow state is available, run this before drafting the plan:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition plan-start
+```
+
 ## Output Location
 
 Always update `.codex-context/plan-progress.md`.
@@ -68,6 +74,7 @@ For bug fixes, behavior changes, API changes, migrations, and user-visible workf
 13. Record risks, assumptions, rollback notes, and open questions.
 14. Update `.codex-context/artifact-index.md` with files that matter.
 15. Review the plan for gaps before offering execution.
+16. When the plan is ready but execution is not yet approved, run `node .codex/hooks/project-ops.mjs workflow-state transition plan-ready`.
 
 ## Plan Header
 
@@ -198,3 +205,8 @@ Which do you want?
 ```
 
 Only proceed to `executing-plans` after user approval or an explicit earlier instruction to plan-then-execute. If the user previously asked to plan-then-execute but did not explicitly choose Codex Goal mode, record `Execution Mode: Traditional task-by-task execution`.
+
+After the user chooses execution mode, update workflow state before executing:
+
+- Traditional task-by-task execution: `node .codex/hooks/project-ops.mjs workflow-state transition execution-approved-traditional`
+- Codex Goal mode: `node .codex/hooks/project-ops.mjs workflow-state transition execution-approved-goal`

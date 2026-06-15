@@ -12,6 +12,7 @@ import {
 } from "./learning.mjs";
 import { sessionRecoveryContext } from "./recovery.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
+import { workflowStatus } from "./workflow.mjs";
 
 export function sessionStart(root, ctx) {
   writeJson(sessionRecoveryContext(root, ctx, "SessionStart"));
@@ -187,6 +188,7 @@ function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues
 
   const reread = [
     ".codex-context/handoff-summary.md",
+    ".codex-context/workflow-state.yaml",
     ".codex-context/current-state.md",
     ".codex-context/project-map.md",
     ".codex-context/spec.md",
@@ -251,6 +253,8 @@ export function preCompact(input, root, ctx) {
 
   const checkpoint = gitCheckpointStatus(root, ctx, latest);
   if (!checkpoint.ok) issues.push(checkpoint.summary);
+  const workflow = workflowStatus(root, ctx);
+  issues.push(...workflow.issues);
   const assets = assetGovernanceStatus(root, ctx);
   issues.push(...assets.issues);
 
@@ -296,8 +300,9 @@ export function stop(input, root, ctx) {
   const latest = latestChangedMtime(root, [...new Set([...changed, ...statusFiles])]);
   const checkpoint = gitCheckpointStatus(root, ctx, latest);
   const assets = assetGovernanceStatus(root, ctx);
+  const workflow = workflowStatus(root, ctx);
 
-  if (changed.length === 0 && learning.ok && checkpoint.ok && assets.ok) {
+  if (changed.length === 0 && learning.ok && checkpoint.ok && assets.ok && workflow.ok) {
     writeJson({ continue: true });
     return;
   }
@@ -327,6 +332,7 @@ export function stop(input, root, ctx) {
   issues.push(...learning.issues);
   if (!checkpoint.ok) issues.push(checkpoint.summary);
   issues.push(...assets.issues);
+  issues.push(...workflow.issues);
 
   if (issues.length === 0) {
     writeJson({ continue: true });

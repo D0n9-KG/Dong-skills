@@ -62,7 +62,8 @@ const projectOpsScripts = {
   "asset-governance": "asset-governance.mjs",
   "health-check": "project-ops-health.mjs",
   "release-check": "release-check.mjs",
-  "state-prune": "state-prune.mjs"
+  "state-prune": "state-prune.mjs",
+  "workflow-state": "workflow-state.mjs"
 };
 
 if (Object.hasOwn(projectOpsScripts, cliMode)) {

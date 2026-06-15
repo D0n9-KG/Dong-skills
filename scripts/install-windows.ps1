@@ -310,6 +310,7 @@ $projectHelperScripts = @(
   "project-ops-health.mjs",
   "release-check.mjs",
   "state-prune.mjs",
+  "workflow-state.mjs",
   "solutions.mjs",
   "session-history.mjs"
 )

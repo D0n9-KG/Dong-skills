@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-15 - Add Comet-Inspired Workflow State Machine
+
+Status: done
+Priority: P0
+Affected area: routing / hooks / bootstrap / recovery / tests / README
+Source: user request to absorb useful ideas from `rpamis/comet` without importing OpenSpec or cross-platform adapters
+Implemented: `.codex-context/workflow-state.yaml` is now a first-class state file; `workflow-state` CLI supports `init`, `status`, `get`, `set`, `transition`, `check`, `next`, `recover`, and `hash`; `using-superpowers`, governance, brainstorming, planning, execution, verification, review, checkpoint, recovery, health checks, bootstrap assets, and tests recognize the workflow state.
+
+Signal:
+Comet's useful part for Dong Skills is not its OpenSpec directory layout, but its script-readable phase state, explicit decision points, guardable phase transitions, deterministic `next` routing, and recovery output. Dong Skills previously had phase gates in prose and Markdown, but no single machine-checkable state contract.
+
+Decision:
+Adapt Comet's state-machine pattern to Codex-only Dong Skills. Keep `.codex-context/` as the source of truth, do not add OpenSpec change directories, do not add Claude/cross-platform adapters, and do not make `workflow-state.yaml` a noisy per-file freshness gate. Use it for phase, next skill, blocking decision, verification/review/checkpoint status, and recovery hash.
+
+Verification:
+`tests/project-ops.test.mjs` covers workflow-state transitions, next routing, recovery, hashing, project hook forwarding, bootstrap installation, health-check validation, and skill documentation gates.
+
 ### 2026-06-14 - Fix Review-Validated Runtime And Workflow Gaps
 
 Status: done

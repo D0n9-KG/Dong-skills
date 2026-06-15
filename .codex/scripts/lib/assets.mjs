@@ -26,6 +26,7 @@ const ACTIVE_STATE_FILES = [
   "dong-skills-outbox.md",
   "solution-index.md",
   "worktree-state.md",
+  "workflow-state.yaml",
   "handoff-summary.md"
 ];
 

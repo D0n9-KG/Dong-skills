@@ -14,6 +14,7 @@ const solutions = path.join(root, "scripts", "solutions.mjs");
 const health = path.join(root, "scripts", "project-ops-health.mjs");
 const assetGovernance = path.join(root, "scripts", "asset-governance.mjs");
 const releaseCheck = path.join(root, "scripts", "release-check.mjs");
+const workflowState = path.join(root, "scripts", "workflow-state.mjs");
 
 function decodePowerShellEncodedCommand(command) {
   const match = String(command).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
@@ -119,7 +120,7 @@ function readyHealthFixture(projectRoot) {
   write(path.join(projectRoot, ".codex", "hooks", "project-ops.mjs"), "console.log('root hook');\n");
   write(path.join(projectRoot, ".codex", "hooks", "launch-project-ops.mjs"), "console.log('launcher');\n");
   write(path.join(projectRoot, ".codex", "scripts", "lib", "core.mjs"), "export const value = 1;\n");
-  for (const scriptName of ["instincts.mjs", "asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["instincts.mjs", "asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs"]) {
     write(path.join(projectRoot, "scripts", scriptName), "#!/usr/bin/env node\n");
   }
   write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n");
@@ -136,7 +137,8 @@ function readyHealthFixture(projectRoot) {
     "verification.md",
     "learned-instincts.md",
     "dong-skills-outbox.md",
-    "solution-index.md"
+    "solution-index.md",
+    "workflow-state.yaml"
   ]) {
     write(path.join(ctx, name), `# ${name}\n`);
   }
@@ -222,6 +224,23 @@ None.
 - Re-detect before cleanup.
 `);
 
+  write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
+phase: execution
+next_skill: executing-plans
+auto_next: true
+decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
+
   write(path.join(ctx, "handoff-summary.md"), `# Handoff Summary
 
 ## Objective
@@ -270,6 +289,9 @@ test("brainstorming skill preserves upstream continuation loop", () => {
   assert.match(skill, /Do not end a brainstorming turn by only saying that files were updated/);
   assert.match(skill, /compare 2-3 viable approaches/);
   assert.match(skill, /## Final Spec Gate/);
+  assert.match(skill, /workflow-state transition spec-living/);
+  assert.match(skill, /workflow-state transition spec-ready/);
+  assert.match(skill, /workflow-state transition spec-approved/);
   assert.match(skill, /Pending written-spec approval/);
   assert.match(skill, /fresh session could write a plan from the spec file/);
   assert.match(skill, /written-spec approval/);
@@ -291,6 +313,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(writing, /## Goal Mode Objective Draft/);
   assert.match(writing, /## Runtime Constraints/);
   assert.match(writing, /## Checkpoint Cadence/);
+  assert.match(writing, /workflow-state transition plan-ready/);
 
   const debugging = readSkill("systematic-debugging");
   assert.match(debugging, /Reproduction is the entry ticket to fixing/);
@@ -311,13 +334,22 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /## Stop Conditions/);
   assert.match(executing, /create_goal/);
   assert.match(executing, /Do not simulate Goal mode/);
+  assert.match(executing, /workflow-state check execution/);
+  assert.match(executing, /workflow-state transition execution-complete/);
 
   const router = readSkill("using-superpowers");
   assert.match(router, /written spec is approved/);
+  assert.match(router, /Workflow State Gate/);
+  assert.match(router, /workflow-state next/);
+  assert.match(router, /Decision Point Protocol/);
   assert.match(router, /Execution Mode/);
   assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
   assert.match(router, /Codex Goal mode requires an explicit user choice/);
   assert.match(router, /actual goal mechanism/);
+
+  const governance = readSkill("codex-project-governance");
+  assert.match(governance, /workflow-state\.yaml/);
+  assert.match(governance, /workflow-state transition/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -455,7 +487,9 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.match(gitignore, /\.codex-context\/raw\/\*/);
   assert.match(gitignore, /!\.codex-context\/raw\/\.gitkeep/);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "core.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "workflow.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "workflow-state.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "asset-governance.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "solutions.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "session-history.mjs")), true);
@@ -463,7 +497,9 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "worktree-state.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "workflow-state.yaml")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "dong-skills-outbox.md")), true);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8"), /next_skill: codex-codebase-onboarding/);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Approval Status/);
   const planProgress = fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8");
   assert.match(planProgress, /## Spec Approval/);
@@ -483,9 +519,11 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   }).trim();
   const context = JSON.parse(recovery).hookSpecificOutput.additionalContext;
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
-  assert.match(context, /8\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /10\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
-  assert.match(context, /11\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /3\. \.codex-context\/workflow-state\.yaml/);
+  assert.match(context, /9\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /11\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
+  assert.match(context, /12\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /Workflow recovery:/);
 });
 
 test("hook launcher dispatches using hook input cwd rather than launcher cwd", () => {
@@ -505,6 +543,75 @@ test("hook launcher dispatches using hook input cwd rather than launcher cwd", (
   }).trim();
 
   assert.deepEqual(JSON.parse(out), { root: "target" });
+});
+
+test("workflow-state exposes deterministic transition, next, recover, and hash commands", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+
+  let out = execFileSync(process.execPath, [workflowState, project, "init"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Initialized workflow state/);
+
+  out = execFileSync(process.execPath, [workflowState, project, "transition", "brainstorming-start"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /phase: brainstorming/);
+  assert.match(out, /next_skill: brainstorming/);
+
+  out = execFileSync(process.execPath, [workflowState, project, "transition", "spec-ready"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /decision_required: written-spec-approval/);
+
+  out = execFileSync(process.execPath, [workflowState, project, "next"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /NEXT: manual/);
+  assert.match(out, /SKILL: brainstorming/);
+  assert.match(out, /written-spec-approval/);
+
+  const state = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  assert.match(state, /phase: spec/);
+  assert.match(state, /spec_status: pending-approval/);
+
+  out = execFileSync(process.execPath, [workflowState, project, "recover"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Workflow recovery/);
+  assert.match(out, /next: manual/);
+
+  out = execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /CONTEXT_HASH: [a-f0-9]{64}/);
+  assert.match(fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8"), /handoff_hash: [a-f0-9]{64}/);
+});
+
+test("project hook forwards workflow-state commands", () => {
+  const project = tempProject();
+
+  const out = execFileSync(process.execPath, [hook, "workflow-state", project, "next"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /NEXT: auto/);
+  assert.match(out, /SKILL: codex-codebase-onboarding/);
 });
 
 test("health check reports linked worktree diagnostics without failing", () => {
@@ -741,6 +848,32 @@ Continue.
   assert.match(out, /Result: pass/);
 });
 
+test("health check rejects invalid workflow state", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: flying
+next_skill: executing-plans
+auto_next: true
+decision_required: none
+`);
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [health, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /workflow-state\.yaml invalid phase: flying/);
+    assert.match(String(error.stdout), /workflow-state\.yaml missing field: spec_status/);
+    assert.match(String(error.stdout), /workflow-state\.yaml missing field: execution_approval/);
+  }
+  assert.equal(failed, true);
+});
+
 test("release check reports text readability mojibake markers", () => {
   const project = tempProject();
   readyHealthFixture(project);
@@ -810,14 +943,33 @@ Resume final task.
   write(path.join(project, ".codex-context", "solution-index.md"), "# Solution Index\n\n## Knowledge Store\n- docs/solutions present: yes\n");
   write(path.join(project, ".codex-context", "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- None.\n");
   write(path.join(project, ".codex-context", "worktree-state.md"), "# Worktree State\n\n## Current Workspace\n- Role: primary-checkout\n");
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: delivery
+next_skill: verification-before-completion
+auto_next: true
+decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pass
+review_status: done
+checkpoint_status: done
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
 
   const output = runHook(project, { hook_event_name: "SessionStart" });
   const context = output.hookSpecificOutput.additionalContext;
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
-  assert.match(context, /8\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /10\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
-  assert.match(context, /11\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /3\. \.codex-context\/workflow-state\.yaml/);
+  assert.match(context, /9\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /11\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
+  assert.match(context, /12\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
   assert.match(context, /Worktree: role=unknown/);
+  assert.match(context, /Workflow recovery:/);
+  assert.match(context, /phase: delivery/);
   assert.match(context, /## Git Checkpoint/);
   assert.match(context, /## Next Action\nResume final task\./);
   assert.match(context, /## Files To Re-read First\n- important\.md/);

@@ -5,21 +5,23 @@ import { gitCheckpointStatus } from "./git.mjs";
 import { learningStatus } from "./learning.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 import { detectWorktree, worktreeSummary } from "./worktree.mjs";
+import { recoverWorkflowContext } from "./workflow.mjs";
 
 const RECOVERY_ORDER = [
   "Recovery order:",
   "1. .codex-context/handoff-summary.md",
   "2. .codex-context/worktree-state.md",
-  "3. .codex-context/current-state.md",
-  "4. .codex-context/project-map.md",
-  "5. .codex-context/spec.md",
-  "6. .codex-context/plan-progress.md",
-  "7. .codex-context/artifact-index.md",
-  "8. .codex-context/solution-index.md",
-  "9. .codex-context/learned-instincts.md",
-  "10. .codex-context/dong-skills-outbox.md only when discussing Dong Skills improvements",
-  "11. STRATEGY.md, CONCEPTS.md, or relevant docs/solutions entries only when the task needs them",
-  "12. latest user instruction"
+  "3. .codex-context/workflow-state.yaml",
+  "4. .codex-context/current-state.md",
+  "5. .codex-context/project-map.md",
+  "6. .codex-context/spec.md",
+  "7. .codex-context/plan-progress.md",
+  "8. .codex-context/artifact-index.md",
+  "9. .codex-context/solution-index.md",
+  "10. .codex-context/learned-instincts.md",
+  "11. .codex-context/dong-skills-outbox.md only when discussing Dong Skills improvements",
+  "12. STRATEGY.md, CONCEPTS.md, or relevant docs/solutions entries only when the task needs them",
+  "13. latest user instruction"
 ].join("\n");
 
 function excerpt(ctx, name, max) {
@@ -73,6 +75,9 @@ export function sessionRecoveryContext(root, ctx, eventName) {
     "",
     "Handoff excerpt:",
     handoffRecoveryExcerpt(ctx),
+    "",
+    "Workflow recovery:",
+    recoverWorkflowContext(root, ctx),
     "",
     "Current state excerpt:",
     excerpt(ctx, REQUIRED_FILES.current, 1000),

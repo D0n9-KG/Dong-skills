@@ -66,6 +66,7 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `learned-instincts.md`
 - `dong-skills-outbox.md`
 - `worktree-state.md`
+- `workflow-state.yaml`
 - `handoff-summary.md`
 
 Use `.codex-context/raw/` for raw logs or large outputs.
@@ -76,6 +77,8 @@ Use `.codex-context/dong-skills-outbox.md` only for Dong Skills improvement cand
 Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions/` and `CONCEPTS.md`; do not paste full solution docs into active state.
 
 Use `.codex-context/worktree-state.md` to record whether the current workspace is the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, a submodule, or unknown. Refresh it before execution, checkpoint, branch completion, cleanup, or whenever hook UI source paths differ from the actual Git root.
+
+Use `.codex-context/workflow-state.yaml` as the script-readable phase state. Before routing non-trivial work, run `node .codex/hooks/project-ops.mjs workflow-state next` or read the file directly. Update it at phase boundaries with `workflow-state transition <event>` so compaction recovery can identify the current phase, blocking decision, and next skill.
 
 If present:
 
@@ -117,16 +120,17 @@ After compaction, recover in this order:
 
 1. `.codex-context/handoff-summary.md`
 2. `.codex-context/worktree-state.md`
-3. `.codex-context/current-state.md`
-4. `.codex-context/project-map.md`
-5. `.codex-context/spec.md`
-6. `.codex-context/plan-progress.md`
-7. `.codex-context/artifact-index.md`
-8. `.codex-context/solution-index.md`
-9. `.codex-context/learned-instincts.md`
-10. `.codex-context/dong-skills-outbox.md` only when discussing Dong Skills improvements
-11. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
-12. latest user instruction
+3. `.codex-context/workflow-state.yaml`
+4. `.codex-context/current-state.md`
+5. `.codex-context/project-map.md`
+6. `.codex-context/spec.md`
+7. `.codex-context/plan-progress.md`
+8. `.codex-context/artifact-index.md`
+9. `.codex-context/solution-index.md`
+10. `.codex-context/learned-instincts.md`
+11. `.codex-context/dong-skills-outbox.md` only when discussing Dong Skills improvements
+12. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
+13. latest user instruction
 
 ## Completion
 

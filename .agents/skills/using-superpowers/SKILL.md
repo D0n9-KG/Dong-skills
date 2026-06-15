@@ -13,6 +13,24 @@ Before any non-trivial action, choose the relevant process skill and use it. A n
 
 Direct execution is allowed only for tiny mechanical edits with clear acceptance criteria.
 
+## Workflow State Gate
+
+For a project with Dong Skills installed, read `.codex-context/workflow-state.yaml` or run this before routing:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state next
+```
+
+Use the output contract:
+
+- `NEXT: auto` + `SKILL: <skill>` means load that skill and continue from the recorded phase.
+- `NEXT: manual` means a blocking decision, stale state, or manual handoff is required; ask the user only for that decision and stop.
+- `NEXT: done` means the workflow is complete; use verification/checkpoint/handoff only if delivery evidence still needs refresh.
+
+If the file is missing, run `codex-codebase-onboarding` or `node .codex/hooks/project-ops.mjs workflow-state init` before continuing. If the state conflicts with the latest user instruction, the latest user instruction wins, but update `workflow-state.yaml` with `workflow-state transition <event>` or `workflow-state set <field> <value>` before moving on.
+
+Do not route from chat memory alone when a valid workflow state exists.
+
 ## Phase Order
 
 For project work, keep this order:
@@ -65,9 +83,22 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 - If the user says "continue" after a question, treat it as continuing the current phase, not approval to skip later gates.
 - If there is doubt, ask one short question and wait.
 
+## Decision Point Protocol
+
+Decision points are blocking points. They include written-spec approval, execution-mode approval, verification failure handling, branch handling, archive confirmation, scope expansion, and any user choice recorded in `workflow-state.yaml` as `decision_required`.
+
+At a decision point:
+
+- State exactly what decision is being made.
+- Present mutually exclusive, actionable options.
+- Do not choose from historical preference, defaults, or "the user probably wants this."
+- Do not write the chosen state fields or execute the branch until the user explicitly chooses.
+- After the user chooses, update `workflow-state.yaml` and the matching `.codex-context` state files, then continue.
+
 ## State Discipline
 
 - Before edits: know the relevant files and update `artifact-index.md` when they matter.
+- At phase boundaries: update `.codex-context/workflow-state.yaml` with the phase, `next_skill`, and `decision_required`.
 - During work: keep `plan-progress.md` and `current-state.md` current.
 - During Goal mode work: periodically re-read `spec.md` and `plan-progress.md`, compare progress against acceptance criteria, and stop on ambiguity, scope change, repeated verification failure, destructive action, missing user decision, or state contradiction.
 - In or near a worktree: keep `worktree-state.md` current before execution, checkpoint, merge, PR, discard, or cleanup.

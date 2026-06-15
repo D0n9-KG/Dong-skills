@@ -15,6 +15,7 @@ export const REQUIRED_FILES = {
   dongSkillsOutbox: "dong-skills-outbox.md",
   solutions: "solution-index.md",
   worktree: "worktree-state.md",
+  workflow: "workflow-state.yaml",
   handoff: "handoff-summary.md"
 };
 
@@ -293,6 +294,22 @@ Do not treat entries here as project instincts, project rules, or solution memor
 ## Resume Instructions
 - Re-run \`git rev-parse --show-toplevel\`, \`git rev-parse --git-dir\`, \`git rev-parse --git-common-dir\`, and \`git branch --show-current\` before branch completion or cleanup.
 - If this session resumes from a Codex App worktree, update this file before editing project files.
+`,
+  "workflow-state.yaml": `workflow: standard
+phase: discovery
+next_skill: codex-codebase-onboarding
+auto_next: true
+decision_required: none
+spec_status: not-started
+plan_status: not-started
+execution_mode: pending
+execution_approval: pending
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: not-started
+note: initialized
 `,
   "handoff-summary.md": `# Handoff Summary
 

@@ -18,6 +18,7 @@ const REQUIRED_CONTEXT_FILES = [
   "dong-skills-outbox.md",
   "solution-index.md",
   "worktree-state.md",
+  "workflow-state.yaml",
   "handoff-summary.md"
 ];
 
@@ -220,6 +221,23 @@ function headingLabel(headings) {
   return headings.join(" or ");
 }
 
+function parseFlatYaml(text) {
+  const state = {};
+  for (const line of String(text || "").split(/\r?\n/)) {
+    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (match) state[match[1]] = match[2].trim().replace(/^['"]|['"]$/g, "");
+  }
+  return state;
+}
+
+function requireWorkflowValue(state, field, allowed, issues) {
+  if (!state[field]) {
+    issues.push(`workflow-state.yaml missing field: ${field}`);
+  } else if (allowed && !allowed.includes(state[field])) {
+    issues.push(`workflow-state.yaml invalid ${field}: ${state[field]}`);
+  }
+}
+
 function decodePowerShellEncodedCommand(value) {
   const match = String(value).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
   if (!match) return "";
@@ -359,6 +377,30 @@ function checkContext(root, issues) {
       issues.push(`worktree-state.md missing section: ${heading}`);
     }
   }
+
+  const workflow = parseFlatYaml(readText(path.join(ctx, "workflow-state.yaml")));
+  requireWorkflowValue(workflow, "workflow", ["standard", "hotfix", "tweak"], issues);
+  requireWorkflowValue(workflow, "phase", [
+    "discovery",
+    "brainstorming",
+    "spec",
+    "planning",
+    "execution",
+    "debugging",
+    "verification",
+    "review",
+    "delivery",
+    "handoff",
+    "blocked",
+    "complete"
+  ], issues);
+  requireWorkflowValue(workflow, "next_skill", null, issues);
+  requireWorkflowValue(workflow, "decision_required", null, issues);
+  requireWorkflowValue(workflow, "spec_status", null, issues);
+  requireWorkflowValue(workflow, "plan_status", null, issues);
+  requireWorkflowValue(workflow, "execution_mode", null, issues);
+  requireWorkflowValue(workflow, "execution_approval", null, issues);
+  requireWorkflowValue(workflow, "verify_result", null, issues);
 }
 
 function checkAssetParity(root, issues) {
@@ -397,6 +439,10 @@ function checkAssetParity(root, issues) {
     [
       path.join(root, "scripts", "state-prune.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "state-prune.mjs")
+    ],
+    [
+      path.join(root, "scripts", "workflow-state.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "workflow-state.mjs")
     ],
     [
       path.join(root, "scripts", "solutions.mjs"),
@@ -456,7 +502,7 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "lib", "core.mjs"))) {
     issues.push("Missing .codex/scripts/lib/core.mjs required by split project hook");
   }
-  for (const scriptName of ["asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs"]) {
     if (!fs.existsSync(path.join(root, ".codex", "scripts", scriptName)) &&
         !fs.existsSync(path.join(root, "scripts", scriptName))) {
       issues.push(`Missing project ops helper script: ${scriptName}`);

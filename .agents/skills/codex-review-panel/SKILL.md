@@ -117,3 +117,4 @@ After a meaningful review:
 - update `.codex-context/decisions.md` for accepted or rejected review decisions that affect future work
 - update `.codex-context/plan-progress.md` when review creates follow-up tasks
 - update `.codex-context/verification.md` when fixes or evidence are produced
+- update `.codex-context/workflow-state.yaml` with `workflow-state transition review-complete` after meaningful review passes, or `review-skipped` when a low-risk skip is explicitly recorded

@@ -42,6 +42,12 @@ Append new entries to the end of `.codex-context/verification.md` under `Command
 
 If verification fails, return to `systematic-debugging` before further fixes.
 
+When workflow state is available, update it after recording verification:
+
+- Passing verification: `node .codex/hooks/project-ops.mjs workflow-state transition verification-pass`
+- Explicit unverified gap recorded: `node .codex/hooks/project-ops.mjs workflow-state transition verification-gap-recorded`
+- Failed verification: `node .codex/hooks/project-ops.mjs workflow-state transition verification-fail`
+
 ## Completion Rule
 
 Before saying work is complete, run a fresh verification command in the current turn or clearly state the remaining gap. Older runs are context, not proof.
