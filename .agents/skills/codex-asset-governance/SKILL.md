@@ -36,6 +36,7 @@ Inspect:
 - `STRATEGY.md`, `CONCEPTS.md`
 - `.agents/skills/**/SKILL.md`
 - `.codex/hooks/**`, `.codex/scripts/**`, `scripts/**`, tests, and generated evidence paths
+- deliberate simplification markers: `dong-debt: <ceiling>; revisit when <trigger>`
 
 Do not treat raw runtime data as active knowledge. Do not commit raw observations, logs, backups, local paths, or private evidence.
 
@@ -61,6 +62,7 @@ Dry-run is the default. `--apply` only prunes generated `precompact-auto-*.md` r
 - `observations.jsonl`: learning-candidate input. Review with `codex-learning-memory`; do not prune with generic raw cleanup.
 - `precompact-auto-*.md`: backup/audit snapshot. Keep the newest few, and prune old ones by count or age.
 - UI screenshots, logs, command dumps, and generated evidence: keep in `.codex-context/raw/` only while needed for verification or handoff; summarize durable facts into `verification.md`, `handoff-summary.md`, or `docs/solutions/`, then prune raw files.
+- `dong-debt:` markers: active code comments for accepted simplifications. They need a ceiling and a revisit trigger; markers without a trigger are lifecycle risk, not active memory.
 
 ## Update Matrix
 
@@ -71,6 +73,7 @@ Dry-run is the default. `--apply` only prunes generated `precompact-auto-*.md` r
 - Code concentration, flat directories, duplicate concepts, or orphan scripts: use `codex-architecture-governance` before restructuring.
 - Context pressure: use `codex-context-budget` and keep archives/raw/full solutions on demand.
 - Dong Skills improvement ideas: update `docs/improvements/backlog.md`, not project instincts.
+- Deliberate simplification debt: use `codex-simplicity-review` to decide whether to remove, keep, or upgrade the shortcut; keep valid `dong-debt:` markers near the code they explain.
 
 ## Milestone Sweep
 

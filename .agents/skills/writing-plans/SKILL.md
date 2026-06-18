@@ -57,24 +57,35 @@ For bug fixes, behavior changes, API changes, migrations, and user-visible workf
 - If a failing automated test is impractical, write the exact manual reproduction and the verification gap.
 - Do not plan implementation-only behavior changes without either test coverage or a recorded reason.
 
+## Simplicity Gate
+
+Before choosing an implementation path, run this gate and record the result in the plan's `Runtime Constraints`, `Execution Note`, or task notes:
+
+1. **Can this be avoided?** If the approved outcome can be reached by deleting, configuring, documenting, or doing nothing, plan that instead of new code.
+2. **Does the standard library already do it?** Prefer language/runtime standard library behavior over custom code.
+3. **Does the native platform already do it?** Prefer browser, OS, database, framework, shell, or built-in service features over dependencies or custom abstractions.
+
+The gate is a constraint, not a research project. If a higher rung clearly works, use it and move on. Do not add the Ponytail one-line/minimum-implementation rungs to the mandatory Dong Skills gate unless the user explicitly asks for them.
+
 ## Plan Requirements
 
 1. Re-read the approved spec or clear requirements.
 2. Map files to inspect, create, modify, and leave alone.
 3. Identify module boundaries and decomposition before tasks.
-4. Map every acceptance criterion to at least one task and one verification step.
-5. Break work into bite-sized tasks. Prefer 2-5 minute steps for risky code changes: write/adjust test, run expected failure, implement minimal change, run expected pass, update docs/state, checkpoint.
-6. Include exact commands and expected success signals where known.
-7. Include test scenarios: happy path, edge/error path, regression path, and any explicit non-goal that must remain unchanged.
-8. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
-9. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
-10. State that Codex Goal mode requires a real goal mechanism in the current Codex session, such as available `create_goal` and `update_goal` tools. If that mechanism is absent, Goal mode is not selectable.
-11. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
-12. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, and rollback notes.
-13. Record risks, assumptions, rollback notes, and open questions.
-14. Update `.codex-context/artifact-index.md` with files that matter.
-15. Review the plan for gaps before offering execution.
-16. When the plan is ready but execution is not yet approved, run `node .codex/hooks/project-ops.mjs workflow-state transition plan-ready`.
+4. Apply the Simplicity Gate: avoid building, standard library, native platform.
+5. Map every acceptance criterion to at least one task and one verification step.
+6. Break work into bite-sized tasks. Prefer 2-5 minute steps for risky code changes: write/adjust test, run expected failure, implement minimal change, run expected pass, update docs/state, checkpoint.
+7. Include exact commands and expected success signals where known.
+8. Include test scenarios: happy path, edge/error path, regression path, and any explicit non-goal that must remain unchanged.
+9. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
+10. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
+11. State that Codex Goal mode requires a real goal mechanism in the current Codex session, such as available `create_goal` and `update_goal` tools. If that mechanism is absent, Goal mode is not selectable.
+12. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
+13. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, rollback notes, and the Simplicity Gate decision.
+14. Record risks, assumptions, rollback notes, and open questions.
+15. Update `.codex-context/artifact-index.md` with files that matter.
+16. Review the plan for gaps before offering execution.
+17. When the plan is ready but execution is not yet approved, run `node .codex/hooks/project-ops.mjs workflow-state transition plan-ready`.
 
 ## Plan Header
 
@@ -120,6 +131,7 @@ Goal mode is unavailable if the current Codex session does not expose an actual 
 - Keep `.codex-context/plan-progress.md`, `artifact-index.md`, `verification.md`, `current-state.md`, and `handoff-summary.md` current.
 - Stop on ambiguity, failed verification loops, scope changes, destructive actions, missing credentials, missing user decisions, or architecture conflicts.
 - Do not silently expand scope beyond the approved spec.
+- Apply the Simplicity Gate before adding code, dependencies, abstractions, scripts, docs, or state files: can avoid building; standard library; native platform.
 - Re-read the spec and plan at milestones and compare progress against acceptance criteria.
 
 ## Checkpoint Cadence
@@ -138,6 +150,7 @@ Goal mode is unavailable if the current Codex session does not expose an actual 
 ## Execution Note
 - Read first:
 - Do not touch:
+- Simplicity Gate:
 - Test-first / characterization-first requirement:
 - Preferred verification:
 - Rollback:
@@ -184,6 +197,7 @@ Before offering execution:
 - Risks and open questions are captured in `.codex-context/risks.md` and `.codex-context/open-questions.md`.
 - `.codex-context/plan-progress.md` names exactly one `Current Step`.
 - `.codex-context/plan-progress.md` records `Execution Mode`, `Goal Mode Objective`, `Runtime Constraints`, and `Checkpoint Cadence`.
+- The Simplicity Gate result is recorded for any new code, dependency, abstraction, script, doc, or state asset.
 - Codex Goal mode is presented as an explicit user choice, not the default.
 
 ## Execution Handoff

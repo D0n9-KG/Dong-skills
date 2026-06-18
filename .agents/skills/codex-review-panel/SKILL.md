@@ -44,6 +44,7 @@ Always run these lenses:
 - Correctness: broken behavior, edge cases, state, data loss.
 - Testing: missing unit/e2e proof, weak assertions, unverified acceptance criteria.
 - Maintainability: coupling, unnecessary abstraction, large-file drift, naming, locality.
+- Simplicity: whether the diff should avoid building, use standard library behavior, or use native platform features instead of custom code, new dependencies, or extra abstractions.
 - Project Standards: `AGENTS.md`, existing conventions, architecture decisions.
 
 Add conditional lenses only when the diff or plan justifies them:
@@ -64,8 +65,9 @@ Add conditional lenses only when the diff or plan justifies them:
 3. Review from each persona separately. Keep findings grounded in file/line evidence.
 4. Deduplicate findings. Merge duplicates under the highest justified severity.
 5. Validate cheap factual claims directly against code or docs.
-6. Separate actionable findings from residual risks and test gaps.
-7. If fixes are in scope, apply only scoped fixes, run targeted verification, and update `.codex-context/verification.md`.
+6. For the Simplicity lens, use the same tags as `codex-simplicity-review` when applicable: `delete`, `stdlib`, `native`, `yagni`, `shrink`, or `dong-debt`.
+7. Separate actionable findings from residual risks and test gaps.
+8. If fixes are in scope, apply only scoped fixes, run targeted verification, and update `.codex-context/verification.md`.
 
 If a finding requires scope, architecture, or UX changes beyond the approved spec/plan, stop implementation and route back to `brainstorming` or `writing-plans`. Do not silently expand scope during review cleanup.
 
@@ -85,6 +87,7 @@ For specs and plans, use these personas:
 - Coherence: contradictions, terminology drift, unclear acceptance criteria.
 - Feasibility: whether the approach survives contact with the repo.
 - Scope Guardian: creep, premature abstraction, hidden non-goals.
+- Simplicity Gate: whether the plan records avoid-building, standard library, and native platform alternatives before implementation.
 - Security Lens: auth/data/API risks in the plan.
 - Design/Product Lens: user flow, interaction states, value alignment.
 - Adversarial Document Reviewer: unstated assumptions and failure scenarios.

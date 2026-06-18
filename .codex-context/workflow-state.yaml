@@ -1,6 +1,6 @@
 workflow: standard
-phase: complete
-next_skill: none
+phase: delivery
+next_skill: verification-before-completion
 auto_next: true
 decision_required: none
 spec_status: approved
@@ -10,6 +10,6 @@ execution_approval: approved-traditional
 verify_result: pass
 review_status: done
 checkpoint_status: done
-handoff_hash: 10ad9a2fd3404a183ce6d649c3a88525f27fe8e48b2ddf0eb401a61c62144884
-updated_at: 2026-06-15T16:12:16.530Z
+handoff_hash: 6bf7ce5da3eeeb3502001ae7e331969a61e48115f461cd39af97f9f3f43c5a0f
+updated_at: 2026-06-18T05:25:25.337Z
 note: Context hash refreshed

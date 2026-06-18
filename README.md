@@ -4,7 +4,7 @@ Dong Skills is a Codex project-operations skill kit for long-running software wo
 
 Current scope: Dong Skills is maintained as an OpenAI Codex-specific kit. Claude Code compatibility would require a separate adapter for `.claude/skills`, `CLAUDE.md`, and Claude hook settings; it is not part of this Codex-only release line.
 
-It combines a curated subset of [Superpowers](https://github.com/obra/superpowers), learning/onboarding ideas adapted from [ECC](https://github.com/affaan-m/ECC), context-governance patterns inspired by [agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering), workflow ideas adapted from [Compound Engineering](https://github.com/everyinc/compound-engineering-plugin), and a Codex-only phase-state pattern adapted from [Comet](https://github.com/rpamis/comet).
+It combines a curated subset of [Superpowers](https://github.com/obra/superpowers), learning/onboarding ideas adapted from [ECC](https://github.com/affaan-m/ECC), context-governance patterns inspired by [agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering), workflow ideas adapted from [Compound Engineering](https://github.com/everyinc/compound-engineering-plugin), a Codex-only phase-state pattern adapted from [Comet](https://github.com/rpamis/comet), and anti-overengineering review ideas adapted from [Ponytail](https://github.com/DietrichGebert/ponytail).
 
 ## 中文
 
@@ -158,6 +158,7 @@ node scripts/release-check.mjs "."
 - Context governance ideas are adapted from [muratcankoylan/agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering).
 - Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).
 - Workflow-state ideas are adapted from [rpamis/comet](https://github.com/rpamis/comet).
+- Simplicity review ideas are adapted from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail).
 - License files are included under `licenses/`.
 
 ## English
@@ -194,6 +195,7 @@ It helps with:
 - Project hooks inject recovery context, check compaction readiness, track changed artifacts, and block final stopping when state is stale. Automatic PreCompact prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, and writes a raw snapshot as backup.
 - `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It uses Keep / Update / Consolidate / Replace / Delete / Stale / Raw-Prune classifications. Dry-run is default; `--apply` only prunes generated `precompact-auto-*.md` raw snapshots that exceed retention.
 - `codex-review-panel` adds persona-based review.
+- `codex-simplicity-review` adds an anti-overengineering pass for avoid-building, standard library, native platform, unnecessary abstractions, and deliberate simplification debt.
 - `codex-evidence-capture` records real behavior evidence for observable changes.
 - `release-check` runs syntax, tests, privacy, and runtime-artifact checks.
 

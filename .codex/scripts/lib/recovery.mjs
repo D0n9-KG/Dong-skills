@@ -1,11 +1,12 @@
 import path from "node:path";
+import { assetGovernanceStatus } from "./assets.mjs";
 import { readText } from "./core.mjs";
 import { sectionContent, meaningful } from "./markdown.mjs";
 import { gitCheckpointStatus } from "./git.mjs";
 import { learningStatus } from "./learning.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 import { detectWorktree, worktreeSummary } from "./worktree.mjs";
-import { recoverWorkflowContext } from "./workflow.mjs";
+import { recoverWorkflowContext, workflowStatus } from "./workflow.mjs";
 
 const RECOVERY_ORDER = [
   "Recovery order:",
@@ -57,6 +58,23 @@ function handoffRecoveryExcerpt(ctx) {
   return excerpt(ctx, REQUIRED_FILES.handoff, 1800);
 }
 
+function hookStatus(root, ctx) {
+  const workflow = workflowStatus(root, ctx);
+  const learning = learningStatus(ctx);
+  const assets = assetGovernanceStatus(root, ctx);
+  const checkpoint = gitCheckpointStatus(root, ctx, 0);
+  const state = workflow.state || {};
+
+  return [
+    "Hook status:",
+    `- Actual Git root: ${root}`,
+    `- Workflow: phase=${state.phase || "missing"} next_skill=${state.next_skill || "missing"} decision_required=${state.decision_required || "missing"} issues=${workflow.issues.length}`,
+    `- Learning: ${learning.ok ? "ok" : "pending-review"} issues=${learning.issues.length}`,
+    `- Assets: ${assets.ok ? "ok" : "review-required"} issues=${assets.issues.length} advisories=${assets.advisories.length}`,
+    `- Checkpoint: ${checkpoint.ok ? "ok" : "review-required"}`
+  ].join("\n");
+}
+
 export function sessionRecoveryContext(root, ctx, eventName) {
   const learning = learningStatus(ctx);
   const learningSummary = learning.ok
@@ -67,6 +85,7 @@ export function sessionRecoveryContext(root, ctx, eventName) {
 
   const parts = [
     "Codex Project Ops hooks are active.",
+    hookStatus(root, ctx),
     RECOVERY_ORDER,
     "Before editing, keep artifact-index.md current. Before completion, update verification.md, Git Checkpoint, and handoff-summary.md.",
     workspaceSummary,

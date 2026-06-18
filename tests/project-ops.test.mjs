@@ -321,6 +321,11 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const writing = readSkill("writing-plans");
   assert.match(writing, /## Scope Check/);
   assert.match(writing, /## Test-First Default/);
+  assert.match(writing, /## Simplicity Gate/);
+  assert.match(writing, /Can this be avoided/);
+  assert.match(writing, /standard library already do it/);
+  assert.match(writing, /native platform already do it/);
+  assert.match(writing, /Do not add the Ponytail one-line\/minimum-implementation rungs/);
   assert.match(writing, /## Execution Note/);
   assert.match(writing, /2-5 minute steps/);
   assert.match(writing, /## Acceptance Mapping/);
@@ -339,6 +344,11 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.doesNotMatch(debugging, /'"'"'/);
 
   const executing = readSkill("executing-plans");
+  assert.match(executing, /Run the Simplicity Gate before adding code/);
+  assert.match(executing, /can the approved outcome be reached by avoiding the new thing/);
+  assert.match(executing, /does the standard library already do it/);
+  assert.match(executing, /does the native platform already do it/);
+  assert.match(executing, /dong-debt:/);
   assert.match(executing, /Run Test Discovery before editing implementation files/);
   assert.match(executing, /For behavior-changing tasks, add\/update the planned test/);
   assert.match(executing, /## Review And Shipping Gate/);
@@ -358,6 +368,8 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /written spec is approved/);
   assert.match(router, /Workflow State Gate/);
   assert.match(router, /workflow-state next/);
+  assert.match(router, /codex-simplicity-review/);
+  assert.match(router, /can avoid building, standard library, native platform/);
   assert.match(router, /Decision Point Protocol/);
   assert.match(router, /Execution Mode/);
   assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
@@ -367,6 +379,8 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const governance = readSkill("codex-project-governance");
   assert.match(governance, /workflow-state\.yaml/);
   assert.match(governance, /workflow-state transition/);
+  assert.match(governance, /codex-simplicity-review/);
+  assert.match(governance, /Hook output includes a compact status line/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -375,6 +389,16 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const reviewPanel = readSkill("codex-review-panel");
   assert.match(reviewPanel, /## Mandatory Panel Triggers/);
   assert.match(reviewPanel, /verification gaps, manual-only evidence/);
+  assert.match(reviewPanel, /Simplicity: whether the diff should avoid building/);
+  assert.match(reviewPanel, /delete`, `stdlib`, `native`, `yagni`, `shrink`, or `dong-debt/);
+
+  const simplicity = readSkill("codex-simplicity-review");
+  assert.match(simplicity, /## Simplicity Gate/);
+  assert.match(simplicity, /Avoid building/);
+  assert.match(simplicity, /Standard library/);
+  assert.match(simplicity, /Native platform/);
+  assert.match(simplicity, /Do not make one-line\/minimum-implementation checks mandatory/);
+  assert.match(simplicity, /dong-debt: <ceiling>; revisit when <trigger>/);
 
   const worktree = readSkill("codex-worktree-governance");
   assert.match(worktree, /## Branch Finishing Menu/);
@@ -928,6 +952,11 @@ test("Stop explains stale Git Checkpoint handoff evidence", () => {
 
   const output = runHook(project, { hook_event_name: "Stop" });
   assert.equal(output.decision, "block");
+  assert.match(output.reason, /Hook status:/);
+  assert.match(output.reason, /Actual Git root:/);
+  assert.match(output.reason, /Latest changed file: work\.txt/);
+  assert.match(output.hookSpecificOutput.additionalContext, /Hook status:/);
+  assert.match(output.hookSpecificOutput.additionalContext, /Workflow: phase=execution next_skill=executing-plans/);
   assert.match(output.reason, /handoff-summary\.md is older than changed files/);
   assert.match(output.reason, /latest changed file: work\.txt/);
   assert.match(output.reason, /refresh handoff-summary\.md after verification\/artifact\/current-state updates/);
@@ -984,6 +1013,34 @@ Approved by fixture.
 
 ## Next Step
 Continue.
+`);
+
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Result: pass/);
+});
+
+test("health check accepts codex-simplicity-review as workflow next skill", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: review
+next_skill: codex-simplicity-review
+auto_next: true
+decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pass
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
 `);
 
   const out = execFileSync(process.execPath, [health, project], {
@@ -1178,6 +1235,10 @@ note: fixture
 
   const output = runHook(project, { hook_event_name: "SessionStart" });
   const context = output.hookSpecificOutput.additionalContext;
+  assert.match(context, /Hook status:/);
+  assert.match(context, /Actual Git root:/);
+  assert.match(context, /Workflow: phase=delivery next_skill=verification-before-completion decision_required=none issues=0/);
+  assert.match(context, /Assets: ok/);
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
   assert.match(context, /3\. \.codex-context\/workflow-state\.yaml/);
   assert.match(context, /9\. \.codex-context\/solution-index\.md/);
@@ -1213,6 +1274,9 @@ test("PostToolUse blocks when artifact index is stale after project file changes
   const output = runHook(project, { hook_event_name: "PostToolUse" });
   assert.equal(output.decision, "block");
   assert.match(output.reason, /artifact-index\.md is not fresh/);
+  assert.match(output.reason, /Hook status:/);
+  assert.match(output.reason, /Actual Git root:/);
+  assert.match(output.reason, /Latest changed file: work\.txt/);
   assert.match(output.reason, /work\.txt/);
 });
 
@@ -1378,6 +1442,33 @@ test("asset-governance prunes only excess precompact raw snapshots", () => {
   const remaining = fs.readdirSync(raw);
   assert.equal(remaining.filter((name) => /^precompact-auto-/.test(name)).length, 3);
   assert.equal(remaining.includes("observations.jsonl"), true);
+});
+
+test("asset-governance reports dong-debt markers and missing revisit triggers", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "src", "shortcut.mjs"), `export function fastPath(value) {
+  // dong-debt: global cache shared by every tenant; revisit when tenant-specific throughput matters
+  return value;
+}
+
+export function naivePath(value) {
+  // dong-debt: naive scan for now
+  return value;
+}
+`);
+
+  const out = execFileSync(process.execPath, [assetGovernance, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Dong debt markers: 2/);
+  assert.match(out, /Dong debt markers without trigger: 1/);
+  assert.match(out, /src\/shortcut\.mjs:2: triggered/);
+  assert.match(out, /src\/shortcut\.mjs:7: no-trigger/);
+  assert.match(out, /review with codex-simplicity-review/);
 });
 
 test("Stop blocks severe asset governance bloat", () => {

@@ -63,6 +63,7 @@ Tiny mechanical edits can use a compact spec and direct implementation. If the b
 - `verification-before-completion`: before claiming complete, fixed, passing, ready, or delivered.
 - `codex-git-checkpoint`: archive verified work with clear commits and optional GitHub push before pauses, compaction, or delivery.
 - `codex-review-panel`: persona-based review for meaningful implementation, plans, docs, architecture, and delivery evidence.
+- `codex-simplicity-review`: anti-overengineering review for avoid-building, standard library, native platform, unnecessary abstraction, and simplification-debt findings.
 - `requesting-code-review`: lightweight review entry or handoff to `codex-review-panel`.
 - `receiving-code-review`: when review feedback arrives.
 - `codex-learning-memory`: record, validate, prune, and promote evidence-backed project instincts; route Dong Skills improvement candidates to the real Dong Skills backlog or fallback outbox.
@@ -82,11 +83,11 @@ Load only the skill needed for the current phase.
 3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`, and require written-spec approval before planning.
 4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; use `workflow-state transition plan-ready` when the plan is awaiting execution approval, then ask for execution mode approval unless the user explicitly requested plan-then-execute.
 5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
-6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
+6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; apply the Simplicity Gate before adding custom code, dependencies, abstractions, scripts, docs, or state assets; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
 7. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
 8. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
 9. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`; transition workflow state to `verification-pass`, `verification-gap-recorded`, or `verification-fail`.
-10. Review: use `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings; transition workflow state to `review-complete` or `review-skipped` with a recorded reason.
+10. Review: use `codex-simplicity-review` for overengineering risk and `codex-review-panel` for meaningful diffs, plans, docs, or high-risk delivery; record accepted and rejected findings; transition workflow state to `review-complete` or `review-skipped` with a recorded reason.
 11. Govern assets: at milestones, compaction risk, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, unsafe, or bloated, use `codex-asset-governance`; delegate detailed docs cleanup to `codex-docs-stewardship`.
 12. Steward docs: when README/AGENTS/docs/state files need reconciliation, use `codex-docs-stewardship`; archive old verification evidence when useful.
 13. Learn: after verified work or user correction, use `codex-learning-memory` for short instincts and `codex-solution-memory` for structured reusable solutions. If the signal is about improving Dong Skills hooks, skills, docs, installers, or governance behavior, record it in the real Dong Skills repo `docs/improvements/backlog.md`; if the repo cannot be found, write `.codex-context/dong-skills-outbox.md` and report the migration path instead of using project memory.
@@ -105,6 +106,7 @@ When `.codex/hooks/project-ops.mjs` and `.codex/hooks.json` are installed and tr
 - `Stop` blocks final stopping when state, artifacts, verification, Git checkpoint notes, handoff, or learning review are stale.
 - `Stop` and `PreCompact` also report malformed or missing `workflow-state.yaml`, but they do not require it to be newer than every source edit.
 - `Stop` also blocks severe asset bloat or unsafe tracked raw/runtime artifacts reported by asset governance.
+- Hook output includes a compact status line with the actual Git root, phase, next skill, blocking decision, learning state, asset state, checkpoint state, and latest changed file when known.
 
 If a hook blocks, update the named state files. Do not disable hooks unless the user explicitly asks.
 

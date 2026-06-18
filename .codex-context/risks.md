@@ -19,6 +19,8 @@
 - Topic-based learning dedupe is heuristic; real usage may show topics that need splitting or merging.
 - Shell/Bash/PowerShell-style Codex tool writes now trigger `PostToolUse`; file changes made by external processes outside Codex hook visibility can still bypass the immediate block. Stop and PreCompact still catch stale state before stopping or compacting.
 - Workflow-state routing improves recovery, but it still depends on agents using `using-superpowers` or project governance before substantive work.
+- Simplicity Gate is a skill/process constraint, not a technical lock; sessions that ignore `writing-plans`, `executing-plans`, or `codex-review-panel` can still overbuild.
+- `dong-debt:` markers can rot if milestone reviews skip `codex-simplicity-review` or asset-governance output.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -43,6 +45,8 @@
 - No dedicated hook currently enforces Goal mode cadence at runtime; the first safeguard is the written Goal objective plus Stop/PreCompact/state checks.
 - Existing projects with older hook runtimes may still hit deleted-file freshness false positives until their `.codex/scripts/lib/core.mjs` is updated.
 - Existing projects with older `project-ops.mjs` may still fail `session-history <root> ...` until hooks are refreshed.
+- Hook status output must stay lightweight on PostToolUse. Reintroducing full asset-governance or checkpoint scans there would slow every edit.
+- `dong-debt:` scanning is heuristic and intentionally skips docs/tests to avoid counting examples; real simplification debt should be marked in active code comments.
 - If a future release wants Claude Code support, it should be a deliberate adapter layer, not a partial rename of the Codex-specific layout.
 - Transition event names are now part of the internal workflow contract; future changes should preserve compatibility or include migration guidance for existing projects.
 
@@ -52,12 +56,14 @@
 - State archive can grow over time; budget excludes it, so docs stewardship should review archive size separately.
 - PreCompact raw snapshots can grow over time; asset governance should prune old generated snapshots by count or age.
 - Adding CE-inspired skills increases the global skill set; routing docs must stay concise and skill details should remain on demand.
+- Adding `codex-simplicity-review` increases the curated skill set; router docs must keep it focused so it does not become another broad review ritual.
 
 ## Documentation Risks
 - README, skill docs, AGENTS snippets, and bootstrap templates now all describe phase gates; future changes must keep these aligned or agents may receive conflicting workflow instructions.
 - README, AGENTS snippets, workflow skills, `workflow-state.yaml`, and `workflow-state.mjs` must stay aligned when phases or transition names change.
 - README now declares Codex-only scope; future Claude adapter documentation must not imply the existing `.codex`/`.agents` layout is Claude-native.
 - README, AGENTS snippet, project-map, and skill routing can diverge after future changes.
+- README, AGENTS snippets, workflow skills, review-panel guidance, and asset-governance docs must stay aligned on the exact three Simplicity Gate rungs.
 - Generated context archives may preserve outdated command evidence; keep main `verification.md` current.
 - `docs/solutions/` can accumulate overlapping or stale entries unless `codex-solution-memory` refresh/consolidation is used.
 

@@ -57,6 +57,12 @@
 - Release large-file scanning blocks oversized text assets, while `.codex-context/raw/` and `.codex-context/archive/` remain governed by raw/archive lifecycle rules.
 - Windows installation uses strict UTF-8 reads and UTF-8 no-BOM writes; unreadable legacy-encoded managed files should fail explicitly rather than be silently corrupted.
 - Global skill replacement during Windows install uses staging and backup directories under the target skills root instead of delete-then-copy.
+- Ponytail is adopted selectively as anti-overengineering guidance, not imported wholesale.
+- Dong Skills mandatory Simplicity Gate has exactly three required rungs: avoid building, standard library, and native platform.
+- Ponytail's one-line and minimum-implementation rungs are not mandatory Dong Skills gates; they can appear only as advisory `shrink` findings.
+- `codex-simplicity-review` is a focused overengineering review skill that complements, but does not replace, `codex-review-panel`.
+- Accepted simplifications with known ceilings use `dong-debt: <ceiling>; revisit when <trigger>` comments near the code, and asset governance reports markers without treating them as active project memory.
+- Hook status output is allowed to show root, workflow phase, next skill, decision state, learning state, asset state, checkpoint state, and latest changed file; high-frequency PostToolUse must use a lightweight status path rather than full asset-governance scans.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -78,3 +84,6 @@
 - Adding Claude Code `.claude` / `CLAUDE.md` adapter files to the Codex-only release line.
 - Importing Comet/OpenSpec wholesale for Dong Skills.
 - Blocking every source edit until `workflow-state.yaml` mtime is refreshed.
+- Importing Ponytail mode switching (`lite/full/ultra/off`) into Dong Skills.
+- Making Ponytail's one-line/minimum-implementation rungs mandatory in Dong Skills.
+- Running full asset-governance inside every PostToolUse hook just to enrich status output.

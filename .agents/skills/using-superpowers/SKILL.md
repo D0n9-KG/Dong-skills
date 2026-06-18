@@ -43,9 +43,10 @@ For project work, keep this order:
 6. **Workspace:** use `codex-worktree-governance` before execution in a new/resumed worktree, when hook source paths are confusing, or before branch completion/cleanup.
 7. **Debug:** use `systematic-debugging` for bugs, failures, regressions, or unexpected behavior.
 8. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
-9. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
-10. **Asset cleanup:** use `codex-asset-governance` before milestone handoff, compaction, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, or bloated.
-11. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
+9. **Simplicity review:** use `codex-simplicity-review` when a diff or plan may be overbuilt, adds dependencies/abstractions, or the user asks what can be deleted.
+10. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
+11. **Asset cleanup:** use `codex-asset-governance` before milestone handoff, compaction, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, or bloated.
+12. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
 
 Do not jump from scope directly to implementation for multi-step or behavior-changing work.
 
@@ -58,6 +59,7 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Starting, resuming, finishing, or debugging path confusion in a Git worktree: `codex-worktree-governance`.
 - Bug, failing test, build failure, regression, or unexpected behavior: `systematic-debugging`.
 - Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
+- Overbuilt diff/plan, avoidable dependency, unnecessary abstraction, or "what can be deleted/simplified": `codex-simplicity-review`.
 - Stale, duplicate, orphaned, bloated, unsafe, or lifecycle-unclear docs/state/raw/code assets: `codex-asset-governance`.
 - Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
 - Prior session context needed beyond project files: `codex-session-history`.
@@ -106,6 +108,7 @@ At a decision point:
 - Before long pauses or final response with meaningful changes: commit/push a Git checkpoint or record the deferred reason in `handoff-summary.md`.
 - Before success claims: run or record verification in `verification.md`.
 - Before milestone handoff or release: run `asset-governance` when state files, raw snapshots, archives, solution docs, or generated assets have grown.
+- Before adding or accepting custom code/dependencies/abstractions, apply the Simplicity Gate from `writing-plans`/`executing-plans`: can avoid building, standard library, native platform.
 
 ## Tool Mapping
 

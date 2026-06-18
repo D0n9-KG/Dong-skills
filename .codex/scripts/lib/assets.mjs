@@ -40,6 +40,21 @@ const REVIEW_STATE_FILES = [
   "worktree-state.md"
 ];
 
+const DEBT_SCAN_EXTENSIONS = new Set([
+  ".js",
+  ".mjs",
+  ".ts",
+  ".tsx",
+  ".jsx",
+  ".py",
+  ".go",
+  ".rs",
+  ".java",
+  ".cs",
+  ".ps1",
+  ".sh"
+]);
+
 function readText(file) {
   try {
     return fs.readFileSync(file, "utf8");
@@ -207,6 +222,32 @@ function trackedRawFiles(root) {
     .filter((file) => !file.endsWith("/.gitkeep") && !file.endsWith("\\.gitkeep"));
 }
 
+function simplificationDebtMarkers(root) {
+  const markers = [];
+  for (const file of walk(root)) {
+    const relative = rel(root, file);
+    if (relative.startsWith(".codex-context/raw/")) continue;
+    if (relative.startsWith(".codex-context/archive/")) continue;
+    if (relative.startsWith("tests/")) continue;
+    if (relative.startsWith("node_modules/") || relative.startsWith("dist/") || relative.startsWith("build/")) continue;
+    if (!DEBT_SCAN_EXTENSIONS.has(path.extname(file))) continue;
+
+    const lines = readText(file).split(/\r?\n/);
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (!/\bdong-debt:/i.test(line)) continue;
+      const text = line.replace(/^.*?\bdong-debt:\s*/i, "").trim();
+      markers.push({
+        rel: relative,
+        line: index + 1,
+        text,
+        hasTrigger: /revisit when\b/i.test(text)
+      });
+    }
+  }
+  return markers;
+}
+
 export function assetGovernanceStatus(root, ctx, overrides = {}) {
   const options = { ...DEFAULTS, ...overrides };
   const issues = [];
@@ -258,6 +299,15 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
     advisories.push(`review on-demand state file freshness: ${staleFiles.map((item) => item.rel).join(", ")}`);
   }
 
+  const debtMarkers = simplificationDebtMarkers(root);
+  const debtWithoutTrigger = debtMarkers.filter((marker) => !marker.hasTrigger);
+  if (debtMarkers.length) {
+    advisories.push(`${debtMarkers.length} dong-debt marker(s) found; review with codex-simplicity-review before milestone handoff`);
+  }
+  if (debtWithoutTrigger.length) {
+    advisories.push(`${debtWithoutTrigger.length} dong-debt marker(s) missing "revisit when" trigger: ${debtWithoutTrigger.slice(0, 8).map((marker) => `${marker.rel}:${marker.line}`).join(", ")}`);
+  }
+
   const archiveDir = path.join(ctx, "archive");
   const archiveFiles = fs.existsSync(archiveDir) ? walk(ctx, "archive").map((file) => rel(root, file)) : [];
   if (archiveFiles.length > 20) {
@@ -278,6 +328,8 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
       runtimeArtifacts,
       trackedRuntimeArtifacts: trackedArtifacts,
       trackedRawFiles: unsafeRaw,
+      simplificationDebtMarkers: debtMarkers,
+      simplificationDebtWithoutTrigger: debtWithoutTrigger,
       archiveFiles
     },
     options
@@ -308,6 +360,8 @@ export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
     `- Stale review candidates: ${status.metrics.staleReviewFiles.length}`,
     `- Runtime artifacts outside raw/archive: ${status.metrics.runtimeArtifacts.length}`,
     `- Tracked raw/runtime artifacts: ${status.metrics.trackedRawFiles.length + status.metrics.trackedRuntimeArtifacts.length}`,
+    `- Dong debt markers: ${status.metrics.simplificationDebtMarkers.length}`,
+    `- Dong debt markers without trigger: ${status.metrics.simplificationDebtWithoutTrigger.length}`,
     "",
     "Classification:",
     "- Keep: accurate, current, referenced, and still useful.",
@@ -339,6 +393,15 @@ export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
   if (status.actions.length) {
     lines.push("Suggested commands:");
     for (const action of status.actions) lines.push(`- ${action}`);
+    lines.push("");
+  }
+
+  if (status.metrics.simplificationDebtMarkers.length) {
+    lines.push("Dong debt markers:");
+    for (const marker of status.metrics.simplificationDebtMarkers.slice(0, 20)) {
+      const trigger = marker.hasTrigger ? "triggered" : "no-trigger";
+      lines.push(`- ${marker.rel}:${marker.line}: ${trigger}: ${marker.text}`);
+    }
     lines.push("");
   }
 

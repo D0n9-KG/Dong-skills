@@ -34,6 +34,7 @@ Use only the bundled curated set by default:
 - `codex-architecture-governance`
 - `codex-docs-stewardship`
 - `codex-asset-governance`
+- `codex-simplicity-review`
 - `codex-review-panel`
 - `codex-solution-memory`
 - `codex-session-history`
@@ -87,6 +88,8 @@ If present:
 - `docs/solutions/` stores structured verified learnings with YAML frontmatter.
 
 Use `codex-architecture-governance` before or after structural changes, major refactors, large-file growth, flat-directory growth, unclear ownership, or repeated bugs caused by coupling. Keep architecture facts in `project-map.md`, decisions in `decisions.md`, and structural risks in `risks.md`.
+
+Before adding custom code, dependencies, abstractions, scripts, docs, or state assets, apply the Simplicity Gate: can the approved outcome be reached without building the new thing; does the standard library already cover it; does the native platform already cover it. Use `codex-simplicity-review` for overbuilt diffs/plans, avoidable dependencies, unnecessary abstractions, or deliberate simplification debt. If an accepted simplification has a known ceiling, mark it near the code as `dong-debt: <ceiling>; revisit when <trigger>`.
 
 Use `codex-docs-stewardship` at milestones, before handoff, after API/architecture changes, or when README/AGENTS/docs/.codex-context may be stale. Delete, merge, or archive stale docs instead of keeping misleading notes.
 

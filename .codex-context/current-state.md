@@ -1,24 +1,24 @@
 # Current State
 
 ## Objective
-Harden Dong Skills after multi-agent review findings.
+Absorb Ponytail-inspired anti-overengineering mechanisms into Dong Skills without importing Ponytail wholesale.
 
 ## Latest User Instruction
-Fix all confirmed Dong Skills review findings.
+Implement the recommended Ponytail-inspired changes, with the P0 Simplicity Gate limited to "can avoid building / stdlib / native platform"; all other proposed items are acceptable.
 
 ## Current Phase
 delivery
 
 ## Active Assumptions
-- The reviewed findings remain the approved scope for this patch.
-- No Claude adapter, global hooks, or cross-platform installer work is in scope.
-- Existing target projects will need a local refresh/bootstrap to pick up the new workflow-state runtime.
+- Dong Skills remains Codex-only.
+- The mandatory Simplicity Gate intentionally excludes Ponytail's one-line and minimum-implementation rungs.
+- Existing target projects need a project-local Dong Skills refresh/bootstrap to receive the new skill, runtime, and AGENTS guidance.
 
 ## Blockers
 - None.
 
 ## Next Action
-Record the checkpoint, refresh handoff details, and report the verified result.
+Optionally commit/push this verified patch, or report the current uncommitted changes and verification results.
 
 ## Last Updated
-2026-06-15 23:51 +08:00
+2026-06-18 11:52 +08:00

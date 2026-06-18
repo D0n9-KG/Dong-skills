@@ -55,6 +55,7 @@ const ALLOWED = {
     "verification-before-completion",
     "requesting-code-review",
     "receiving-code-review",
+    "codex-simplicity-review",
     "codex-review-panel",
     "codex-git-checkpoint",
     "codex-learning-memory",
