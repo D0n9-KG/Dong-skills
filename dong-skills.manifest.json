@@ -1,0 +1,32 @@
+{
+  "schema": "dong-skills.manifest.v1",
+  "managed_by": "Dong Skills",
+  "global_skills": [
+    "codex-codebase-onboarding",
+    "using-superpowers"
+  ],
+  "project_skills": [
+    "brainstorming",
+    "writing-plans",
+    "executing-plans",
+    "systematic-debugging",
+    "verification-before-completion",
+    "requesting-code-review",
+    "receiving-code-review",
+    "codex-project-governance",
+    "codex-verification-loop",
+    "codex-learning-memory",
+    "codex-context-budget",
+    "codex-worktree-governance",
+    "codex-git-checkpoint",
+    "codex-architecture-governance",
+    "codex-docs-stewardship",
+    "codex-asset-governance",
+    "codex-simplicity-review",
+    "codex-review-panel",
+    "codex-solution-memory",
+    "codex-session-history",
+    "codex-strategy-anchor",
+    "codex-evidence-capture"
+  ]
+}

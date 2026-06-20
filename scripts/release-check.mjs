@@ -226,7 +226,10 @@ function textReadabilityScan(root) {
 function runtimeArtifactScan(root) {
   return walk(root)
     .map((file) => rel(root, file))
-    .filter((file) => /\.(bak|tmp|log)$/i.test(file) || file.endsWith("observations.jsonl") || file.includes("test-session"));
+    .filter((file) => /\.(bak|tmp|log)$/i.test(file) ||
+      file.endsWith("observations.jsonl") ||
+      file.endsWith(".codex-context/discussion-state.json") ||
+      file.includes("test-session"));
 }
 
 function runTests(root) {

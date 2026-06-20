@@ -21,6 +21,8 @@
 - Workflow-state routing improves recovery, but it still depends on agents using `using-superpowers` or project governance before substantive work.
 - Simplicity Gate is a skill/process constraint, not a technical lock; sessions that ignore `writing-plans`, `executing-plans`, or `codex-review-panel` can still overbuild.
 - `dong-debt:` markers can rot if milestone reviews skip `codex-simplicity-review` or asset-governance output.
+- `working-notes.md` can become noisy if agents write every thought instead of compact externalized findings; phase-boundary promotion/pruning remains required.
+- `discussion-state.json` is only a freshness marker. If the agent ignores the Stop/PreCompact prompt and does not update state, the marker alone is not durable project memory.
 
 ## Technical Risks
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
@@ -49,6 +51,9 @@
 - `dong-debt:` scanning is heuristic and intentionally skips docs/tests to avoid counting examples; real simplification debt should be marked in active code comments.
 - If a future release wants Claude Code support, it should be a deliberate adapter layer, not a partial rename of the Codex-specific layout.
 - Transition event names are now part of the internal workflow contract; future changes should preserve compatibility or include migration guidance for existing projects.
+- PostToolUse exploration detection is heuristic. It now covers read/search/web/browser/codegraph and common shell inspection commands, but unusual MCP tools or custom shell scripts may still need matcher updates.
+- Wider PostToolUse matching can create extra working-notes refresh prompts during heavy exploration. If this becomes noisy, narrow with evidence-backed tests rather than disabling the guard.
+- Real Codex UI hook display behavior can differ from CLI simulation; after refreshing an old project, verify `/hooks` status and a small Stop/PreCompact path in that project.
 
 ## Architecture Risks
 - Adding governance skills can bloat routing docs if their long rules stay in always-read files; keep details in skill-specific references.

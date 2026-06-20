@@ -1,37 +1,50 @@
 # Artifact Index
 
 ## Created
-- `.agents/skills/codex-simplicity-review/SKILL.md`: new anti-overengineering review skill adapted from Ponytail ideas for Dong Skills.
-- `licenses/PONYTAIL-LICENSE`: MIT license text for the adapted Ponytail ideas.
+- `dong-skills.manifest.json`: source manifest for global bootstrap skills and project-level workflow skills.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/dong-skills.manifest.json`: bootstrap asset copy of the manifest.
+- `.codex-context/working-notes.md`: active recovery file for compact externalized investigation findings.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/working-notes.md`: project bootstrap template for working notes.
 
 ## Modified
-- `.agents/skills/writing-plans/SKILL.md`: adds the three-rung Simplicity Gate for planning: avoid building, standard library, native platform; explicitly excludes mandatory one-line/minimum-implementation rungs.
-- `.agents/skills/executing-plans/SKILL.md`: requires the Simplicity Gate before adding code/dependencies/abstractions/assets and introduces `dong-debt:` markers for accepted simplifications with ceilings.
-- `.agents/skills/codex-review-panel/SKILL.md`: adds a Simplicity lens and plan-review check.
-- `.agents/skills/using-superpowers/SKILL.md`: routes overbuilt diffs/plans and deletion/simplification requests to `codex-simplicity-review`.
-- `.agents/skills/codex-project-governance/SKILL.md`: adds `codex-simplicity-review` to the lifecycle and documents hook status output.
-- `.agents/skills/codex-asset-governance/SKILL.md`: documents `dong-debt:` marker lifecycle and review path.
-- `AGENTS.md` and `AGENTS.project-ops.snippet.md`: add curated `codex-simplicity-review`, Simplicity Gate guidance, and `dong-debt:` convention for bootstrapped projects.
-- `README.md`: adds Ponytail as a credited inspiration source and describes `codex-simplicity-review` in the English workflow.
-- `.codex/scripts/lib/assets.mjs`: scans code files for `dong-debt:` markers, reports missing `revisit when` triggers, and surfaces marker counts in asset-governance reports.
-- `.codex/scripts/lib/events.mjs`: adds compact hook status output for PostToolUse, PreCompact, and Stop; PostToolUse uses a lightweight path to avoid full asset scans on every edit.
-- `.codex/scripts/lib/recovery.mjs`: injects hook status into SessionStart recovery context.
-- `.codex/scripts/lib/workflow.mjs` and `scripts/project-ops-health.mjs`: allow `codex-simplicity-review` as a valid workflow `next_skill`.
-- Bootstrap asset mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized runtime libraries, health script, and AGENTS snippet.
-- `tests/project-ops.test.mjs`: adds regressions for Simplicity Gate skill content, `codex-simplicity-review` workflow-state acceptance, hook status output, and `dong-debt:` asset-governance scanning.
-- `.codex-context/current-state.md`, `plan-progress.md`, `artifact-index.md`, `verification.md`, `risks.md`, `decisions.md`, `workflow-state.yaml`, and `handoff-summary.md`: refreshed for this patch.
-- Global install target `%USERPROFILE%\.agents\skills`: updated by `scripts/install-windows.ps1`; this is runtime state outside the repo, not a committed artifact.
+- `scripts/install-windows.ps1`: split install model; global bootstrap/router only; writes `.dong-skills-source.json`; installs full project-level skills to target `.agents/skills`; removes only identifiable Dong-managed old global heavy skills; preserves same-name non-Dong skills.
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`: installs full project-level skills from the source checkout; writes `.agents/skills/.dong-skills-project.json`; refuses same-name non-Dong project skill overwrite; preserves project-local non-Dong skills.
+- `.agents/skills/using-superpowers/SKILL.md`: requires project-level marker before routing to full workflow skills.
+- `.agents/skills/codex-codebase-onboarding/SKILL.md`: documents bootstrap gate, project-level full skills, and non-Dong preservation.
+- `.agents/skills/brainstorming/SKILL.md`: preserves upstream continuation loop, Living Spec mode, final written-spec gate, and working-notes behavior.
+- `.agents/skills/codex-project-governance/SKILL.md`: documents workflow-state, phase gates, working-notes, discussion marker, and project-level lifecycle.
+- `.agents/skills/codex-docs-stewardship/SKILL.md` and `.agents/skills/codex-asset-governance/SKILL.md`: include working-notes/runtime marker asset lifecycle.
+- `.codex/scripts/lib/events.mjs`: discussion/investigation dirty markers, Stop freshness checks, PreCompact emergency handoff/raw snapshot behavior.
+- `.codex/scripts/lib/recovery.mjs`: SessionStart recovery includes decisions, open questions, and working notes.
+- `.codex/scripts/lib/templates.mjs`: creates required `working-notes.md` template.
+- `.codex/hooks/project-ops.mjs` and `.codex/hooks.json`: PostToolUse input forwarding and broader exploration matcher coverage.
+- Bootstrap mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized hooks, hook libraries, helper scripts, AGENTS snippet, and templates.
+- `scripts/project-ops-health.mjs`: validates project-level marker, required project skills, working-notes sections, runtime ignore rules, and manifest/bootstrap asset parity.
+- `scripts/release-check.mjs`: scans for runtime marker artifacts and readability/privacy issues.
+- `README.md`: rewritten in Chinese/English around the Codex-only split install model and lifecycle.
+- `AGENTS.md` and `AGENTS.project-ops.snippet.md`: recovery order and project ops guidance updated.
+- `.gitignore`: ignores `.codex-context/discussion-state.json`.
+- `tests/project-ops.test.mjs`: adds/updates coverage for split install, non-Dong preservation, discussion/working-notes hooks, PreCompact, recovery, health, release, and workflow gates.
+- `.codex-context/*.md` and `.codex-context/workflow-state.yaml`: refreshed for current delivery state.
 
 ## Read / Inspected
-- Ponytail upstream clone under `%TEMP%\ponytail-inspect`: README, skills, commands, hooks, tests, and license.
-- Existing Dong Skills workflow/review/asset/hook files listed above.
-- `codex-project-governance`, `writing-plans`, `executing-plans`, `codex-review-panel`, and `codex-simplicity-review` skill instructions.
-- `.codex-context/plan-progress.md`, `current-state.md`, `artifact-index.md`, `verification.md`, `risks.md`, `decisions.md`, and `handoff-summary.md`.
+- `scripts/install-windows.ps1`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+- `scripts/project-ops-health.mjs`
+- `scripts/release-check.mjs`
+- `tests/project-ops.test.mjs`
+- `README.md`
+- `.agents/skills/brainstorming/SKILL.md`
+- `.agents/skills/writing-plans/SKILL.md`
+- `.agents/skills/executing-plans/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
+- `.codex-context/*`
 
 ## Raw Outputs
 - No raw outputs added.
+- `.codex-context/discussion-state.json` remains runtime-only and ignored.
 
 ## Residual Watchpoints
-- Existing target projects need a local Dong Skills refresh/bootstrap to receive `codex-simplicity-review`, the new AGENTS guidance, and the updated hook runtime.
-- Hook status output should stay compact. Avoid adding heavyweight scans to high-frequency hooks such as PostToolUse.
-- `dong-debt:` markers are lifecycle signals, not project instincts or solution memory.
+- Existing projects must run/update project bootstrap to receive `.agents/skills/.dong-skills-project.json` and the new project-local skills.
+- Same-name non-Dong project skills intentionally block bootstrap; user must rename or approve manual resolution.
+- `working-notes.md` should stay compact; promote durable conclusions into spec/decisions/current-state/handoff/solution docs.

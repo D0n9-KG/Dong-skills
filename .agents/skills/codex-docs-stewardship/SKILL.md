@@ -67,7 +67,8 @@ node .codex/hooks/project-ops.mjs solution-status --update-index
 
 ## State File Hygiene
 
-- Keep `.codex-context/current-state.md`, `plan-progress.md`, and `handoff-summary.md` compact.
+- Keep `.codex-context/current-state.md`, `plan-progress.md`, `working-notes.md`, and `handoff-summary.md` compact.
+- Treat `working-notes.md` as transient investigation state: promote durable findings into spec, decisions, current-state, handoff, or solution docs, then remove stale exploration residue.
 - Append new verification evidence to the end of `.codex-context/verification.md`; `state-prune` treats later command entries as newer.
 - Move long logs to `.codex-context/raw/` when they are runtime-only.
 - Archive old verification evidence with:
@@ -86,7 +87,7 @@ node .codex/hooks/project-ops.mjs state-prune --keep 8 --apply
 - User correction or durable preference: evaluate with `codex-learning-memory`, then update learned instincts.
 - Verified non-trivial fix or reusable solution: evaluate with `codex-solution-memory`, then update `docs/solutions/`, `CONCEPTS.md`, and `solution-index.md`.
 - Strategy change: update `STRATEGY.md`, decisions, risks, and any specs/plans that depend on it.
-- Milestone handoff: update handoff-summary, artifact-index, verification, and Git Checkpoint.
+- Milestone handoff: update handoff-summary, artifact-index, verification, working-notes promotion/cleanup, and Git Checkpoint.
 
 ## Final Check
 

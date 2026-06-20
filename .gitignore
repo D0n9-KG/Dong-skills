@@ -12,6 +12,7 @@ Thumbs.db
 
 .codex-context/raw/*
 !.codex-context/raw/.gitkeep
+.codex-context/discussion-state.json
 
 .codegraph/
 

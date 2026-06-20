@@ -1,83 +1,47 @@
 # Dong Skills
 
-Dong Skills is a Codex project-operations skill kit for long-running software work. It keeps project truth outside the chat window, makes context recoverable after compaction or new sessions, and turns verified work into reusable project knowledge.
+Dong Skills is a Codex-specific project-operations kit for long-running software work. It keeps project truth outside the chat window, makes context recoverable after compaction or new sessions, and turns verified work into reusable project knowledge.
 
-Current scope: Dong Skills is maintained as an OpenAI Codex-specific kit. Claude Code compatibility would require a separate adapter for `.claude/skills`, `CLAUDE.md`, and Claude hook settings; it is not part of this Codex-only release line.
+Current scope: Dong Skills targets OpenAI Codex only. Claude Code compatibility would require a separate adapter for `.claude/skills`, `CLAUDE.md`, and Claude hook settings.
 
-It combines a curated subset of [Superpowers](https://github.com/obra/superpowers), learning/onboarding ideas adapted from [ECC](https://github.com/affaan-m/ECC), context-governance patterns inspired by [agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering), workflow ideas adapted from [Compound Engineering](https://github.com/everyinc/compound-engineering-plugin), a Codex-only phase-state pattern adapted from [Comet](https://github.com/rpamis/comet), and anti-overengineering review ideas adapted from [Ponytail](https://github.com/DietrichGebert/ponytail).
+Dong Skills combines selected ideas from Superpowers, ECC, agent-skills-for-context-engineering, Compound Engineering, Comet, and Ponytail, adapted for Codex project-level skills, project-level hooks, and file-based recovery.
 
 ## 中文
 
-### 这个项目解决什么
+### 解决什么问题
 
 Codex 做完整项目时，风险通常不是“不会写代码”，而是：
 
-- 需求、边界、计划、验证证据散落在聊天里。
-- 自动压缩或新 session 后，重要上下文丢失。
-- 做到一半偏离目标，或者忘记前面已经做过的决策。
+- 需求、边界、计划、验证证据只留在聊天里。
+- 自动压缩或新 session 后，关键上下文丢失。
+- 讨论还没结束，已经忘了前面确认过的设计约束。
 - 文件改了，但状态、文档、验证、交接没有同步。
 - 项目推进久了，结构变平、文件变大、文档变脏，后续越来越难改。
-- 已验证的经验没有沉淀，下一次又重新踩坑。
+- 已验证的经验没有沉淀，下次继续重复踩坑。
 
-Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solutions/`、`CONCEPTS.md` 和 `STRATEGY.md`，再用 skills 和项目级 hooks 推动 Codex 按阶段维护它们。
+Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solutions/`、`CONCEPTS.md` 和 `STRATEGY.md`，并用项目级 skills/hooks 推动 Codex 按阶段维护。
 
-### 核心机制
+### 安装模型
 
-- 主流程治理：`codex-project-governance` 协调发现、澄清、计划、执行、调试、验证、评审、学习、提交、交接。
-- 阶段边界：非平凡工作先 `brainstorming` 形成用户批准的 written spec，再用 `writing-plans` 写计划；执行前必须在 `plan-progress.md` 记录执行模式，`plan-then-execute` 默认传统逐项执行，Codex Goal mode 需要用户明确选择。
-- 上下文恢复：`SessionStart` 注入恢复顺序；压缩后由 `SessionStart` 的 `compact` 启动来源恢复上下文，`PostCompact` 只确认压缩事件完成。
-- 压缩前检查：`PreCompact` 检查 handoff、核心状态文件和学习审查是否新鲜。手动压缩不满足条件时会被拦住；自动压缩不硬拦，而是先写入应急 `handoff-summary.md` 再放行，避免上下文压力下静默卡住。
-- 文件变更追踪：`PostToolUse` 在非上下文文件变化后要求刷新 `artifact-index.md`。
-- 完成前闸门：`Stop` 检查状态、产物索引、验证记录、Git checkpoint、交接和学习审查。
-- Git 存档纪律：`codex-git-checkpoint` 管理 diff review、commit message、checkpoint commit 和 push 记录。
-- 策略锚点：`codex-strategy-anchor` 维护 `STRATEGY.md`，让需求和计划受产品目标、用户、指标和 active tracks 约束。
-- 结构化经验库：`codex-solution-memory` 把非平凡、已验证的经验写入 `docs/solutions/`，并维护 `CONCEPTS.md` 和 `.codex-context/solution-index.md`。
-- 短记忆沉淀：`codex-learning-memory` 只保存短的 trigger/action instincts，不把复杂经验塞进杂乱笔记。
-- 安全 session 检索：`codex-session-history` 只先查元数据和关键词计数，不把完整 session 或 raw transcript 塞进上下文。
-- Persona 评审：`codex-review-panel` 用 correctness、testing、maintainability、standards，以及按需 security、performance、API contract、reliability、adversarial 等视角审查。
-- 产品证据：`codex-evidence-capture` 要求对 UI、CLI、API、生成物或工作流变化做真实使用证据，而不把测试输出冒充 demo。
-- 架构治理：`codex-architecture-governance` 审查大文件、平铺目录、耦合、重复概念、边界和可测试性。
-- 文档治理：`codex-docs-stewardship` 清理 README、AGENTS、docs、`.codex-context/`、`docs/solutions/` 和 `CONCEPTS.md`。
-- 上下文预算：`codex-context-budget` 检查 skills、hooks、state files、docs 是否膨胀。
-- 资产生命周期治理：`codex-asset-governance` 审计 docs/state/raw/archive/scripts/hooks/tests/code 资产，防止工作区一味叠加。
-- 发布安全：`release-check` 跑语法、测试、隐私和运行时产物检查。
+Dong Skills 使用“全局最小、项目完整”的安装模型：
 
-### 包含的 skills
+- 全局用户 skills 只保留 bootstrap/router：`codex-codebase-onboarding` 和 `using-superpowers`。
+- 完整工作流 skills 安装到每个项目自己的 `.agents/skills/`。
+- 项目 hooks 也只安装到项目 `.codex/hooks.json` 和 `.codex/hooks/`，不安装全局 hooks。
+- 安装器只管理 `dong-skills.manifest.json` 里列出的 Dong skill 名称。
+- 非 Dong 的本地 skills 会被保留；同名但无法确认是 Dong 管理的目录不会被静默覆盖或删除。
 
-| Skill | 用途 |
-| --- | --- |
-| `using-superpowers` | 进入项目工作时选择合适流程 skill。 |
-| `brainstorming` | 模糊、创造性或行为变更任务先形成可恢复 spec。 |
-| `writing-plans` | 把明确需求转成可执行、可验证的计划。 |
-| `executing-plans` | 按计划逐项执行，或在用户明确选择后按 Codex Goal mode 执行并维护进度。 |
-| `systematic-debugging` | 遇到 bug、失败或异常时先定位根因。 |
-| `verification-before-completion` | 完成声明前要求验证证据。 |
-| `codex-codebase-onboarding` | 新项目启动、bootstrap 项目级 hooks、建立项目地图。 |
-| `codex-project-governance` | 非平凡项目工作的主循环。 |
-| `codex-verification-loop` | 选择并记录 build、typecheck、lint、test、security、diff、产品证据。 |
-| `codex-evidence-capture` | 捕获真实产品使用证据。 |
-| `codex-git-checkpoint` | 阶段边界、压缩、交付或 GitHub 存档前提交/推送。 |
-| `codex-review-panel` | 用多 persona 审查代码、计划、文档、架构和交付证据。 |
-| `requesting-code-review` | 轻量 review 入口，必要时路由到 review panel。 |
-| `receiving-code-review` | 判断并处理 review 反馈。 |
-| `codex-architecture-governance` | 治理项目结构、模块边界、耦合和可测试性。 |
-| `codex-docs-stewardship` | 同步和清理文档、状态文件、归档和知识库。 |
-| `codex-asset-governance` | 统一治理 docs/state/raw/archive/scripts/hooks/tests/code 资产生命周期。 |
-| `codex-learning-memory` | 沉淀短的项目 instincts 和用户纠正。 |
-| `codex-solution-memory` | 沉淀结构化 solution docs 和项目词汇。 |
-| `codex-session-history` | 安全检索 prior sessions，避免完整 transcript 污染上下文。 |
-| `codex-strategy-anchor` | 创建或维护 `STRATEGY.md`。 |
-| `codex-context-budget` | 审查上下文成本和治理文件膨胀。 |
+这个模型避免“某个项目没初始化 Dong Skills，但全局重型 skill 仍然被隐式调用”的混乱。
 
 ### 安装
 
-Windows PowerShell:
+从 Dong Skills 源仓库运行：
 
 ```powershell
 .\scripts\install-windows.ps1 -TargetProjectRoot "C:\path\to\repo"
 ```
 
-如果已经在目标项目目录中运行：
+如果当前目录就是目标项目：
 
 ```powershell
 .\scripts\install-windows.ps1
@@ -85,53 +49,89 @@ Windows PowerShell:
 
 安装器会：
 
-- 复制 bundled skills 到用户 `.agents\skills`。
-- 创建或补齐 `.codex-context/` 模板。
-- 安装 `.codex/hooks/project-ops.mjs`、`.codex/scripts/lib/` 和 helper scripts。
-- 合并 `.codex/hooks.json` 中受管理的 hook groups。
-- 合并 `.gitignore` 运行时保护规则，避免提交 `.codex-context/raw/` 内容。
-- 把受 marker 管理的项目说明片段合并到 `AGENTS.md`。
+- 安装全局 bootstrap/router skills 到 `%USERPROFILE%\.agents\skills`。
+- 写入 `%USERPROFILE%\.agents\skills\.dong-skills-source.json`，让项目 bootstrap 能定位真实 Dong Skills 源仓库。
+- 清理能明确识别为 Dong 旧全局安装的重型 skills。
+- 保留所有非 Dong 本地 skills。
+- 把完整项目级 Dong Skills 安装到目标项目 `.agents/skills/`。
+- 写入 `.agents/skills/.dong-skills-project.json`。
+- 创建或补齐 `.codex-context/`、`.codex/` hooks、helper scripts、`.gitignore` 运行时规则和 `AGENTS.md` managed block。
 
-安装后重启 Codex 或开新 thread。若 Codex 提示 trust hooks，打开 `/hooks` 信任项目 hooks。
+安装后重启 Codex 或从目标项目新开 thread。如果 Codex 提示 trust hooks，打开 `/hooks` 信任项目 hooks。
 
-Dong Skills 使用项目级 hooks，不安装全局 hooks。每个项目可以独立选择是否启用。
+### 新项目启动
 
-### 新项目怎么启动
-
-首次安装 Dong Skills 后，新项目不必手动跑安装脚本。进入目标仓库，开一个 Codex thread，然后说：
+首次全局安装后，在目标项目打开 Codex，然后说：
 
 ```text
 使用 codex-codebase-onboarding 启动这个项目。
 ```
 
-`codex-codebase-onboarding` 会检查项目配置是否存在；缺失时运行自带 bootstrap，写入 `.codex-context/`、`.codex/hooks/`、`.codex/hooks.json` 和 `AGENTS.md` marker block，然后继续建立 `project-map.md` 和 `solution-index.md`。
+`codex-codebase-onboarding` 会检查项目是否已有：
+
+- `.agents/skills/.dong-skills-project.json`
+- `.codex-context/workflow-state.yaml`
+- `.codex/hooks/project-ops.mjs`
+- `.codex/hooks.json`
+- `AGENTS.md` managed block
+
+缺失时，它会运行 bootstrap，安装项目级 skills/hooks/context，然后继续建立 `project-map.md` 和 `solution-index.md`。
+
+### 核心 workflow
+
+- `using-superpowers`：轻量路由，不直接替代完整流程。
+- `codex-codebase-onboarding`：新项目 bootstrap 和项目地图。
+- `brainstorming`：模糊、创造性、行为变化、多文件、架构、UX/API、项目方向任务先形成 living spec，再进入 approved spec。
+- `writing-plans`：把 approved spec 转成可执行、可验证计划。
+- `executing-plans`：按计划执行，支持传统逐项执行和显式选择后的 Codex Goal mode。
+- `systematic-debugging`：遇到 bug、失败或异常时先复现和定位根因。
+- `verification-before-completion` / `codex-verification-loop`：完成声明前先有证据。
+- `codex-git-checkpoint`：阶段性提交/推送纪律。
+- `codex-learning-memory`：短的项目 instincts；Dong Skills 优化候选进入 Dong Skills backlog 或项目 outbox。
+- `codex-solution-memory`：结构化、可复用的项目解决方案。
+- `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构。
+- `codex-review-panel` / `codex-simplicity-review`：交付前审查和反过度工程。
+
+### 上下文恢复
+
+压缩后或新 session 恢复时，优先读取：
+
+1. `.codex-context/handoff-summary.md`
+2. `.codex-context/worktree-state.md`
+3. `.codex-context/workflow-state.yaml`
+4. `.codex-context/current-state.md`
+5. `.codex-context/project-map.md`
+6. `.codex-context/spec.md`
+7. `.codex-context/decisions.md`
+8. `.codex-context/open-questions.md`
+9. `.codex-context/working-notes.md`
+10. `.codex-context/plan-progress.md`
+11. `.codex-context/artifact-index.md`
+12. `.codex-context/solution-index.md`
+13. `.codex-context/learned-instincts.md`
+14. `.codex-context/dong-skills-outbox.md`，仅当讨论 Dong Skills 改进时读取。
+15. `STRATEGY.md`、`CONCEPTS.md` 或相关 `docs/solutions/`，仅当当前任务需要。
+
+`.codex-context/working-notes.md` 用于记录可外部化的探索状态：已检查事实、被排除路径、当前假设/结论、开放调查问题和下一步验证。不要把隐藏推理、完整聊天、原始日志、密钥或隐私内容写进去。
 
 ### 常用命令
 
 从目标项目运行：
 
 ```powershell
+node .codex/hooks/project-ops.mjs workflow-state next
+node .codex/hooks/project-ops.mjs workflow-state recover
+node .codex/hooks/project-ops.mjs health-check
 node .codex/hooks/project-ops.mjs context-budget
 node .codex/hooks/project-ops.mjs asset-governance
 node .codex/hooks/project-ops.mjs learning-status
-node .codex/hooks/project-ops.mjs instinct-status
-node .codex/hooks/project-ops.mjs instinct-validate
-node .codex/hooks/project-ops.mjs instinct-prune --dry-run
-node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
-node .codex/hooks/project-ops.mjs solution-status
 node .codex/hooks/project-ops.mjs solution-status --update-index
-node .codex/hooks/project-ops.mjs solution-validate
-node .codex/hooks/project-ops.mjs session-history scan --days 7 --keywords auth,token
-node .codex/hooks/project-ops.mjs health-check
+node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 ```
 
-从本 kit 目录运行：
+从 Dong Skills 源仓库运行：
 
 ```powershell
-node scripts/context-budget.mjs "C:\path\to\repo"
-node scripts/instincts.mjs status "C:\path\to\repo"
-node scripts/solutions.mjs "C:\path\to\repo" status
-node scripts/session-history.mjs "C:\path\to\repo" scan --days 7 --keywords auth,token
 node scripts/project-ops-health.mjs "C:\path\to\repo"
 node scripts/release-check.mjs "."
 ```
@@ -140,26 +140,16 @@ node scripts/release-check.mjs "."
 
 发布包不应包含：
 
-- 本机个人路径、私有目录结构、原始 session 内容。
+- 本机个人路径或私有目录结构。
 - credentials、keys、cookies、headers、private query strings。
 - raw observations、日志、临时文件、备份文件。
 - 客户资料、未脱敏 URL、私有项目代码。
 
-`UserPromptSubmit` hook 只保存脱敏短摘录、prompt fingerprint 和元数据；raw observations 不是 active memory。发布前运行：
+发布前运行：
 
 ```powershell
 node scripts/release-check.mjs "."
 ```
-
-### 来源与许可
-
-- Superpowers components are adapted from [obra/superpowers](https://github.com/obra/superpowers).
-- ECC onboarding and continuous-learning concepts are adapted from [affaan-m/ECC](https://github.com/affaan-m/ECC).
-- Context governance ideas are adapted from [muratcankoylan/agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering).
-- Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).
-- Workflow-state ideas are adapted from [rpamis/comet](https://github.com/rpamis/comet).
-- Simplicity review ideas are adapted from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail).
-- License files are included under `licenses/`.
 
 ## English
 
@@ -178,30 +168,22 @@ It helps with:
 - keeping architecture and docs from degrading over time
 - auditing whether the governance layer itself is becoming too large
 
-### Core Workflow
+### Split Installation Model
 
-- `codex-project-governance` is the main lifecycle skill.
-- Non-trivial work has explicit phase gates: `brainstorming` produces a user-approved written spec, `writing-plans` produces a verifiable plan with an execution mode, and execution waits for mode approval. `plan-then-execute` defaults to Traditional task-by-task execution; Codex Goal mode requires an explicit user choice.
-- `.codex-context/` stores recoverable project state.
-- `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash.
-- `workflow-state` commands provide a Comet-inspired state interface: `init`, `status`, `get`, `set`, `transition`, `check`, `next`, `recover`, and `hash`.
-- `STRATEGY.md` anchors product/project direction when adopted.
-- `docs/solutions/` stores verified reusable solutions.
-- `CONCEPTS.md` stores stable project vocabulary.
-- `docs/improvements/backlog.md` stores Dong Skills improvement candidates; it is for skill, hook, installer, bootstrap, README, and governance improvements, not project memory.
-- `%USERPROFILE%\.agents\skills\.dong-skills-source.json` is generated by the installer so project sessions can locate the real Dong Skills source repo. If the repo cannot be found, Dong Skills improvement ideas go to `.codex-context/dong-skills-outbox.md` as a migration queue.
-- `.codex-context/solution-index.md` keeps the active recovery pointer compact.
-- `.codex-context/worktree-state.md` records whether Codex is operating in the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, or an unknown workspace.
-- Project hooks inject recovery context, check compaction readiness, track changed artifacts, and block final stopping when state is stale. Automatic PreCompact prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, and writes a raw snapshot as backup.
-- `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It uses Keep / Update / Consolidate / Replace / Delete / Stale / Raw-Prune classifications. Dry-run is default; `--apply` only prunes generated `precompact-auto-*.md` raw snapshots that exceed retention.
-- `codex-review-panel` adds persona-based review.
-- `codex-simplicity-review` adds an anti-overengineering pass for avoid-building, standard library, native platform, unnecessary abstractions, and deliberate simplification debt.
-- `codex-evidence-capture` records real behavior evidence for observable changes.
-- `release-check` runs syntax, tests, privacy, and runtime-artifact checks.
+Dong Skills uses a split model:
+
+- Global user skills contain only `codex-codebase-onboarding` and `using-superpowers`.
+- Full workflow skills are installed per project into `.agents/skills/`.
+- Project hooks are installed per project into `.codex/hooks.json` and `.codex/hooks/`.
+- The installer manages only names listed in `dong-skills.manifest.json`.
+- Non-Dong local skills are preserved.
+- Same-name directories that cannot be identified as Dong-managed are not silently overwritten or deleted.
+
+This prevents uninitialized projects from accidentally invoking heavy global Dong workflow skills.
 
 ### Installation
 
-Windows PowerShell:
+From the Dong Skills source checkout:
 
 ```powershell
 .\scripts\install-windows.ps1 -TargetProjectRoot "C:\path\to\repo"
@@ -213,9 +195,17 @@ When running from the target repository, omit the target path:
 .\scripts\install-windows.ps1
 ```
 
-After installation, restart Codex or start a new thread. If Codex asks to trust hooks, open `/hooks` and trust the project hooks.
+The installer:
 
-The installer also writes a local source marker at `%USERPROFILE%\.agents\skills\.dong-skills-source.json`. This lets other project sessions find the real Dong Skills checkout for `docs/improvements/backlog.md` instead of editing installed skill copies.
+- installs global bootstrap/router skills to `%USERPROFILE%\.agents\skills`
+- writes `%USERPROFILE%\.agents\skills\.dong-skills-source.json`
+- removes old global heavy Dong skills only when they are identifiable as Dong-managed
+- preserves non-Dong local skills
+- installs full project-level Dong Skills into the target repo `.agents/skills/`
+- writes `.agents/skills/.dong-skills-project.json`
+- installs `.codex-context/`, project hooks, helper scripts, runtime `.gitignore` rules, and the managed `AGENTS.md` block
+
+After installation, restart Codex or start a new thread. If Codex asks to trust hooks, open `/hooks` and trust the project hooks.
 
 ### Starting A New Project
 
@@ -225,40 +215,43 @@ After Dong Skills has been installed once, start Codex from the target repositor
 Use codex-codebase-onboarding to start this project.
 ```
 
-The onboarding skill bootstraps missing project files and then maps the repository.
+The onboarding skill bootstraps missing project-level skills, hooks, context files, and guidance, then maps the repository.
 
-When working in Codex App worktrees, Dong Skills uses detect-and-defer governance: it records the actual Git root and branch state, but leaves Codex-managed worktree cleanup to Codex App.
+A healthy project install has `.agents/skills/.dong-skills-project.json`. Run this from the target project to check:
+
+```powershell
+node .codex/hooks/project-ops.mjs health-check
+```
+
+### Core Workflow
+
+- `codex-project-governance` is the main lifecycle skill.
+- Non-trivial work has explicit phase gates: brainstorming produces a written spec, planning produces a verifiable plan with an execution mode, and execution waits for approval.
+- `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash.
+- `.codex-context/working-notes.md` stores compact externalized investigation state. It is not for hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning.
+- `.codex-context/discussion-state.json` is a runtime-only dirty marker and should stay ignored by Git.
+- Project hooks inject recovery context, check compaction readiness, track changed artifacts, mark discussion/exploration state dirty, and block final stopping when state is stale.
+- Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue.
+- `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets.
 
 ### Commands
 
 From the target project:
 
 ```powershell
+node .codex/hooks/project-ops.mjs workflow-state next
+node .codex/hooks/project-ops.mjs workflow-state recover
+node .codex/hooks/project-ops.mjs health-check
 node .codex/hooks/project-ops.mjs context-budget
 node .codex/hooks/project-ops.mjs asset-governance
 node .codex/hooks/project-ops.mjs learning-status
-node .codex/hooks/project-ops.mjs instinct-status
-node .codex/hooks/project-ops.mjs instinct-validate
-node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
-node .codex/hooks/project-ops.mjs solution-status
 node .codex/hooks/project-ops.mjs solution-status --update-index
-node .codex/hooks/project-ops.mjs solution-validate
-node .codex/hooks/project-ops.mjs session-history scan --days 7 --keywords auth,token
-node .codex/hooks/project-ops.mjs workflow-state next
-node .codex/hooks/project-ops.mjs workflow-state recover
-node .codex/hooks/project-ops.mjs workflow-state transition spec-approved
-node .codex/hooks/project-ops.mjs health-check
+node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 ```
 
 From this kit:
 
 ```powershell
-node scripts/context-budget.mjs "C:\path\to\repo"
-node scripts/asset-governance.mjs "C:\path\to\repo"
-node scripts/instincts.mjs status "C:\path\to\repo"
-node scripts/solutions.mjs "C:\path\to\repo" status
-node scripts/session-history.mjs "C:\path\to\repo" scan --days 7 --keywords auth,token
-node scripts/workflow-state.mjs "C:\path\to\repo" next
 node scripts/project-ops-health.mjs "C:\path\to\repo"
 node scripts/release-check.mjs "."
 ```
@@ -274,3 +267,13 @@ Before release:
 ```powershell
 node scripts/release-check.mjs "."
 ```
+
+### Sources And Licenses
+
+- Superpowers components are adapted from [obra/superpowers](https://github.com/obra/superpowers).
+- ECC onboarding and continuous-learning concepts are adapted from [affaan-m/ECC](https://github.com/affaan-m/ECC).
+- Context governance ideas are adapted from [muratcankoylan/agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering).
+- Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).
+- Workflow-state ideas are adapted from [rpamis/comet](https://github.com/rpamis/comet).
+- Simplicity review ideas are adapted from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail).
+- License files are included under `licenses/`.

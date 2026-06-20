@@ -64,6 +64,7 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `open-questions.md`
 - `risks.md`
 - `verification.md`
+- `working-notes.md`
 - `learned-instincts.md`
 - `dong-skills-outbox.md`
 - `worktree-state.md`
@@ -71,8 +72,9 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `handoff-summary.md`
 
 Use `.codex-context/raw/` for raw logs or large outputs.
-Project bootstrap should keep `.codex-context/raw/*` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
+Project bootstrap should keep `.codex-context/raw/*` and `.codex-context/discussion-state.json` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
 Use `.codex-context/archive/` for old but still useful verification or handoff history.
+Use `.codex-context/working-notes.md` for compact externalized investigation state: checked facts, rejected paths, current hypothesis, current conclusion, open investigation questions, and next verification step. Do not store hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning there. Promote durable conclusions into spec, decisions, current-state, handoff, or solution docs at phase boundaries.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
 Use `.codex-context/dong-skills-outbox.md` only for Dong Skills improvement candidates when the real Dong Skills source repo cannot be found. It is not project memory and not an active instinct.
 Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions/` and `CONCEPTS.md`; do not paste full solution docs into active state.
@@ -117,7 +119,7 @@ Use `codex-session-history` only when project files are insufficient or the user
 
 ## Compaction
 
-Write a fresh handoff at phase boundaries and before long pauses. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled.
+Write a fresh handoff at phase boundaries and before long pauses. During discussion, discovery, planning, debugging, or substantial exploration, keep `working-notes.md` fresh before stopping or compacting. The `UserPromptSubmit` hook may mark `.codex-context/discussion-state.json` dirty, and `Stop`/`PreCompact` can require refreshed spec/current/decisions/open-questions/working-notes/handoff files. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled.
 
 After compaction, recover in this order:
 
@@ -127,13 +129,16 @@ After compaction, recover in this order:
 4. `.codex-context/current-state.md`
 5. `.codex-context/project-map.md`
 6. `.codex-context/spec.md`
-7. `.codex-context/plan-progress.md`
-8. `.codex-context/artifact-index.md`
-9. `.codex-context/solution-index.md`
-10. `.codex-context/learned-instincts.md`
-11. `.codex-context/dong-skills-outbox.md` only when discussing Dong Skills improvements
-12. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
-13. latest user instruction
+7. `.codex-context/decisions.md`
+8. `.codex-context/open-questions.md`
+9. `.codex-context/working-notes.md`
+10. `.codex-context/plan-progress.md`
+11. `.codex-context/artifact-index.md`
+12. `.codex-context/solution-index.md`
+13. `.codex-context/learned-instincts.md`
+14. `.codex-context/dong-skills-outbox.md` only when discussing Dong Skills improvements
+15. `STRATEGY.md`, `CONCEPTS.md`, or relevant `docs/solutions/` entries only when the task needs them
+16. latest user instruction
 
 ## Completion
 

@@ -58,11 +58,81 @@ function write(file, text) {
   fs.writeFileSync(file, text, "utf8");
 }
 
+function writeDongProjectSkillsFixture(projectRoot) {
+  const names = [
+    "brainstorming",
+    "writing-plans",
+    "executing-plans",
+    "systematic-debugging",
+    "verification-before-completion",
+    "requesting-code-review",
+    "receiving-code-review",
+    "codex-project-governance",
+    "codex-verification-loop",
+    "codex-learning-memory",
+    "codex-context-budget",
+    "codex-worktree-governance",
+    "codex-git-checkpoint",
+    "codex-architecture-governance",
+    "codex-docs-stewardship",
+    "codex-asset-governance",
+    "codex-simplicity-review",
+    "codex-review-panel",
+    "codex-solution-memory",
+    "codex-session-history",
+    "codex-strategy-anchor",
+    "codex-evidence-capture"
+  ];
+
+  const skillsRoot = path.join(projectRoot, ".agents", "skills");
+  write(path.join(skillsRoot, ".dong-skills-project.json"), JSON.stringify({
+    schema: "dong-skills.project-install.v1",
+    managed_by: "Dong Skills",
+    installed_at: "fixture",
+    installed_skills: names,
+    global_bootstrap_skills_required: ["codex-codebase-onboarding", "using-superpowers"]
+  }, null, 2));
+
+  for (const name of names) {
+    write(path.join(skillsRoot, name, "SKILL.md"), `---\nname: ${name}\n---\n\n# ${name}\n`);
+    write(path.join(skillsRoot, name, ".dong-skill-managed.json"), JSON.stringify({
+      schema: "dong-skills.skill-install.v1",
+      managed_by: "Dong Skills",
+      name,
+      scope: "project",
+      installed_at: "fixture"
+    }, null, 2));
+  }
+}
+
 function readyState(projectRoot, checkpoint) {
   const ctx = path.join(projectRoot, ".codex-context");
   write(path.join(ctx, "current-state.md"), "# Current State\n\n## Next Action\nContinue.\n");
   write(path.join(ctx, "artifact-index.md"), "# Artifact Index\n\n## Modified\n- `work.txt`: test change.\n");
   write(path.join(ctx, "verification.md"), "# Verification\n\n## Commands Run\n- Test fixture.\n\n## Not Yet Verified\n- None.\n");
+  write(path.join(ctx, "working-notes.md"), `# Working Notes
+
+## Purpose
+Fixture investigation notes.
+
+## Current Findings
+- Fixture finding.
+
+## Current Hypothesis
+- Fixture hypothesis.
+
+## Rejected Paths
+- None.
+
+## Open Investigation Questions
+- None.
+
+## Next Verification Step
+- Fixture verification.
+
+## Promotion Notes
+- None.
+`);
   write(path.join(ctx, "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- Last reviewed raw observations: now.\n");
   write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
 phase: execution
@@ -128,6 +198,7 @@ Continue test.
 
 function readyHealthFixture(projectRoot) {
   const ctx = path.join(projectRoot, ".codex-context");
+  writeDongProjectSkillsFixture(projectRoot);
   const hooks = {};
   for (const eventName of ["SessionStart", "UserPromptSubmit", "PostToolUse", "PreCompact", "PostCompact", "Stop"]) {
     hooks[eventName] = [{ hooks: [{ command: "node .codex/hooks/project-ops.mjs" }] }];
@@ -140,7 +211,7 @@ function readyHealthFixture(projectRoot) {
   for (const scriptName of ["instincts.mjs", "asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs"]) {
     write(path.join(projectRoot, "scripts", scriptName), "#!/usr/bin/env node\n");
   }
-  write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n");
+  write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n.codex-context/discussion-state.json\n");
 
   for (const name of [
     "current-state.md",
@@ -152,6 +223,7 @@ function readyHealthFixture(projectRoot) {
     "open-questions.md",
     "risks.md",
     "verification.md",
+    "working-notes.md",
     "learned-instincts.md",
     "dong-skills-outbox.md",
     "solution-index.md",
@@ -217,6 +289,30 @@ None.
 - Fixture check.
 
 ## Out Of Scope
+- None.
+`);
+
+  write(path.join(ctx, "working-notes.md"), `# Working Notes
+
+## Purpose
+Fixture investigation notes.
+
+## Current Findings
+- Fixture finding.
+
+## Current Hypothesis
+- Fixture hypothesis.
+
+## Rejected Paths
+- None.
+
+## Open Investigation Questions
+- None.
+
+## Next Verification Step
+- Fixture verification.
+
+## Promotion Notes
 - None.
 `);
 
@@ -297,6 +393,33 @@ Continue.
 `);
 }
 
+function setWorkflowPhase(projectRoot, phase, nextSkill = "brainstorming") {
+  write(path.join(projectRoot, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: ${phase}
+next_skill: ${nextSkill}
+auto_next: true
+decision_required: none
+spec_status: ${phase === "brainstorming" || phase === "spec" ? "living-draft" : "approved"}
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
+}
+
+function backdateContextFiles(projectRoot, names) {
+  const old = new Date(Date.now() - 20_000);
+  for (const name of names) {
+    const file = path.join(projectRoot, ".codex-context", name);
+    if (fs.existsSync(file)) fs.utimesSync(file, old, old);
+  }
+}
+
 test("brainstorming skill preserves upstream continuation loop", () => {
   const skill = fs.readFileSync(path.join(root, ".agents", "skills", "brainstorming", "SKILL.md"), "utf8");
 
@@ -312,6 +435,8 @@ test("brainstorming skill preserves upstream continuation loop", () => {
   assert.match(skill, /Pending written-spec approval/);
   assert.match(skill, /fresh session could write a plan from the spec file/);
   assert.match(skill, /written-spec approval/);
+  assert.match(skill, /working-notes\.md/);
+  assert.match(skill, /Do not store hidden chain-of-thought/);
   assert.match(skill, /"可以", "继续"/);
 });
 
@@ -375,12 +500,16 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
   assert.match(router, /Codex Goal mode requires an explicit user choice/);
   assert.match(router, /actual goal mechanism/);
+  assert.match(router, /working-notes\.md/);
+  assert.match(router, /hidden chain-of-thought/);
 
   const governance = readSkill("codex-project-governance");
   assert.match(governance, /workflow-state\.yaml/);
   assert.match(governance, /workflow-state transition/);
   assert.match(governance, /codex-simplicity-review/);
   assert.match(governance, /Hook output includes a compact status line/);
+  assert.match(governance, /discussion-state\.json/);
+  assert.match(governance, /working-notes\.md/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -456,6 +585,12 @@ test("PostToolUse hook matcher covers shell-based file writes", () => {
     assert.match(matcher, /Edit/);
     assert.match(matcher, /Write/);
     assert.match(matcher, /apply_patch/);
+    assert.match(matcher, /Read/);
+    assert.match(matcher, /Grep/);
+    assert.match(matcher, /Glob/);
+    assert.match(matcher, /codegraph/);
+    assert.match(matcher, /web/);
+    assert.match(matcher, /browser/);
     assert.match(matcher, /shell_command/);
     assert.match(matcher, /Bash/);
     assert.match(matcher, /PowerShell/);
@@ -532,6 +667,8 @@ test("Windows hook command survives outer PowerShell invocation", () => {
 
 test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const project = tempProject();
+  write(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md"), "---\nname: local-only-skill\n---\n");
+
   execFileSync("powershell.exe", [
     "-NoProfile",
     "-ExecutionPolicy",
@@ -545,6 +682,7 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const gitignore = fs.readFileSync(path.join(project, ".gitignore"), "utf8");
   assert.match(gitignore, /\.codex-context\/raw\/\*/);
   assert.match(gitignore, /!\.codex-context\/raw\/\.gitkeep/);
+  assert.match(gitignore, /\.codex-context\/discussion-state\.json/);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "core.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "workflow.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
@@ -558,6 +696,12 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "worktree-state.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "workflow-state.yaml")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "dong-skills-outbox.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "working-notes.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", ".dong-skills-project.json")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", ".dong-skill-managed.json")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "brainstorming", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md")), true);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8"), /next_skill: codex-codebase-onboarding/);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Approval Status/);
   const planProgress = fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8");
@@ -579,9 +723,12 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const context = JSON.parse(recovery).hookSpecificOutput.additionalContext;
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
   assert.match(context, /3\. \.codex-context\/workflow-state\.yaml/);
-  assert.match(context, /9\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /11\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
-  assert.match(context, /12\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /7\. \.codex-context\/decisions\.md/);
+  assert.match(context, /8\. \.codex-context\/open-questions\.md/);
+  assert.match(context, /9\. \.codex-context\/working-notes\.md/);
+  assert.match(context, /12\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /14\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
+  assert.match(context, /15\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
   assert.match(context, /Workflow recovery:/);
 });
 
@@ -606,8 +753,88 @@ test("Windows installer preserves existing UTF-8 Chinese AGENTS.md", () => {
   const agents = fs.readFileSync(path.join(project, "AGENTS.md"), "utf8");
   assert.match(agents, new RegExp(escapeRegExp(originalChinese)));
   assert.doesNotMatch(agents, /\uFFFD/);
-  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "using-superpowers", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), false);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "brainstorming", "SKILL.md")), false);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", ".dong-skills-project.json")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, ".dong-skills-source.json")), true);
+});
+
+test("Windows installer removes only managed Dong global skills and preserves non-Dong local skills", () => {
+  const project = tempProject();
+  const skillsRoot = path.join(tempProject(), "skills");
+
+  write(path.join(skillsRoot, "doc", "SKILL.md"), "---\nname: doc\n---\n\n# User doc skill\n");
+  write(path.join(skillsRoot, "codex-project-governance", "SKILL.md"), "---\nname: codex-project-governance\n---\n\n# Codex Project Governance\nDong Skills old global copy.\n");
+  write(path.join(skillsRoot, "brainstorming", "SKILL.md"), "---\nname: brainstorming\n---\n\n# Brainstorming\nDong Skills old global copy.\n");
+
+  execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    installWindows,
+    "-TargetProjectRoot",
+    project,
+    "-TargetSkillsRoot",
+    skillsRoot
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  assert.equal(fs.existsSync(path.join(skillsRoot, "doc", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "using-superpowers", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), false);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "brainstorming", "SKILL.md")), false);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
+});
+
+test("Windows installer preserves same-name non-Dong global skills", () => {
+  const project = tempProject();
+  const skillsRoot = path.join(tempProject(), "skills");
+  const userSkill = path.join(skillsRoot, "codex-project-governance", "SKILL.md");
+  const userSkillText = "---\nname: codex-project-governance\n---\n\n# User governance helper\nThis is a personal unrelated skill.\n";
+  write(userSkill, userSkillText);
+
+  execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    installWindows,
+    "-TargetProjectRoot",
+    project,
+    "-TargetSkillsRoot",
+    skillsRoot
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  assert.equal(fs.readFileSync(userSkill, "utf8"), userSkillText);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "using-superpowers", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
+});
+
+test("bootstrap refuses to overwrite same-name non-Dong project skills", () => {
+  const project = tempProject();
+  const userSkill = path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md");
+  const userSkillText = "---\nname: codex-project-governance\n---\n\n# User project governance helper\nThis is not a Dong-managed skill.\n";
+  write(userSkill, userSkillText);
+
+  assert.throws(() => {
+    execFileSync("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      bootstrap,
+      "-TargetProjectRoot",
+      project
+    ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+  }, /Command failed/);
+
+  assert.equal(fs.readFileSync(userSkill, "utf8"), userSkillText);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", ".dong-skills-project.json")), false);
 });
 
 test("hook launcher dispatches using hook input cwd rather than launcher cwd", () => {
@@ -1084,6 +1311,25 @@ checkpoint_status: pending
   assert.equal(failed, true);
 });
 
+test("health check requires project-level Dong Skills marker", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  fs.rmSync(path.join(project, ".agents", "skills", ".dong-skills-project.json"));
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [health, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /Missing project-level Dong Skills marker/);
+  }
+  assert.equal(failed, true);
+});
+
 test("release check reports text readability mojibake markers", () => {
   const project = tempProject();
   readyHealthFixture(project);
@@ -1212,6 +1458,14 @@ Resume final task.
 - important.md
 `);
   write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nResume final task.\n");
+  write(path.join(project, ".codex-context", "working-notes.md"), `# Working Notes
+
+## Current Findings
+- Critical recovered investigation finding.
+
+## Next Verification Step
+- Re-run the fixture check.
+`);
   write(path.join(project, ".codex-context", "plan-progress.md"), "# Plan Progress\n\n## Current Step\nResume.\n");
   write(path.join(project, ".codex-context", "solution-index.md"), "# Solution Index\n\n## Knowledge Store\n- docs/solutions present: yes\n");
   write(path.join(project, ".codex-context", "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- None.\n");
@@ -1241,9 +1495,12 @@ note: fixture
   assert.match(context, /Assets: ok/);
   assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
   assert.match(context, /3\. \.codex-context\/workflow-state\.yaml/);
-  assert.match(context, /9\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /11\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
-  assert.match(context, /12\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
+  assert.match(context, /7\. \.codex-context\/decisions\.md/);
+  assert.match(context, /8\. \.codex-context\/open-questions\.md/);
+  assert.match(context, /9\. \.codex-context\/working-notes\.md/);
+  assert.match(context, /12\. \.codex-context\/solution-index\.md/);
+  assert.match(context, /14\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
+  assert.match(context, /15\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
   assert.match(context, /Worktree: role=unknown/);
   assert.match(context, /Workflow recovery:/);
   assert.match(context, /phase: delivery/);
@@ -1252,6 +1509,8 @@ note: fixture
   assert.match(context, /## Files To Re-read First\n- important\.md/);
   assert.match(context, /Solution index excerpt:/);
   assert.match(context, /docs\/solutions present: yes/);
+  assert.match(context, /Working notes excerpt:/);
+  assert.match(context, /Critical recovered investigation finding/);
   assert.match(context, /Worktree state excerpt:/);
 });
 
@@ -1280,6 +1539,199 @@ test("PostToolUse blocks when artifact index is stale after project file changes
   assert.match(output.reason, /work\.txt/);
 });
 
+test("UserPromptSubmit marks discussion state during active brainstorming", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+
+  const output = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "确认采用 dedicated working-notes.md，token=secretfixture1234567890" // codex-release-check: allow-secret-fixture
+  });
+
+  assert.match(output.hookSpecificOutput.additionalContext, /marked discussion state dirty/);
+  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
+  assert.equal(marker.status, "dirty");
+  assert.equal(marker.source, "UserPromptSubmit");
+  assert.equal(marker.phase, "brainstorming");
+  assert.ok(marker.required_files.includes("spec.md"));
+  assert.ok(marker.required_files.includes("current-state.md"));
+  assert.ok(marker.required_files.includes("decisions.md"));
+  assert.ok(marker.required_files.includes("open-questions.md"));
+  assert.ok(marker.required_files.includes("handoff-summary.md"));
+  assert.doesNotMatch(marker.prompt_excerpt, /secretfixture1234567890/);
+  assert.match(marker.prompt_excerpt, /\[redacted\]/);
+});
+
+test("Stop blocks stale discussion state even when no project files changed", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "我们确认这个设计边界，需要继续讨论下一步。"
+  });
+  backdateContextFiles(project, ["spec.md", "current-state.md", "decisions.md", "open-questions.md", "handoff-summary.md"]);
+
+  const blocked = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(blocked.decision, "block");
+  assert.match(blocked.reason, /No non-context files changed/);
+  assert.match(blocked.reason, /spec\.md is older than latest discussion or investigation marker/);
+  assert.match(blocked.reason, /decisions\.md is older than latest discussion or investigation marker/);
+  assert.match(blocked.reason, /Discussion: needs-state-refresh/);
+
+  write(path.join(project, ".codex-context", "spec.md"), "# Spec\n\n## Approval Status\nLiving Draft / Not Approved.\n\n## Open Questions\n- Continue discussion.\n");
+  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nAsk the next discussion question.\n");
+  write(path.join(project, ".codex-context", "decisions.md"), "# Decisions\n\n## Accepted\n- Design boundary recorded.\n\n## Rejected\n- None.\n");
+  write(path.join(project, ".codex-context", "open-questions.md"), "# Open Questions\n\n- Continue discussion.\n");
+  write(path.join(project, ".codex-context", "handoff-summary.md"), `# Handoff Summary
+
+## Objective
+Discussion fixture.
+
+## Latest User Instruction
+Continue discussion.
+
+## Approved Scope / Spec
+Living draft.
+
+## Plan Status
+Brainstorming.
+
+## Files Modified
+None.
+
+## Decisions Made
+- Design boundary recorded.
+
+## Verification Evidence
+Not applicable.
+
+## Git Checkpoint
+- Latest commit: fixture
+- Push state: no remote
+- Files included: none
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+
+## Next Action
+Ask the next question.
+
+## Files To Re-read First
+- .codex-context/spec.md
+`);
+
+  const allowed = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(allowed.continue, true);
+});
+
+test("PostToolUse exploration requires working notes before stopping", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "execution", "executing-plans");
+
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "Read",
+    tool_input: { path: "src/runtime.mjs" }
+  });
+  assert.deepEqual(post, {});
+
+  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
+  assert.equal(marker.source, "PostToolUse");
+  assert.ok(marker.required_files.includes("working-notes.md"));
+  backdateContextFiles(project, ["working-notes.md", "current-state.md", "handoff-summary.md"]);
+
+  const blocked = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(blocked.decision, "block");
+  assert.match(blocked.reason, /working-notes\.md is older than latest discussion or investigation marker/);
+
+  write(path.join(project, ".codex-context", "working-notes.md"), `# Working Notes
+
+## Purpose
+Fixture.
+
+## Current Findings
+- Read src/runtime.mjs and found the relevant hook path.
+
+## Current Hypothesis
+- Working notes should unblock Stop.
+
+## Rejected Paths
+- None.
+
+## Open Investigation Questions
+- None.
+
+## Next Verification Step
+- Run Stop hook again.
+
+## Promotion Notes
+- Promote if durable.
+`);
+  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nContinue execution.\n");
+  write(path.join(project, ".codex-context", "handoff-summary.md"), `# Handoff Summary
+
+## Objective
+Working notes fixture.
+
+## Latest User Instruction
+Continue execution.
+
+## Approved Scope / Spec
+Approved.
+
+## Plan Status
+Execution.
+
+## Files Modified
+None.
+
+## Decisions Made
+- Working notes refreshed.
+
+## Verification Evidence
+Stop hook fixture.
+
+## Git Checkpoint
+- Latest commit: fixture
+- Push state: no remote
+- Files included: none
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+
+## Next Action
+Continue.
+
+## Files To Re-read First
+- .codex-context/working-notes.md
+`);
+
+  const allowed = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(allowed.continue, true);
+});
+
+test("PostToolUse shell exploration commands require working notes before stopping", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "execution", "executing-plans");
+
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "functions.shell_command",
+    tool_input: { command: "Get-ChildItem -Force" }
+  });
+  assert.deepEqual(post, {});
+
+  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
+  assert.equal(marker.source, "PostToolUse");
+  assert.equal(marker.tool_name, "functions.shell_command");
+  assert.ok(marker.required_files.includes("working-notes.md"));
+});
+
 test("PreCompact blocks when handoff is missing or stale", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -1289,6 +1741,40 @@ test("PreCompact blocks when handoff is missing or stale", () => {
   assert.equal(output.continue, false);
   assert.equal(output.stopReason, "codex-project-ops-handoff-not-ready");
   assert.match(output.systemMessage, /handoff-summary\.md/);
+});
+
+test("PreCompact automatic compaction captures stale discussion and working-notes state", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "压缩前要保留当前讨论和探索结论。"
+  });
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "Read",
+    tool_input: { path: ".codex/scripts/lib/events.mjs" }
+  });
+  backdateContextFiles(project, ["spec.md", "current-state.md", "decisions.md", "open-questions.md", "handoff-summary.md", "working-notes.md"]);
+
+  const output = runHook(project, { hook_event_name: "PreCompact", trigger: "auto" });
+  assert.equal(output.continue, true);
+  assert.match(output.systemMessage, /allowed automatic compaction/);
+  assert.match(output.systemMessage, /working-notes\.md is older than latest discussion or investigation marker/);
+
+  const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
+  assert.match(handoff, /## PreCompact Emergency Notice/);
+  assert.match(handoff, /\.codex-context\/working-notes\.md/);
+  assert.match(handoff, /\.codex-context\/discussion-state\.json/);
+
+  const rawFile = fs.readdirSync(path.join(project, ".codex-context", "raw"))
+    .find((name) => /^precompact-auto-.*\.md$/.test(name));
+  assert.ok(rawFile);
+  const raw = fs.readFileSync(path.join(project, ".codex-context", "raw", rawFile), "utf8");
+  assert.match(raw, /## Discussion Marker/);
+  assert.match(raw, /## Working Notes/);
 });
 
 test("PreCompact writes emergency handoff and allows automatic compaction", () => {

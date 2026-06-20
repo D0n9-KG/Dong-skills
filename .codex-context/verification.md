@@ -3,71 +3,39 @@
 ## Commands Run
 - `node --test tests\project-ops.test.mjs`
   - Result: pass.
-  - Evidence: 42/42 tests passed. Coverage includes existing workflow/bootstrap/installer/release behavior plus Simplicity Gate skill assertions, `codex-simplicity-review` workflow-state acceptance, hook status output, and `dong-debt:` asset-governance reporting.
-  - Date: 2026-06-18 13:19 +08:00
+  - Evidence: 51/51 tests passed.
+  - Coverage: brainstorming continuation/spec gates; split global/project install; same-name non-Dong global preservation; same-name non-Dong project overwrite refusal; hook launcher cwd; workflow state; learning redaction/dedupe; checkpoint gates; project marker health; release privacy/readability; discussion/working-notes Stop and PreCompact behavior; asset governance; solution validation.
+  - Date: 2026-06-20 16:39 +08:00.
 - `node scripts\project-ops-health.mjs .`
   - Result: pass.
-  - Evidence: context files, hooks, helper scripts, bootstrap asset parity, worktree diagnostics, and workflow-state schema passed with no issues.
-  - Date: 2026-06-18 13:19 +08:00
+  - Evidence: no context, hook, script, project-level skill marker, bootstrap parity, worktree, or workflow-state issues.
+  - Date: 2026-06-20 16:39 +08:00.
+- `git diff --check`
+  - Result: pass.
+  - Evidence: no whitespace errors in the current diff.
+  - Date: 2026-06-20 16:39 +08:00.
 - `node scripts\release-check.mjs .`
   - Result: pass.
   - Evidence: health check, Node syntax checks, PowerShell parse checks, full Node test suite, privacy scan, text readability scan, large file scan, and runtime artifact scan passed.
-  - Date: 2026-06-18 13:19 +08:00
-- `git diff --cached --check`
+  - Date: 2026-06-20 16:41 +08:00.
+- `node scripts\release-check.mjs .`
   - Result: pass.
-  - Evidence: no staged whitespace errors.
-  - Date: 2026-06-18 13:19 +08:00
-- `node .codex/hooks/project-ops.mjs asset-governance`
-  - Result: pass.
-  - Evidence: no blocking asset issues, zero `dong-debt:` markers in the Dong Skills repo, and expected stale-review advisories for older on-demand state files.
-  - Date: 2026-06-18 13:19 +08:00
-- Staged privacy scan for local user paths and username tokens.
-  - Result: pass.
-  - Evidence: no staged private local path or username matches.
-  - Date: 2026-06-18 13:19 +08:00
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1 -TargetProjectRoot .`
-  - Result: pass.
-  - Evidence: installed curated skills to `%USERPROFILE%\.agents\skills`, refreshed project context/hooks/scripts, and reported restart/new-thread guidance.
-  - Date: 2026-06-18 12:01 +08:00
-- `Test-Path %USERPROFILE%\.agents\skills\codex-simplicity-review\SKILL.md`
-  - Result: pass.
-  - Evidence: returned `True`; global `writing-plans` also contains the new Simplicity Gate.
-  - Date: 2026-06-18 13:19 +08:00
-- `git status -sb`
-  - Result: pass.
-  - Evidence: worktree clean after checkpoint; branch `main` is ahead of `origin/main` by one local commit.
-  - Date: 2026-06-18 13:24 +08:00
-- `git log --oneline -3`
-  - Result: pass.
-  - Evidence: latest commit subject is `feat(skills): add simplicity review governance`.
-  - Date: 2026-06-18 13:24 +08:00
-- `git diff --check HEAD~1 HEAD`
-  - Result: pass.
-  - Evidence: committed diff has no whitespace errors.
-  - Date: 2026-06-18 13:24 +08:00
-- Privacy scan on the committed tree for local user paths and username tokens.
-  - Result: pass.
-  - Evidence: no matches.
-  - Date: 2026-06-18 13:24 +08:00
+  - Evidence: final pre-commit release check passed after state refresh and non-Dong conflict tests were added.
+  - Date: 2026-06-20 16:56 +08:00.
 
 ## Product Evidence
-- Direct CLI/test evidence confirms:
-  - `codex-simplicity-review` is present and routed by the curated skills.
-  - Global install contains `codex-simplicity-review` and source marker points back to this Dong Skills repo.
-  - `workflow-state.yaml` accepts `codex-simplicity-review` as a valid `next_skill`.
-  - `asset-governance` reports `dong-debt:` marker counts and missing `revisit when` triggers.
-  - `SessionStart`, `PostToolUse`, and `Stop` hook outputs include compact hook status.
+- Installer tests confirm global Dong Skills installs only `codex-codebase-onboarding` and `using-superpowers`, while full workflow skills install into the target project `.agents/skills/`.
+- Installer tests confirm local non-Dong skills are preserved, including same-name global conflicts.
+- Bootstrap tests confirm same-name non-Dong project skills are not overwritten; bootstrap fails instead.
+- Hook tests confirm discussion and investigation state can block Stop or produce automatic PreCompact emergency recovery.
+- Release check confirms no personal secret/key/path pattern, runtime artifact, oversized active text file, or mojibake marker in the publish scope.
 
 ## Review
-- `codex-simplicity-review` self-review:
-  - Finding fixed during review: initial hook status implementation would have made PostToolUse run full asset-governance on every file edit. Fixed by making PostToolUse use a lightweight status path while Stop/PreCompact retain full asset/checkpoint status.
-  - Remaining simplicity findings: none material.
-- `codex-review-panel` lenses applied: correctness, testing, maintainability, project standards, reliability, privacy/release hygiene.
-  - Result: no remaining actionable findings after the PostToolUse performance fix.
-
-## Solution Memory Evaluation
-- Outcome: drop.
-- Reason: this is Dong Skills workflow/tooling behavior. Durable details are captured in skill docs, runtime tests, decisions, risks, and README; no project `docs/solutions/` entry is needed.
+- Self-review fixed one additional risk: health check now verifies root/asset manifest parity.
+- Self-review fixed one additional risk: tests now cover same-name non-Dong global preservation and project overwrite refusal.
+- Simplicity lens: uses existing manifest, markers, PowerShell copy/move, Node stdlib, and existing Codex hook events; no new dependency or global daemon.
 
 ## Not Yet Verified
-- Existing external target projects have not been refreshed in this turn; they need project-local Dong Skills update/bootstrap to receive these changes.
+- Real Codex UI `/hooks` trust screen was not manually inspected after this batch.
+- External old projects have not been refreshed in this turn.
+- Commit and push are pending.

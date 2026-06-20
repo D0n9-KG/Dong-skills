@@ -113,7 +113,7 @@ switch (input.hook_event_name) {
     userPromptSubmit(input, root, ctx);
     break;
   case "PostToolUse":
-    postToolUse(root, ctx);
+    postToolUse(input, root, ctx);
     break;
   case "PreCompact":
     preCompact(input, root, ctx);

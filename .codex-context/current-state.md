@@ -1,24 +1,31 @@
 # Current State
 
 ## Objective
-Absorb Ponytail-inspired anti-overengineering mechanisms into Dong Skills without importing Ponytail wholesale.
+Deliver the current Dong Skills update batch:
+
+- preserve long discussion and investigation state across compaction with `discussion-state.json` and `working-notes.md`
+- switch Dong Skills installation to global bootstrap/router only plus full project-level `.agents/skills/`
+- protect non-Dong local skills from cleanup or overwrite
 
 ## Latest User Instruction
-Implement the recommended Ponytail-inspired changes, with the P0 Simplicity Gate limited to "can avoid building / stdlib / native platform"; all other proposed items are acceptable.
+User asked to make some skills initialize into each project workspace, leave only general/bootstrap skills globally, and avoid touching local non-Dong skills.
 
 ## Current Phase
 delivery
 
 ## Active Assumptions
 - Dong Skills remains Codex-only.
-- The mandatory Simplicity Gate intentionally excludes Ponytail's one-line and minimum-implementation rungs.
-- Existing target projects need a project-local Dong Skills refresh/bootstrap to receive the new skill, runtime, and AGENTS guidance.
+- No global hooks should be installed.
+- Global user skills should contain only `codex-codebase-onboarding` and `using-superpowers` from Dong Skills.
+- Full workflow skills belong in each initialized project under `.agents/skills/`.
+- Installers must manage only manifest-listed Dong skill names, and must not silently delete or overwrite same-name non-Dong local skills.
+- Existing projects need a refresh/bootstrap before they receive the new project-level skill model and hook runtime.
 
 ## Blockers
-- None.
+- None for implementation or local verification.
 
 ## Next Action
-Optionally commit/push this verified patch, or report the current uncommitted changes and verification results.
+Run final hook/status checks, then commit and push this verified batch if the repository remote is available.
 
 ## Last Updated
-2026-06-18 11:52 +08:00
+2026-06-20 16:52 +08:00

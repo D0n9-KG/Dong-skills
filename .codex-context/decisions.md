@@ -63,6 +63,12 @@
 - `codex-simplicity-review` is a focused overengineering review skill that complements, but does not replace, `codex-review-panel`.
 - Accepted simplifications with known ceilings use `dong-debt: <ceiling>; revisit when <trigger>` comments near the code, and asset governance reports markers without treating them as active project memory.
 - Hook status output is allowed to show root, workflow phase, next skill, decision state, learning state, asset state, checkpoint state, and latest changed file; high-frequency PostToolUse must use a lightweight status path rather than full asset-governance scans.
+- Long discussion and investigation recovery uses a dedicated `.codex-context/working-notes.md` file instead of folding agent exploration notes into `current-state.md` or `handoff-summary.md`.
+- `.codex-context/discussion-state.json` is a runtime-only dirty marker, ignored by Git and blocked by release checks if tracked.
+- Hooks do not call a model to summarize discussion or analysis. They only mark dirty state, compare freshness, and write deterministic emergency snapshots.
+- `UserPromptSubmit` can mark active discussion/spec/planning/debugging state dirty and requires refreshing `spec.md`, `current-state.md`, `decisions.md`, `open-questions.md`, and `handoff-summary.md`.
+- `PostToolUse` can mark investigation state dirty for read/search/web/browser/codegraph and common shell exploration commands, requiring `working-notes.md`, `current-state.md`, and `handoff-summary.md` before stopping or compacting.
+- SessionStart recovery order includes `decisions.md`, `open-questions.md`, and `working-notes.md` before plan/artifact files so a compacted session can recover the current discussion before executing.
 
 ## Rejected
 - Global hook dispatcher as the main release mechanism.
@@ -87,3 +93,5 @@
 - Importing Ponytail mode switching (`lite/full/ultra/off`) into Dong Skills.
 - Making Ponytail's one-line/minimum-implementation rungs mandatory in Dong Skills.
 - Running full asset-governance inside every PostToolUse hook just to enrich status output.
+- Model-in-hook summarization for PreCompact or UserPromptSubmit.
+- Storing hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning in `working-notes.md`.

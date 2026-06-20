@@ -15,6 +15,20 @@ Direct execution is allowed only for tiny mechanical edits with clear acceptance
 
 ## Workflow State Gate
 
+Dong Skills uses a split installation model:
+
+- Global install should expose only the bootstrap/router skills: `codex-codebase-onboarding` and `using-superpowers`.
+- Full workflow skills are project-scoped and should live in the target repo at `.agents/skills/`.
+- Do not assume full Dong Skills are available in an uninitialized project just because this global router is visible.
+
+Before routing to any full workflow skill, confirm the current repository has project-level Dong Skills installed. The expected marker is:
+
+```text
+.agents/skills/.dong-skills-project.json
+```
+
+If the marker is missing, or `.codex-context/workflow-state.yaml`, `.codex/hooks/project-ops.mjs`, `.codex/hooks.json`, or the `AGENTS.md` managed block is missing, use `codex-codebase-onboarding` first and bootstrap the project. Do not route directly to `brainstorming`, `writing-plans`, `executing-plans`, review, learning, or governance skills until project bootstrap is present.
+
 For a project with Dong Skills installed, read `.codex-context/workflow-state.yaml` or run this before routing:
 
 ```powershell
@@ -102,6 +116,7 @@ At a decision point:
 - Before edits: know the relevant files and update `artifact-index.md` when they matter.
 - At phase boundaries: update `.codex-context/workflow-state.yaml` with the phase, `next_skill`, and `decision_required`.
 - During work: keep `plan-progress.md` and `current-state.md` current.
+- During discussion, discovery, planning, debugging, or substantial exploration: keep `working-notes.md` current with externalized findings, rejected paths, current hypothesis/conclusion, open investigation questions, and next verification step. Do not store hidden chain-of-thought or raw transcripts.
 - During Goal mode work: periodically re-read `spec.md` and `plan-progress.md`, compare progress against acceptance criteria, and stop on ambiguity, scope change, repeated verification failure, destructive action, missing user decision, or state contradiction.
 - In or near a worktree: keep `worktree-state.md` current before execution, checkpoint, merge, PR, discard, or cleanup.
 - Before long pauses, compaction, or final response: refresh `handoff-summary.md`.

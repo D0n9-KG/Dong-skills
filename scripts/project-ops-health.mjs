@@ -14,6 +14,7 @@ const REQUIRED_CONTEXT_FILES = [
   "open-questions.md",
   "risks.md",
   "verification.md",
+  "working-notes.md",
   "learned-instincts.md",
   "dong-skills-outbox.md",
   "solution-index.md",
@@ -380,6 +381,9 @@ function checkRuntimeGitignore(root, issues) {
   if (!text.includes("!.codex-context/raw/.gitkeep")) {
     issues.push(".gitignore does not keep .codex-context/raw/.gitkeep trackable");
   }
+  if (!text.includes(".codex-context/discussion-state.json")) {
+    issues.push(".gitignore does not ignore .codex-context/discussion-state.json");
+  }
 }
 
 function checkTrackedRaw(root, issues) {
@@ -447,9 +451,83 @@ function checkContext(root, issues) {
     }
   }
 
+  const workingNotes = readText(path.join(ctx, "working-notes.md"));
+  for (const heading of [
+    "Purpose",
+    "Current Findings",
+    "Current Hypothesis",
+    "Rejected Paths",
+    "Open Investigation Questions",
+    "Next Verification Step",
+    "Promotion Notes"
+  ]) {
+    if (!workingNotes.includes(`## ${heading}`)) {
+      issues.push(`working-notes.md missing section: ${heading}`);
+    }
+  }
+
   const workflow = parseFlatYaml(readText(path.join(ctx, "workflow-state.yaml")));
   for (const [field, allowed] of Object.entries(WORKFLOW_ALLOWED)) {
     requireWorkflowValue(workflow, field, allowed, issues);
+  }
+}
+
+function readJsonFile(file, issues, label) {
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    issues.push(`${label} is not valid JSON: ${error.message}`);
+    return null;
+  }
+}
+
+function projectSkillNames(root, issues) {
+  const projectMarker = path.join(root, ".agents", "skills", ".dong-skills-project.json");
+  if (fs.existsSync(projectMarker)) {
+    const marker = readJsonFile(projectMarker, issues, ".agents/skills/.dong-skills-project.json");
+    if (!marker) return [];
+    if (marker.managed_by !== "Dong Skills") {
+      issues.push(".agents/skills/.dong-skills-project.json is not marked as Dong Skills managed");
+    }
+    if (!Array.isArray(marker.installed_skills) || marker.installed_skills.length === 0) {
+      issues.push(".agents/skills/.dong-skills-project.json has no installed_skills list");
+      return [];
+    }
+    return marker.installed_skills;
+  }
+
+  const sourceManifest = path.join(root, "dong-skills.manifest.json");
+  if (fs.existsSync(sourceManifest)) {
+    const manifest = readJsonFile(sourceManifest, issues, "dong-skills.manifest.json");
+    if (!manifest) return [];
+    if (!Array.isArray(manifest.project_skills) || manifest.project_skills.length === 0) {
+      issues.push("dong-skills.manifest.json has no project_skills list");
+      return [];
+    }
+    return manifest.project_skills;
+  }
+
+  issues.push("Missing project-level Dong Skills marker: .agents/skills/.dong-skills-project.json");
+  return [];
+}
+
+function checkProjectSkills(root, issues) {
+  const skillsRoot = path.join(root, ".agents", "skills");
+  const names = projectSkillNames(root, issues);
+
+  for (const name of names) {
+    const skillDir = path.join(skillsRoot, name);
+    const skillFile = path.join(skillDir, "SKILL.md");
+    if (!fs.existsSync(skillFile)) {
+      issues.push(`Missing project-level Dong Skill: .agents/skills/${name}/SKILL.md`);
+      continue;
+    }
+
+    const marker = path.join(skillDir, ".dong-skill-managed.json");
+    const sourceManifest = path.join(root, "dong-skills.manifest.json");
+    if (!fs.existsSync(sourceManifest) && !fs.existsSync(marker)) {
+      issues.push(`Missing Dong Skills managed marker for project skill: .agents/skills/${name}/.dong-skill-managed.json`);
+    }
   }
 }
 
@@ -469,6 +547,10 @@ function checkAssetParity(root, issues) {
     [
       path.join(root, "AGENTS.project-ops.snippet.md"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "AGENTS.project-ops.snippet.md")
+    ],
+    [
+      path.join(root, "dong-skills.manifest.json"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "dong-skills.manifest.json")
     ],
     [
       path.join(root, "scripts", "instincts.mjs"),
@@ -563,6 +645,7 @@ function run(root) {
   checkRuntimeGitignore(root, issues);
   checkTrackedRaw(root, issues);
   checkContext(root, issues);
+  checkProjectSkills(root, issues);
   checkAssetParity(root, issues);
 
   const lines = [

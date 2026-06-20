@@ -20,6 +20,7 @@ Keep recoverable project truth outside chat:
 - `.codex-context/open-questions.md`
 - `.codex-context/risks.md`
 - `.codex-context/verification.md`
+- `.codex-context/working-notes.md`
 - `.codex-context/learned-instincts.md`
 - `.codex-context/worktree-state.md`
 - `.codex-context/workflow-state.yaml`
@@ -83,7 +84,7 @@ Load only the skill needed for the current phase.
 3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`, and require written-spec approval before planning.
 4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; use `workflow-state transition plan-ready` when the plan is awaiting execution approval, then ask for execution mode approval unless the user explicitly requested plan-then-execute.
 5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
-6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; apply the Simplicity Gate before adding custom code, dependencies, abstractions, scripts, docs, or state assets; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh.
+6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; apply the Simplicity Gate before adding custom code, dependencies, abstractions, scripts, docs, or state assets; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh. During substantial investigation, keep `working-notes.md` fresh with checked facts, rejected paths, current hypothesis/conclusion, open questions, and next verification step.
 7. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.
 8. Debug: if anything fails unexpectedly, use `systematic-debugging`; do not stack fixes without a root-cause hypothesis.
 9. Verify: use `codex-verification-loop` and/or `verification-before-completion`; use `codex-evidence-capture` for observable behavior; update `verification.md`; transition workflow state to `verification-pass`, `verification-gap-recorded`, or `verification-fail`.
@@ -99,11 +100,11 @@ Load only the skill needed for the current phase.
 When `.codex/hooks/project-ops.mjs` and `.codex/hooks.json` are installed and trusted:
 
 - `SessionStart` injects recovery context, including `workflow-state.yaml` and the `workflow-state recover` summary.
-- `UserPromptSubmit` captures likely learning signals as raw observations, not active memory.
-- `PostToolUse` blocks after non-context file changes until `artifact-index.md` is fresh.
-- `PreCompact` blocks stale manual compaction; for automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves meaningful existing handoff content below it, writes a raw backup snapshot, and lets compaction continue.
+- `UserPromptSubmit` captures likely learning signals as raw observations, not active memory. During active discussion/spec/planning, it may also mark `.codex-context/discussion-state.json` dirty so user answers are written into state before stopping or compacting.
+- `PostToolUse` blocks after non-context file changes until `artifact-index.md` is fresh. During discovery/debugging/planning/execution exploration, read/search tools can mark discussion state dirty so `working-notes.md` is refreshed before stopping or compacting.
+- `PreCompact` blocks stale manual compaction; for automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves meaningful existing handoff content below it, writes a raw backup snapshot including discussion marker and working notes, and lets compaction continue.
 - `PostCompact` confirms compaction completion with common hook output only; recovery context is injected by `SessionStart` when the start source is `compact`.
-- `Stop` blocks final stopping when state, artifacts, verification, Git checkpoint notes, handoff, or learning review are stale.
+- `Stop` blocks final stopping when state, artifacts, verification, Git checkpoint notes, handoff, working notes, discussion state, or learning review are stale.
 - `Stop` and `PreCompact` also report malformed or missing `workflow-state.yaml`, but they do not require it to be newer than every source edit.
 - `Stop` also blocks severe asset bloat or unsafe tracked raw/runtime artifacts reported by asset governance.
 - Hook output includes a compact status line with the actual Git root, phase, next skill, blocking decision, learning state, asset state, checkpoint state, and latest changed file when known.

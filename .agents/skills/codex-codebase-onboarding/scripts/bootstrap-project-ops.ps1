@@ -6,6 +6,9 @@ $ErrorActionPreference = "Stop"
 
 $skillRoot = Split-Path -Parent $PSScriptRoot
 $assetsRoot = Join-Path $skillRoot "assets\project-ops"
+$manifestFile = Join-Path $assetsRoot "dong-skills.manifest.json"
+$siblingSkillsRoot = Split-Path -Parent $skillRoot
+$userDongSkillsSourceMarker = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".agents\skills\.dong-skills-source.json"
 $sourceContext = Join-Path $assetsRoot ".codex-context"
 $sourceCodex = Join-Path $assetsRoot ".codex"
 $sourceCodexScripts = Join-Path $sourceCodex "scripts"
@@ -35,10 +38,207 @@ if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
   throw "Target project root not found: $TargetProjectRoot"
 }
 
-foreach ($required in @($sourceContext, $sourceCodex, $sourceCodexScripts, $sourceScripts, $sourceAgentsSnippet)) {
+foreach ($required in @($manifestFile, $sourceContext, $sourceCodex, $sourceCodexScripts, $sourceScripts, $sourceAgentsSnippet)) {
   if (!(Test-Path -LiteralPath $required)) {
     throw "Missing bootstrap resource: $required"
   }
+}
+
+$trimChars = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+
+function Assert-PathInside {
+  param(
+    [string]$Parent,
+    [string]$Child
+  )
+
+  $parentFull = ([System.IO.Path]::GetFullPath($Parent)).TrimEnd($trimChars)
+  $childFull = [System.IO.Path]::GetFullPath($Child)
+  if (-not ($childFull.StartsWith($parentFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
+      [System.String]::Equals($childFull.TrimEnd($trimChars), $parentFull, [System.StringComparison]::OrdinalIgnoreCase))) {
+    throw "Refusing to modify path outside target root. Parent: $Parent Child: $Child"
+  }
+}
+
+function Read-DongSkillsManifest {
+  param(
+    [string]$File
+  )
+
+  $manifest = Read-Utf8Text -File $File | ConvertFrom-Json
+  foreach ($field in @("global_skills", "project_skills")) {
+    if (-not ($manifest.PSObject.Properties.Name -contains $field)) {
+      throw "Dong Skills manifest missing field: $field"
+    }
+  }
+  return $manifest
+}
+
+function Test-DongSkillDirectory {
+  param(
+    [string]$SkillDirectory,
+    [string]$ExpectedName
+  )
+
+  if (!(Test-Path -LiteralPath $SkillDirectory)) {
+    return $false
+  }
+
+  $marker = Join-Path $SkillDirectory ".dong-skill-managed.json"
+  if (Test-Path -LiteralPath $marker) {
+    try {
+      $data = Read-Utf8Text -File $marker | ConvertFrom-Json
+      if ($data.managed_by -eq "Dong Skills" -and (!$ExpectedName -or $data.name -eq $ExpectedName)) {
+        return $true
+      }
+    } catch {
+      return $false
+    }
+  }
+
+  $skillFile = Join-Path $SkillDirectory "SKILL.md"
+  if (!(Test-Path -LiteralPath $skillFile)) {
+    return $false
+  }
+
+  $text = Read-Utf8Text -File $skillFile
+  return (($text -match "Dong Skills") -or ($text -match "Codex Project Ops"))
+}
+
+function Write-SkillMarker {
+  param(
+    [string]$SkillDirectory,
+    [string]$Name,
+    [string]$Scope
+  )
+
+  $marker = [pscustomobject]@{
+    schema = "dong-skills.skill-install.v1"
+    managed_by = "Dong Skills"
+    name = $Name
+    scope = $Scope
+    installed_at = (Get-Date).ToUniversalTime().ToString("o")
+    note = "This project skill directory is managed by Dong Skills. Non-Dong project skills are never managed by this marker."
+  }
+  Write-Utf8Text -File (Join-Path $SkillDirectory ".dong-skill-managed.json") -Content (($marker | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
+}
+
+function Install-ManagedSkillDirectory {
+  param(
+    [string]$Source,
+    [string]$DestinationRoot,
+    [string]$Scope
+  )
+
+  $name = Split-Path -Leaf $Source
+  $target = Join-Path $DestinationRoot $name
+  $staging = Join-Path $DestinationRoot ".$name.staging-$PID"
+  $backup = Join-Path $DestinationRoot ".$name.previous-$PID"
+
+  foreach ($pathToCheck in @($target, $staging, $backup)) {
+    Assert-PathInside -Parent $DestinationRoot -Child $pathToCheck
+  }
+
+  if (Test-Path -LiteralPath $staging) {
+    Remove-Item -LiteralPath $staging -Recurse -Force
+  }
+  if (Test-Path -LiteralPath $backup) {
+    Remove-Item -LiteralPath $backup -Recurse -Force
+  }
+
+  if ((Test-Path -LiteralPath $target) -and -not (Test-DongSkillDirectory -SkillDirectory $target -ExpectedName $name)) {
+    throw "Refusing to overwrite non-Dong project skill directory: $target"
+  }
+
+  Copy-Item -LiteralPath $Source -Destination $staging -Recurse
+  Write-SkillMarker -SkillDirectory $staging -Name $name -Scope $Scope
+
+  try {
+    if (Test-Path -LiteralPath $target) {
+      Move-Item -LiteralPath $target -Destination $backup
+    }
+    Move-Item -LiteralPath $staging -Destination $target
+    if (Test-Path -LiteralPath $backup) {
+      Remove-Item -LiteralPath $backup -Recurse -Force
+    }
+  } catch {
+    if ((!(Test-Path -LiteralPath $target)) -and (Test-Path -LiteralPath $backup)) {
+      Move-Item -LiteralPath $backup -Destination $target
+    }
+    if (Test-Path -LiteralPath $staging) {
+      Remove-Item -LiteralPath $staging -Recurse -Force
+    }
+    throw
+  }
+}
+
+function Resolve-ProjectSkillsSourceRoot {
+  param(
+    [object]$Manifest
+  )
+
+  $sourceRepoSkillsRoot = $null
+  if (Test-Path -LiteralPath $userDongSkillsSourceMarker) {
+    try {
+      $sourceMarker = Read-Utf8Text -File $userDongSkillsSourceMarker | ConvertFrom-Json
+      if ($sourceMarker.source_repo) {
+        $sourceRepoSkillsRoot = Join-Path ([string]$sourceMarker.source_repo) ".agents\skills"
+      }
+    } catch {
+      $sourceRepoSkillsRoot = $null
+    }
+  }
+
+  $candidates = @($sourceRepoSkillsRoot, $siblingSkillsRoot) | Where-Object { $_ }
+  foreach ($candidate in $candidates) {
+    if (!(Test-Path -LiteralPath $candidate)) {
+      continue
+    }
+
+    $allPresent = $true
+    foreach ($name in @($Manifest.project_skills)) {
+      if (!(Test-Path -LiteralPath (Join-Path $candidate $name))) {
+        $allPresent = $false
+        break
+      }
+    }
+    if ($allPresent) {
+      return $candidate
+    }
+  }
+
+  throw "Cannot locate project-level Dong Skills source. Reinstall Dong Skills globally so .dong-skills-source.json points to the source checkout, or run bootstrap from the source checkout."
+}
+
+function Install-ProjectDongSkills {
+  param(
+    [string]$SourceRoot,
+    [string]$ProjectRoot,
+    [object]$Manifest
+  )
+
+  $targetProjectSkillsRoot = Join-Path $ProjectRoot ".agents\skills"
+  New-Item -ItemType Directory -Force -Path $targetProjectSkillsRoot | Out-Null
+
+  $installedNames = @()
+  foreach ($name in @($Manifest.project_skills)) {
+    $source = Join-Path $SourceRoot $name
+    if (!(Test-Path -LiteralPath $source)) {
+      throw "Missing Dong Skills project skill source: $source"
+    }
+    Install-ManagedSkillDirectory -Source $source -DestinationRoot $targetProjectSkillsRoot -Scope "project"
+    $installedNames += $name
+  }
+
+  $projectMarker = [pscustomobject]@{
+    schema = "dong-skills.project-install.v1"
+    managed_by = "Dong Skills"
+    installed_at = (Get-Date).ToUniversalTime().ToString("o")
+    installed_skills = $installedNames
+    global_bootstrap_skills_required = @($Manifest.global_skills)
+    note = "Only installed_skills are managed by Dong Skills in this project. Other .agents/skills directories are preserved."
+  }
+  Write-Utf8Text -File (Join-Path $targetProjectSkillsRoot ".dong-skills-project.json") -Content (($projectMarker | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
 }
 
 function Copy-MissingTreeFiles {
@@ -146,7 +346,7 @@ function Ensure-RuntimeGitignore {
   $gitignore = Join-Path $ProjectRoot ".gitignore"
   $markerStart = "# codex-project-ops-runtime:start"
   $markerEnd = "# codex-project-ops-runtime:end"
-  $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n$markerEnd"
+  $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n.codex-context/discussion-state.json`n$markerEnd"
   if (Test-Path -LiteralPath $gitignore) {
     $content = Read-Utf8Text -File $gitignore
   } else {
@@ -162,7 +362,7 @@ function Ensure-RuntimeGitignore {
   if ($hasStart -and $hasEnd) {
     $pattern = "(?s)" + [regex]::Escape($markerStart) + ".*?" + [regex]::Escape($markerEnd)
     $updated = [regex]::Replace($content, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $block })
-  } elseif ($content.Contains(".codex-context/raw/*") -and $content.Contains("!.codex-context/raw/.gitkeep")) {
+  } elseif ($content.Contains(".codex-context/raw/*") -and $content.Contains("!.codex-context/raw/.gitkeep") -and $content.Contains(".codex-context/discussion-state.json")) {
     return
   } else {
     $updated = $content.TrimEnd()
@@ -258,6 +458,10 @@ function Merge-HooksJson {
   Write-Utf8Text -File $TargetFile -Content ($json + [Environment]::NewLine)
 }
 
+$manifest = Read-DongSkillsManifest -File $manifestFile
+$projectSkillsSourceRoot = Resolve-ProjectSkillsSourceRoot -Manifest $manifest
+Install-ProjectDongSkills -SourceRoot $projectSkillsSourceRoot -ProjectRoot $TargetProjectRoot -Manifest $manifest
+
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
 Copy-MissingTreeFiles -From $sourceContext -To $targetContext
 Update-ContextTemplateSections -From $sourceContext -To $targetContext
@@ -310,6 +514,7 @@ if ($agentsContent -like "*$markerStart*" -and $agentsContent -like "*$markerEnd
 }
 
 Write-Host "Bootstrapped Dong Skills project context to $targetContext"
+Write-Host "Installed project-level Dong Skills to $(Join-Path $TargetProjectRoot ".agents\skills")"
 Write-Host "Installed project-level Dong Skills hooks to $targetCodex"
 Write-Host "Ensured .gitignore protects .codex-context/raw runtime data"
 Write-Host "Merged AGENTS.md project ops snippet into $agentsFile"
