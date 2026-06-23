@@ -45,6 +45,22 @@ node .codex/hooks/project-ops.mjs asset-governance
 
 `.codex-context/raw/`, `.codex-context/archive/`, full session histories, and full `docs/solutions/` bodies are excluded from active-budget estimates because they are read only on demand. Keep `.codex-context/solution-index.md` as the compact active pointer.
 
+## Report Buckets
+
+Read the report by bucket, not just by total scanned tokens:
+
+- `Hot recovery path`: files likely to be read on session start, compaction recovery, or router selection. This is the number that should stay small.
+- `Warm on-demand path`: phase skills and state files that should be read only when their workflow is active.
+- `Cold runtime/bootstrap path`: hook/runtime/helper scripts. These affect Dong Skills maintenance cost, but they are not normally model context in ordinary project work.
+
+Default thresholds:
+
+- Hot path over 35k tokens: warning; reduce active state or router/spec verbosity.
+- Hot path over 45k tokens: failure-level context pressure; prune/archive or split before adding more process.
+- Warm/cold heaviness is an optimization queue, not an immediate user-work blocker unless the current task is modifying those files.
+
+Do not tell the user "Dong Skills uses X tokens" from the total scanned number alone. State both total scanned and hot recovery path.
+
 ## Heuristics
 
 - prose: words times 1.3
@@ -61,15 +77,22 @@ node .codex/hooks/project-ops.mjs asset-governance
 
 Report:
 
-- total estimated tokens
-- largest files
-- always-loaded files vs on-demand skills
+- total scanned tokens
+- hot recovery path tokens and status
+- warm on-demand and cold runtime/bootstrap tokens
+- largest hot files vs largest warm/cold files
 - duplicate or stale guidance
 - top three reductions with estimated savings
 
 Do not remove guidance automatically. Recommend deletions or splits, then let the user decide unless they already asked for cleanup.
 
 Do not weaken phase gates, verification gates, privacy rules, or destructive-operation safeguards just to save tokens. If a rule is too verbose, shorten it while preserving the constraint.
+
+Prefer reductions in this order:
+
+1. Archive oversized active state files into `.codex-context/archive/` while keeping compact active summaries.
+2. Move long skill examples, templates, or checklists into `references/` and keep hard gates in `SKILL.md`.
+3. Split large hook/runtime modules only when maintaining Dong Skills itself; runtime size is usually cold context for ordinary projects.
 
 ## State Updates
 

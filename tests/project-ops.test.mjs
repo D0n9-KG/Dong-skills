@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
 const bootstrap = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "scripts", "bootstrap-project-ops.ps1");
 const installWindows = path.join(root, "scripts", "install-windows.ps1");
+const contextBudgetScript = path.join(root, "scripts", "context-budget.mjs");
 const statePrune = path.join(root, "scripts", "state-prune.mjs");
 const solutions = path.join(root, "scripts", "solutions.mjs");
 const health = path.join(root, "scripts", "project-ops-health.mjs");
@@ -631,6 +632,37 @@ test("session-history CLI accepts an explicit project root argument", () => {
 
   assert.match(out, /Dong Skills session history scan/);
   assert.match(out.replace(/\\/g, "/"), new RegExp(`Root: ${escapeRegExp(project.replace(/\\/g, "/"))}`));
+});
+
+test("context-budget reports hot warm and cold context paths", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "AGENTS.md"), "# Project Instructions\n\nUse Dong Skills.\n");
+  write(path.join(project, ".codex", "scripts", "lib", "core.mjs"), `export const fixture = ${JSON.stringify("runtime ".repeat(600))};\n`);
+
+  const hookOut = execFileSync(process.execPath, [hook, "context-budget", project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const scriptOut = execFileSync(process.execPath, [contextBudgetScript, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  for (const out of [hookOut, scriptOut]) {
+    assert.match(out, /Estimated total scanned:/);
+    assert.match(out, /Hot recovery path:/);
+    assert.match(out, /Warm on-demand path:/);
+    assert.match(out, /Cold runtime\/bootstrap path:/);
+    assert.match(out, /Hot budget status: ok/);
+    assert.match(out, /Workflow next skill: executing-plans/);
+    assert.match(out, /Largest hot files:/);
+    assert.match(out, /Largest warm\/cold files:/);
+    assert.match(out, /AGENTS\.md: .*recovery\/router path/);
+    assert.match(out, /\.codex\/scripts\/lib\/core\.mjs: .*runtime\/bootstrap maintenance/);
+  }
 });
 
 test("deleted project files still preserve freshness after state refresh", () => {
@@ -1459,7 +1491,38 @@ test("bootstrapped project hook release-check resolves .codex helper scripts", (
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /PASS health-check/);
+  assert.match(out, /PASS context budget scan/);
   assert.match(out, /Result: pass/);
+});
+
+test("release check fails when hot context budget exceeds fail threshold", () => {
+  const project = tempProject();
+  execFileSync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    bootstrap,
+    "-TargetProjectRoot",
+    project
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  fs.appendFileSync(path.join(project, "AGENTS.md"), `\n\n## Oversized Fixture\n\n${"context ".repeat(36_000)}\n`, "utf8");
+
+  const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [installedHook, "release-check"], {
+      cwd: project,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /FAIL context budget scan/);
+    assert.match(String(error.stdout), /Hot budget status: fail/);
+  }
+  assert.equal(failed, true);
 });
 
 test("release check scans tests for secrets", () => {

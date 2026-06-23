@@ -21,6 +21,8 @@ const READABILITY_SCAN_FILES = new Set([
   "AGENTS.project-ops.snippet.md"
 ]);
 const MAX_TEXT_FILE_BYTES = 512 * 1024;
+const HOT_CONTEXT_WARN_LIMIT = 35_000;
+const HOT_CONTEXT_FAIL_LIMIT = 45_000;
 
 function gitRoot(cwd) {
   try {
@@ -243,10 +245,41 @@ function runTests(root) {
   })];
 }
 
+function contextBudgetScan(root) {
+  const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
+  if (!fs.existsSync(hook)) {
+    return { ok: true, label: "context budget scan", details: "" };
+  }
+
+  try {
+    const output = execFileSync(process.execPath, [hook, "context-budget"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    const match = output.match(/Hot budget status:\s*(\w+)/i);
+    const status = match ? match[1].toLowerCase() : "unknown";
+    const warning = status === "warn"
+      ? `Hot recovery path is above the warning threshold (${HOT_CONTEXT_WARN_LIMIT.toLocaleString()} tokens).`
+      : "";
+    const details = [output.trim(), warning].filter(Boolean).join("\n");
+
+    return {
+      ok: status !== "fail",
+      label: "context budget scan",
+      details
+    };
+  } catch (error) {
+    const details = [error.stdout, error.stderr].filter(Boolean).join("\n").trim();
+    return { ok: false, label: "context budget scan", details };
+  }
+}
+
 function main(root) {
   const checks = [];
   const healthScript = findHelperScript(root, "project-ops-health.mjs");
   checks.push(runCommand("health-check", process.execPath, [healthScript || path.join(root, "scripts", "project-ops-health.mjs"), root], { cwd: root }));
+  checks.push(contextBudgetScan(root));
   checks.push(...syntaxChecks(root));
   checks.push(...powershellParseChecks(root));
   checks.push(...runTests(root));
@@ -281,14 +314,23 @@ function main(root) {
 
   const lines = ["Dong Skills release check", `Root: ${root}`, ""];
   let failed = 0;
+  const warnings = [];
   for (const check of checks) {
     lines.push(`${check.ok ? "PASS" : "FAIL"} ${check.label}`);
     if (!check.ok && check.details) {
       failed += 1;
       lines.push(check.details.split(/\r?\n/).slice(0, 12).map((line) => `  ${line}`).join("\n"));
+    } else if (check.ok && check.label === "context budget scan" && check.details) {
+      const statusLine = check.details.split(/\r?\n/).find((line) => /^Hot budget status:/i.test(line));
+      if (statusLine && /^Hot budget status:\s*warn\b/i.test(statusLine)) warnings.push(statusLine);
     } else if (!check.ok) {
       failed += 1;
     }
+  }
+
+  if (warnings.length) {
+    lines.push("", "Warnings:");
+    for (const warning of warnings) lines.push(`- ${warning}`);
   }
 
   lines.push("", failed ? `Result: fail (${failed} failed check(s))` : "Result: pass");

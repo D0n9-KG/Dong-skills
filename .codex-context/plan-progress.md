@@ -1,7 +1,7 @@
 # Plan Progress
 
 ## Active Plan
-Optimize Dong Skills governance around truth hierarchy, risk lanes, What-not-How specs, reduced freshness churn, and clearer hook diagnostics.
+Optimize Dong Skills governance around truth hierarchy, risk lanes, What-not-How specs, reduced freshness churn, clearer hook diagnostics, and a more accurate context-budget model.
 
 ## Spec Approval
 Approved by user in the current Dong Skills optimization discussion on 2026-06-23.
@@ -34,6 +34,7 @@ Not selected for this task.
 - What-not-How spec discipline -> brainstorming/spec template tests.
 - Freshness churn reduction -> Stop hook tests for docs-only vs code changes.
 - Hook diagnostics -> status output and checkpoint diagnostic tests.
+- Context footprint governance -> hot/warm/cold budget report and release-check hot-path threshold.
 - Bootstrap parity -> health check and release check.
 
 ## Test Scenarios
@@ -51,6 +52,7 @@ Not selected for this task.
 - [x] Synchronize bootstrap asset copies.
 - [x] Add and pass regression tests.
 - [x] Run final health/release checks.
+- [x] Add hot/warm/cold context-budget reporting and release-check thresholding.
 - [ ] Commit and push.
 
 ## Current Step
@@ -61,6 +63,7 @@ Final checkpoint.
 - `node .codex\hooks\project-ops.mjs health-check`: pass.
 - `node scripts\release-check.mjs .`: pass.
 - `git diff --check`: pass.
+- `node .codex\hooks\project-ops.mjs context-budget`: pass with hot budget ok.
 
 ## Out Of Scope
 - Cross-platform installer support.

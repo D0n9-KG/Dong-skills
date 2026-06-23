@@ -32,10 +32,11 @@ Do not record ordinary project memory here. Use:
 
 ### 2026-06-23 - Reduce Active Context Footprint In Project Ops
 
-Status: proposed
+Status: accepted
 Priority: P1
 Affected area: hooks / scripts / context / docs
 Source: repeated project work showing heavy active context and large always-loaded project-ops files
+Implemented so far: `context-budget` now separates `Hot recovery path`, `Warm on-demand path`, and `Cold runtime/bootstrap path`; release checks fail when the hot path exceeds 45k tokens and warn above 35k; the budget skill and README now tell agents to report hot path separately from total scanned tokens.
 
 Signal:
 `context-budget` on a live Science Evo worktree estimated about 85k tokens across 63 files, with several `lib/*.mjs` and `project-ops-health.mjs` files contributing most of the active load. The system works, but the always-loaded surface is heavy enough to slow recovery and increase compaction pressure.
@@ -44,7 +45,10 @@ Decision:
 Split the heaviest project-ops modules further into on-demand references or smaller units where possible, and keep the always-loaded path leaner without weakening phase gates or verification.
 
 Verification:
-`node .codex/hooks/project-ops.mjs context-budget`
+`node .codex/hooks/project-ops.mjs context-budget` now shows current hot recovery path separately from warm/cold maintenance cost. `node --test tests\project-ops.test.mjs` covers the hot/warm/cold report and release-check fail threshold.
+
+Remaining:
+Actual module splitting remains optional follow-up work. Current measured hot path is under the warning threshold, so large `events.mjs`, `workflow.mjs`, `learning.mjs`, and `assets.mjs` are maintenance-cost targets, not ordinary recovery blockers.
 
 ### 2026-06-23 - Reduce Freshness Churn From Frequent State Syncs
 

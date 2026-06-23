@@ -13,6 +13,7 @@ Dong Skills still needed stricter execution discipline and better recovery signa
 - Route work through the lowest sufficient risk lane.
 - Reduce unnecessary freshness churn for docs-only discussion work.
 - Make hook diagnostics and recovery state clearer when the agent nears compaction or checkpoint boundaries.
+- Separate hot recovery context from warm on-demand skills and cold runtime/bootstrap maintenance so budget reports reflect real recovery pressure.
 
 ## Approval Status
 Approved by user through iterative instructions on 2026-06-23.
@@ -47,12 +48,14 @@ Approved by user through iterative instructions on 2026-06-23.
 - Tighten hook freshness checks so docs-only changes do not require code-style verification or Git checkpointing.
 - Keep code/config changes on the stronger verification path.
 - Refresh templates, health checks, tests, and bootstrap mirrors so the new rules are recoverable after compaction.
+- Add a hot/warm/cold `context-budget` report with release-check enforcement for hot-path bloat.
 
 ## Design
 - The spec locks What, not How.
 - Docs-only discussion work may keep state fresh without forcing verification/checkpoint loops.
 - Code/config/script changes still require verification and checkpoint discipline.
 - Hook status output should name the Git root, phase, next skill, latest changed file, and whether checkpoint or learning state is the blocker.
+- `context-budget` should report hot recovery path, warm on-demand path, and cold runtime/bootstrap path separately; only the hot path should drive the main budget signal.
 
 ## Acceptance Criteria
 - Spec and plan files contain explicit `Truth Hierarchy` and `Work Class / Risk Lane` sections.

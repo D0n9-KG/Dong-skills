@@ -7,6 +7,15 @@
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/working-notes.md`: project bootstrap template for working notes.
 
 ## Modified
+- `.codex/scripts/lib/budget.mjs`: context-budget now classifies files into hot recovery, warm on-demand, and cold runtime/bootstrap buckets, with hot-path warn/fail thresholds.
+- `scripts/context-budget.mjs`: standalone budget script mirrors the hot/warm/cold report.
+- `scripts/release-check.mjs`: release check now runs context-budget and fails when hot recovery context exceeds the fail threshold.
+- `.agents/skills/codex-context-budget/SKILL.md`: explains how to interpret hot/warm/cold report buckets and avoid over-reading total scanned tokens.
+- `README.md`: notes that context-budget separates hot recovery path from warm/cold maintenance cost.
+- `docs/improvements/backlog.md`: records the first-phase context-footprint optimization and remaining optional module-splitting work.
+- `tests/project-ops.test.mjs`: covers context-budget report buckets and release-check hot-path failure.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/budget.mjs`: bootstrap mirror of budget runtime.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`: bootstrap mirror of release check.
 - `.agents/skills/brainstorming/SKILL.md`: added truth hierarchy, work-lane guidance, and What-not-How spec discipline.
 - `.agents/skills/writing-plans/SKILL.md`: added work-lane guidance and runtime/checkpoint constraints.
 - `.agents/skills/executing-plans/SKILL.md`: added lane-aware execution depth requirements.
