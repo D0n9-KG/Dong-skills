@@ -13,6 +13,15 @@ Before any non-trivial action, choose the relevant process skill and use it. A n
 
 Direct execution is allowed only for tiny mechanical edits with clear acceptance criteria.
 
+Use the lowest sufficient work lane:
+
+- `Lane 0`: tiny mechanical edit; direct execution is allowed with a clear acceptance criterion.
+- `Lane 1`: small bounded change; use compact planning and targeted verification.
+- `Lane 2`: multi-file or behavior-changing work; use brainstorming, written spec approval, planning, execution, verification, and checkpoint discipline.
+- `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work; require stronger tests, review, rollback notes, and checkpointing.
+
+When records conflict, follow the truth hierarchy: latest user instruction; verified behavior from code/tests/commands/product evidence/live repo inspection; approved spec and plan; current state and handoff; older chat/raw notes/stale specs.
+
 ## Workflow State Gate
 
 Dong Skills uses a split installation model:

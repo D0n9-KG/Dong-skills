@@ -1,104 +1,93 @@
 # Handoff Summary
 
 ## Objective
-Deliver and checkpoint the current Dong Skills update batch:
+Deliver and checkpoint the current Dong Skills optimization batch:
 
-- compaction-resilient discussion and investigation state
-- split install model: global bootstrap/router only, full project-level skills per repo
-- strict preservation of non-Dong local skills
+- truth hierarchy and lowest-sufficient-lane guidance
+- What-not-How spec discipline
+- reduced Stop-hook freshness churn for docs-only discussion changes
+- stronger code/config verification enforcement, including untracked files inside new directories
+- clearer hook diagnostics that prefer real project files over governance noise
 
 ## Latest User Instruction
-User asked to make some skills initialize into the project workspace, keep only general/bootstrap skills globally, and avoid touching local skills that are not Dong Skills.
+User approved implementing the agreed Dong Skills optimization items.
 
 ## Approved Scope / Spec
 - Approved spec: `.codex-context/spec.md`.
 - Implemented:
-  - `working-notes.md` active recovery file and ignored runtime `discussion-state.json`.
-  - UserPromptSubmit/PostToolUse freshness markers, Stop blocks, PreCompact emergency recovery, SessionStart recovery excerpts.
-  - `dong-skills.manifest.json` with `global_skills` and `project_skills`.
-  - Global installer installs only `codex-codebase-onboarding` and `using-superpowers`.
-  - Project bootstrap installs full workflow skills into `.agents/skills/` and writes `.dong-skills-project.json`.
-  - Non-Dong local skills are preserved; same-name non-Dong project skills block overwrite.
-  - README and skill docs explain the split model.
+  - `brainstorming`, `writing-plans`, `executing-plans`, `using-superpowers`, and `codex-project-governance` now document truth hierarchy and work lanes.
+  - Spec and plan templates include `Truth Hierarchy` and `Work Class / Risk Lane`.
+  - Health checks require those sections.
+  - Stop hook now skips verification/checkpoint for docs-only discussion-phase changes but still requires verification/checkpoint for code/config/script changes.
+  - `gitStatusFiles()` expands untracked directories with `--untracked-files=all`.
+  - Hook status now reports the event, actual Git root, workflow state, learning/assets/discussion/checkpoint state, and the latest non-governance changed file when available.
+  - Bootstrap asset mirrors are synchronized.
 
 ## Plan Status
 - Execution mode: Traditional task-by-task execution.
 - Implementation status: complete.
 - Verification status: pass.
-- Review status: complete.
+- Review status: self-review complete.
 - Checkpoint status: pending commit/push.
 
 ## Files Modified
-- `dong-skills.manifest.json`
-- `scripts/install-windows.ps1`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- `scripts/project-ops-health.mjs`
-- `scripts/release-check.mjs`
+- `.agents/skills/brainstorming/SKILL.md`
+- `.agents/skills/writing-plans/SKILL.md`
+- `.agents/skills/executing-plans/SKILL.md`
+- `.agents/skills/using-superpowers/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
 - `.codex/scripts/lib/events.mjs`
+- `.codex/scripts/lib/git.mjs`
 - `.codex/scripts/lib/recovery.mjs`
 - `.codex/scripts/lib/templates.mjs`
-- `.codex/hooks/project-ops.mjs`
-- `.codex/hooks.json`
-- Bootstrap mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`
-- `.agents/skills/brainstorming/SKILL.md`
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`
-- `.agents/skills/codex-project-governance/SKILL.md`
-- `.agents/skills/codex-docs-stewardship/SKILL.md`
-- `.agents/skills/codex-asset-governance/SKILL.md`
+- `scripts/project-ops-health.mjs`
+- `tests/project-ops.test.mjs`
 - `AGENTS.md`
 - `AGENTS.project-ops.snippet.md`
 - `README.md`
-- `.gitignore`
-- `tests/project-ops.test.mjs`
+- `docs/improvements/backlog.md`
+- Bootstrap mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`
 - `.codex-context/*`
 
 ## Files Read But Not Changed
-- `.agents/skills/writing-plans/SKILL.md`
-- `.agents/skills/executing-plans/SKILL.md`
-- `.codex-context/project-map.md`
-- Existing state files before replacement.
+- Existing hook/test/state files before edits.
 
 ## Decisions Made
-- Global Dong install is bootstrap-only.
-- Full Dong workflow skills are installed per project into `.agents/skills/`.
-- `.dong-skills-source.json` records the source checkout for project bootstrap.
-- `.agents/skills/.dong-skills-project.json` marks healthy project-level install.
-- Installer cleanup is manifest/marker/origin-text based and limited to Dong skill names.
-- Same-name non-Dong project skills are never silently overwritten.
-- Existing projects must run bootstrap/update to receive the project-local model.
+- Specs should lock What, not implementation How unless the user or risk explicitly requires it.
+- Use Lane 0-3 to scale ceremony and verification depth.
+- Docs-only discussion changes should not force execution-level verification/checkpoint.
+- Code/config/script changes must still require verification and checkpoint review even when they happen during discussion phases.
+- Hook diagnostics should prefer non-governance files for `Latest changed file`.
+- `git status` must expand untracked directories so new source files are classified correctly.
 
 ## Open Questions And Assumptions
 - No blocking open questions.
-- Assumption: old projects may still show global skills until this updated global installer is run once.
-- Assumption: same-name non-Dong conflicts should be manually resolved by the user rather than overwritten.
+- Assumption: UI-level stale hook notification stacks may still depend on Codex app behavior; this batch improves hook output, not the app notification queue.
 
 ## Risks
-- Old projects must be updated; otherwise they may not have the project-level skill marker or latest hooks.
-- If a user has a personal skill with the same name and clear Dong-origin text in its `SKILL.md`, it could be treated as old Dong-managed; current tests cover ordinary non-Dong same-name text.
-- Real Codex UI hook trust behavior was not manually rechecked after this batch, though CLI/release checks pass.
+- Existing projects need a Dong Skills refresh before they receive these updated hooks/templates.
+- The active-context-footprint backlog item remains open; this batch did not split large hook modules into smaller on-demand units.
 
 ## Verification Evidence
-- `node --test tests\project-ops.test.mjs`: pass, 51/51 tests.
-- `node scripts\project-ops-health.mjs .`: pass.
+- `node --test tests\project-ops.test.mjs`: pass, 53/53 tests.
+- `node .codex\hooks\project-ops.mjs health-check`: pass.
+- `node scripts\release-check.mjs .`: pass.
 - `git diff --check`: pass.
-- `node scripts\release-check.mjs .`: pass, including final pre-commit run after state refresh.
 
 ## Git Checkpoint
 - Latest commit: `1239bc2 feat(skills): add simplicity review governance`
-- Push state: current changes are not committed or pushed yet.
+- Push state: current optimization batch is not committed or pushed yet.
 - Files included: pending.
-- Files intentionally left uncommitted: current verified Dong Skills update batch until checkpoint command runs.
-- Deferred reason: state refresh and Stop hook still need to run after latest edits.
-- Next checkpoint: commit subject `feat(skills): split global and project installs`.
+- Files intentionally left uncommitted: current verified Dong Skills optimization batch until checkpoint command runs.
+- Deferred reason: checkpoint intentionally deferred until the final commit command in this turn.
+- Next checkpoint: commit subject `feat(skills): tighten project ops governance`.
 
 ## Learned Instincts To Preserve
-- Project activation should be explicit; global skill visibility alone is not enough.
-- Preserve durable investigation findings as working notes, not hidden reasoning.
-- Use manifest/marker checks for cleanup; same-name conflicts require refusal or explicit user decision.
+- For hook freshness checks, expand untracked directories to real file paths before classifying risk.
+- For hook diagnostics, prefer user-relevant project files over `.codex-context` maintenance files when naming the latest changed file.
 
 ## Next Action
-Run Stop hook if needed, then commit and push this batch.
+Commit and push this batch.
 
 ## Files To Re-read First
 1. `.codex-context/handoff-summary.md`
@@ -107,6 +96,6 @@ Run Stop hook if needed, then commit and push this batch.
 4. `.codex-context/plan-progress.md`
 5. `.codex-context/artifact-index.md`
 6. `.codex-context/verification.md`
-7. `scripts/install-windows.ps1`
-8. `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
+7. `.codex/scripts/lib/events.mjs`
+8. `.codex/scripts/lib/git.mjs`
 9. `tests/project-ops.test.mjs`

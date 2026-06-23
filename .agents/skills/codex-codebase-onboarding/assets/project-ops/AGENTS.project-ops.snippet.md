@@ -17,6 +17,14 @@ For non-trivial work, keep the phase boundary explicit:
 
 Record spec approval in `.codex-context/spec.md`; record `Execution Mode`, `Goal Mode Objective` when applicable, and execution approval in `.codex-context/plan-progress.md`.
 
+## Truth Hierarchy And Work Lanes
+
+When records conflict, use this order: latest user instruction; verified behavior from code, tests, commands, product evidence, or live repo inspection; approved spec and plan; current state files and handoff; older chat, raw notes, stale specs, or unreviewed observations.
+
+`spec.md` is a current-task intent and acceptance record, not a permanent system truth. After delivery, move durable knowledge into `CONCEPTS.md`, `STRATEGY.md`, `docs/solutions/`, or curated instincts, and do not keep duplicate spec prose that overlaps executable code.
+
+Use the lowest sufficient lane: `Lane 0` tiny mechanical edit; `Lane 1` small bounded change; `Lane 2` multi-file or behavior-changing work; `Lane 3` high-risk core logic, migration, security, money, permissions, release, or production-sensitive work. The lane controls plan depth, verification depth, state update cadence, review, rollback, and checkpoint cadence.
+
 ## Curated Skills
 
 Use only the bundled curated set by default:

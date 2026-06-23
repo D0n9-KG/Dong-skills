@@ -1,13 +1,16 @@
 # Plan Progress
 
 ## Active Plan
-Deliver Dong Skills compaction-resilience plus split install governance.
+Optimize Dong Skills governance around truth hierarchy, risk lanes, What-not-How specs, reduced freshness churn, and clearer hook diagnostics.
 
 ## Spec Approval
-Approved by user through iterative instructions; current written spec in `.codex-context/spec.md`.
+Approved by user in the current Dong Skills optimization discussion on 2026-06-23.
 
 ## Execution Approval
-User said to proceed and continue; Traditional task-by-task execution mode.
+User approved implementation. Traditional task-by-task execution mode.
+
+## Work Class / Risk Lane
+Lane 2: multi-file skill, hook, template, and test changes with user-facing workflow impact.
 
 ## Execution Mode
 Traditional task-by-task execution.
@@ -16,50 +19,50 @@ Traditional task-by-task execution.
 Not selected for this task.
 
 ## Runtime Constraints
-- Do not install global hooks.
-- Do not touch local non-Dong skills.
+- Keep Dong Skills Codex-only.
+- Do not add global hooks.
+- Preserve non-Dong local skills.
 - Keep hooks deterministic and lightweight.
-- Preserve discussion/investigation state without storing hidden reasoning or raw transcripts.
-- Keep source and bootstrap asset copies synchronized.
-- Verify privacy/readability before publishing.
+- Do not weaken verification for code/config/script changes.
+- Keep root files and onboarding bootstrap assets synchronized.
 
 ## Checkpoint Cadence
-- Commit after implementation, tests, health check, release check, diff check, state refresh, and Stop hook pass.
-- Push after commit if remote is available.
+- Commit and push after tests, health check, release check, state refresh, and Stop hook pass.
 
 ## Acceptance Mapping
-- Discussion/investigation survives compaction -> hook tests for UserPromptSubmit, PostToolUse, Stop, PreCompact, SessionStart recovery.
-- Global minimal/project complete install -> installer/bootstrap tests.
-- Non-Dong skills preserved -> same-name global preservation and project overwrite refusal tests.
-- Old projects can be updated -> onboarding bootstrap installs project-level skills and marker.
-- Published package is clean -> health/release/diff checks.
+- Truth hierarchy / work lanes -> skill docs, templates, health schema, and regression tests.
+- What-not-How spec discipline -> brainstorming/spec template tests.
+- Freshness churn reduction -> Stop hook tests for docs-only vs code changes.
+- Hook diagnostics -> status output and checkpoint diagnostic tests.
+- Bootstrap parity -> health check and release check.
 
 ## Test Scenarios
-- Happy path: install globally and into a target project; health check passes.
-- Regression path: old global Dong heavy skills are removed when identifiable.
-- Error path: same-name non-Dong project skill causes bootstrap refusal, not overwrite.
-- Non-goal preservation: no global hooks, no model-in-hook summarization, no raw runtime artifact committed.
+- `node --test tests\project-ops.test.mjs`.
+- `node .codex\hooks\project-ops.mjs health-check`.
+- `node scripts\release-check.mjs .`.
+- `git diff --check`.
 
 ## Tasks
-- [x] Add `working-notes.md`, discussion marker, recovery, Stop/PreCompact behavior, and tests.
-- [x] Add split install manifest and project-level skill marker.
-- [x] Update Windows installer and onboarding bootstrap.
-- [x] Update router/onboarding/project governance docs and README.
-- [x] Add health/release coverage for project marker, manifest parity, runtime ignore, privacy/readability.
-- [x] Add tests for same-name non-Dong skill preservation/refusal.
-- [x] Run verification suite.
-- [ ] Commit and push verified batch.
+- [x] Add truth hierarchy and work-lane guidance to router, governance, brainstorming, planning, and execution skills.
+- [x] Add required spec/plan template sections and health-check schema.
+- [x] Adjust Stop hook verification/checkpoint requirement by phase and changed-file type.
+- [x] Add clearer hook event/status output.
+- [x] Update current project state files for the new spec/plan sections.
+- [x] Synchronize bootstrap asset copies.
+- [x] Add and pass regression tests.
+- [x] Run final health/release checks.
+- [ ] Commit and push.
 
 ## Current Step
 Final checkpoint.
 
 ## Verification
-- `node --test tests\project-ops.test.mjs`: pass, 51/51 tests.
-- `node scripts\project-ops-health.mjs .`: pass.
+- `node --test tests\project-ops.test.mjs`: pass, 53/53 tests.
+- `node .codex\hooks\project-ops.mjs health-check`: pass.
 - `node scripts\release-check.mjs .`: pass.
 - `git diff --check`: pass.
 
 ## Out Of Scope
-- Cross-platform installer.
-- Claude Code adapter.
-- Manual validation in every old project.
+- Cross-platform installer support.
+- Claude adapter support.
+- Manual refresh of downstream projects in this turn.

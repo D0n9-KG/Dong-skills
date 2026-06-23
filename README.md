@@ -226,6 +226,9 @@ node .codex/hooks/project-ops.mjs health-check
 ### Core Workflow
 
 - `codex-project-governance` is the main lifecycle skill.
+- Truth hierarchy: latest user instruction; verified behavior from code, tests, commands, product evidence, or live repo inspection; approved spec and plan; current state and handoff; older chat/raw notes/stale specs.
+- Work lanes keep ceremony proportional: Lane 0 mechanical edit, Lane 1 small bounded change, Lane 2 multi-file or behavior-changing work, Lane 3 high-risk core logic/migration/security/money/permissions/release work.
+- `spec.md` is a current-task intent and acceptance record, not a permanent system truth. Durable knowledge belongs in `CONCEPTS.md`, `STRATEGY.md`, `docs/solutions/`, or curated instincts.
 - Non-trivial work has explicit phase gates: brainstorming produces a written spec, planning produces a verifiable plan with an execution mode, and execution waits for approval.
 - `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash.
 - `.codex-context/working-notes.md` stores compact externalized investigation state. It is not for hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning.

@@ -29,6 +29,16 @@ Keep recoverable project truth outside chat:
 
 If those files conflict with the latest user instruction, the latest user instruction wins. Update the files before continuing.
 
+Use this truth hierarchy when project records conflict:
+
+1. Latest user instruction.
+2. Verified behavior from code, tests, commands, product evidence, or live repo inspection.
+3. Approved written spec and approved plan for the current task.
+4. Current state files and handoff.
+5. Older chat, raw notes, stale specs, or unreviewed observations.
+
+`spec.md` is a current-task intent and acceptance record. It is not a permanent system truth. After delivery, migrate only durable knowledge into `CONCEPTS.md`, `STRATEGY.md`, `docs/solutions/`, or curated instincts; do not maintain duplicate spec text that overlaps executable code.
+
 Use `.codex-context/workflow-state.yaml` as the script-readable workflow state. It records the current phase, next skill, pending decision, spec/plan/execution status, verification result, review status, and checkpoint status. Before routing work after compaction, new sessions, or long pauses, run:
 
 ```powershell
@@ -48,6 +58,13 @@ Do not skip gates for non-trivial work:
 5. **Execution gate:** execute a written plan only after the user approves execution mode or explicitly asked earlier to plan-then-execute. Plan-then-execute defaults to Traditional mode unless the user explicitly selects Codex Goal mode.
 
 Tiny mechanical edits can use a compact spec and direct implementation. If the boundary is uncertain, treat it as non-trivial and use the gates.
+
+Before choosing the gate depth, classify the work into the lowest sufficient lane:
+
+- `Lane 0`: tiny mechanical edit.
+- `Lane 1`: small bounded change with compact planning and targeted verification.
+- `Lane 2`: multi-file or behavior-changing work with approved spec, plan, evidence, and checkpoint discipline.
+- `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work with stronger tests, review, rollback notes, and checkpointing.
 
 ## Skill Map
 
@@ -81,8 +98,8 @@ Load only the skill needed for the current phase.
 
 1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, worktree state, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
 2. Recover: read `workflow-state.yaml` and run `workflow-state recover` when phase or next action is unclear. If project files are still insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
-3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`, and require written-spec approval before planning.
-4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; use `workflow-state transition plan-ready` when the plan is awaiting execution approval, then ask for execution mode approval unless the user explicitly requested plan-then-execute.
+3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, truth hierarchy, work class/risk lane, and What-level scope; transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`; require written-spec approval before planning.
+4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include work class/risk lane, execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; use `workflow-state transition plan-ready` when the plan is awaiting execution approval, then ask for execution mode approval unless the user explicitly requested plan-then-execute.
 5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
 6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; apply the Simplicity Gate before adding custom code, dependencies, abstractions, scripts, docs, or state assets; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh. During substantial investigation, keep `working-notes.md` fresh with checked facts, rejected paths, current hypothesis/conclusion, open questions, and next verification step.
 7. Govern architecture: if structure changes or starts degrading, use `codex-architecture-governance`; update `project-map.md`, `decisions.md`, and `risks.md`.

@@ -61,7 +61,7 @@ function handoffRecoveryExcerpt(ctx) {
   return excerpt(ctx, REQUIRED_FILES.handoff, 1800);
 }
 
-function hookStatus(root, ctx) {
+function hookStatus(root, ctx, eventName) {
   const workflow = workflowStatus(root, ctx);
   const learning = learningStatus(ctx);
   const assets = assetGovernanceStatus(root, ctx);
@@ -70,6 +70,7 @@ function hookStatus(root, ctx) {
 
   return [
     "Hook status:",
+    `- Event: ${eventName || "unknown"}`,
     `- Actual Git root: ${root}`,
     `- Workflow: phase=${state.phase || "missing"} next_skill=${state.next_skill || "missing"} decision_required=${state.decision_required || "missing"} issues=${workflow.issues.length}`,
     `- Learning: ${learning.ok ? "ok" : "pending-review"} issues=${learning.issues.length}`,
@@ -88,7 +89,7 @@ export function sessionRecoveryContext(root, ctx, eventName) {
 
   const parts = [
     "Codex Project Ops hooks are active.",
-    hookStatus(root, ctx),
+    hookStatus(root, ctx, eventName),
     RECOVERY_ORDER,
     "Before editing, keep artifact-index.md current. Before completion, update verification.md, Git Checkpoint, and handoff-summary.md.",
     workspaceSummary,

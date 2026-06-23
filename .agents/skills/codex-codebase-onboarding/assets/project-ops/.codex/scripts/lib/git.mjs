@@ -16,9 +16,22 @@ export function gitChangedFiles(root) {
   return gitStatusFiles(root).filter((name) => !isGovernancePath(name));
 }
 
+export function isVerificationRelevantPath(relPath) {
+  const normalized = String(relPath || "").replace(/\\/g, "/").toLowerCase();
+  if (!normalized) return false;
+  if (isGovernancePath(normalized)) return false;
+  if (normalized === "readme.md" || normalized === "agents.md") return false;
+  if (normalized.startsWith("docs/") || normalized.endsWith("/skill.md")) return false;
+  return /\.(js|mjs|cjs|ts|tsx|jsx|py|go|rs|java|cs|json|toml|ya?ml|ps1|sh|bat|cmd|html|css|scss|sql)$/i.test(normalized);
+}
+
+export function changedPathsNeedVerification(files) {
+  return files.some((file) => isVerificationRelevantPath(file));
+}
+
 export function gitStatusFiles(root) {
   try {
-    const out = execFileSync("git", ["status", "--porcelain"], {
+    const out = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"]

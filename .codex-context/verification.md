@@ -3,39 +3,35 @@
 ## Commands Run
 - `node --test tests\project-ops.test.mjs`
   - Result: pass.
-  - Evidence: 51/51 tests passed.
-  - Coverage: brainstorming continuation/spec gates; split global/project install; same-name non-Dong global preservation; same-name non-Dong project overwrite refusal; hook launcher cwd; workflow state; learning redaction/dedupe; checkpoint gates; project marker health; release privacy/readability; discussion/working-notes Stop and PreCompact behavior; asset governance; solution validation.
-  - Date: 2026-06-20 16:39 +08:00.
-- `node scripts\project-ops-health.mjs .`
+  - Evidence: 53/53 tests passed.
+  - Coverage: upstream brainstorming continuation loop, truth hierarchy/work-lane guidance, bootstrap template sections, Stop docs-only freshness relaxation, Stop code/config verification enforcement, untracked-directory expansion, hook diagnostic latest-file preference, checkpoint diagnostics, split install, recovery, learning, asset governance, and solution validation.
+  - Date: 2026-06-23 14:49 +08:00.
+- `node .codex\hooks\project-ops.mjs health-check`
   - Result: pass.
-  - Evidence: no context, hook, script, project-level skill marker, bootstrap parity, worktree, or workflow-state issues.
-  - Date: 2026-06-20 16:39 +08:00.
-- `git diff --check`
-  - Result: pass.
-  - Evidence: no whitespace errors in the current diff.
-  - Date: 2026-06-20 16:39 +08:00.
+  - Evidence: no context, hook, script, worktree, workflow-state, or bootstrap parity issues.
+  - Date: 2026-06-23 14:49 +08:00.
 - `node scripts\release-check.mjs .`
   - Result: pass.
   - Evidence: health check, Node syntax checks, PowerShell parse checks, full Node test suite, privacy scan, text readability scan, large file scan, and runtime artifact scan passed.
-  - Date: 2026-06-20 16:41 +08:00.
-- `node scripts\release-check.mjs .`
+  - Date: 2026-06-23 14:58 +08:00.
+- `git diff --check`
   - Result: pass.
-  - Evidence: final pre-commit release check passed after state refresh and non-Dong conflict tests were added.
-  - Date: 2026-06-20 16:56 +08:00.
+  - Evidence: no whitespace errors in the current diff.
+  - Date: 2026-06-23 14:58 +08:00.
 
 ## Product Evidence
-- Installer tests confirm global Dong Skills installs only `codex-codebase-onboarding` and `using-superpowers`, while full workflow skills install into the target project `.agents/skills/`.
-- Installer tests confirm local non-Dong skills are preserved, including same-name global conflicts.
-- Bootstrap tests confirm same-name non-Dong project skills are not overwritten; bootstrap fails instead.
-- Hook tests confirm discussion and investigation state can block Stop or produce automatic PreCompact emergency recovery.
-- Release check confirms no personal secret/key/path pattern, runtime artifact, oversized active text file, or mojibake marker in the publish scope.
+- New tests confirm docs-only discussion changes in brainstorming do not force execution-level verification/checkpoint.
+- New tests confirm code changes during discussion phases still block on verification and Git checkpoint review.
+- New tests confirm bootstrap templates preserve `Truth Hierarchy` and `Work Class / Risk Lane` sections.
+- Existing release check confirms no personal secret/key/path pattern, runtime artifact, oversized active text file, or mojibake marker in the publish scope.
 
 ## Review
-- Self-review fixed one additional risk: health check now verifies root/asset manifest parity.
-- Self-review fixed one additional risk: tests now cover same-name non-Dong global preservation and project overwrite refusal.
-- Simplicity lens: uses existing manifest, markers, PowerShell copy/move, Node stdlib, and existing Codex hook events; no new dependency or global daemon.
+- Self-review found a real hook gap: `git status --porcelain` collapsed new untracked directories to `src/`, hiding `src/runtime.mjs` from verification relevance checks.
+- Fix: `gitStatusFiles()` now uses `--untracked-files=all`.
+- Self-review found a diagnostic gap: hook status could report the latest `.codex-context` file instead of the actual project file.
+- Fix: `hookStatusText()` now prefers non-governance files for `Latest changed file`.
 
 ## Not Yet Verified
-- Real Codex UI `/hooks` trust screen was not manually inspected after this batch.
+- Real Codex UI stale notification stack behavior was not manually inspected after this batch.
 - External old projects have not been refreshed in this turn.
 - Commit and push are pending.

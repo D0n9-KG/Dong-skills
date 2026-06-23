@@ -243,6 +243,12 @@ Fixture.
 ## Approval Status
 Approved by fixture.
 
+## Truth Hierarchy
+- Fixture hierarchy.
+
+## Work Class / Risk Lane
+- Lane 1 fixture.
+
 ## Approved Scope
 - Fixture.
 
@@ -269,6 +275,9 @@ Approved by user for Traditional task-by-task execution.
 
 ## Execution Mode
 Traditional task-by-task execution.
+
+## Work Class / Risk Lane
+Lane 1 fixture.
 
 ## Goal Mode Objective
 Not selected.
@@ -424,10 +433,13 @@ test("brainstorming skill preserves upstream continuation loop", () => {
   const skill = fs.readFileSync(path.join(root, ".agents", "skills", "brainstorming", "SKILL.md"), "utf8");
 
   assert.match(skill, /## Continuation Loop/);
+  assert.match(skill, /## Truth Hierarchy And Risk Lane/);
   assert.match(skill, /After every user response during brainstorming/);
   assert.match(skill, /ask the next single highest-impact question/);
   assert.match(skill, /Do not end a brainstorming turn by only saying that files were updated/);
   assert.match(skill, /compare 2-3 viable approaches/);
+  assert.match(skill, /The spec should lock the What/);
+  assert.match(skill, /WHEN \[condition\], THE SYSTEM SHALL \[behavior\]/);
   assert.match(skill, /## Final Spec Gate/);
   assert.match(skill, /workflow-state transition spec-living/);
   assert.match(skill, /workflow-state transition spec-ready/);
@@ -447,10 +459,13 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(writing, /## Scope Check/);
   assert.match(writing, /## Test-First Default/);
   assert.match(writing, /## Simplicity Gate/);
+  assert.match(writing, /## Work Class \/ Risk Lane/);
   assert.match(writing, /Can this be avoided/);
   assert.match(writing, /standard library already do it/);
   assert.match(writing, /native platform already do it/);
   assert.match(writing, /Do not add the Ponytail one-line\/minimum-implementation rungs/);
+  assert.match(writing, /Lane 0/);
+  assert.match(writing, /Lane 3/);
   assert.match(writing, /## Execution Note/);
   assert.match(writing, /2-5 minute steps/);
   assert.match(writing, /## Acceptance Mapping/);
@@ -474,6 +489,8 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /does the standard library already do it/);
   assert.match(executing, /does the native platform already do it/);
   assert.match(executing, /dong-debt:/);
+  assert.match(executing, /Work Class \/ Risk Lane/);
+  assert.match(executing, /Match execution depth to the lane/);
   assert.match(executing, /Run Test Discovery before editing implementation files/);
   assert.match(executing, /For behavior-changing tasks, add\/update the planned test/);
   assert.match(executing, /## Review And Shipping Gate/);
@@ -495,6 +512,8 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /workflow-state next/);
   assert.match(router, /codex-simplicity-review/);
   assert.match(router, /can avoid building, standard library, native platform/);
+  assert.match(router, /Use the lowest sufficient work lane/);
+  assert.match(router, /truth hierarchy/);
   assert.match(router, /Decision Point Protocol/);
   assert.match(router, /Execution Mode/);
   assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
@@ -507,6 +526,9 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /workflow-state\.yaml/);
   assert.match(governance, /workflow-state transition/);
   assert.match(governance, /codex-simplicity-review/);
+  assert.match(governance, /Use this truth hierarchy/);
+  assert.match(governance, /`spec\.md` is a current-task intent and acceptance record/);
+  assert.match(governance, /lowest sufficient lane/);
   assert.match(governance, /Hook output includes a compact status line/);
   assert.match(governance, /discussion-state\.json/);
   assert.match(governance, /working-notes\.md/);
@@ -703,10 +725,14 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "brainstorming", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md")), true);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8"), /next_skill: codex-codebase-onboarding/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Approval Status/);
+  const spec = fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8");
+  assert.match(spec, /## Approval Status/);
+  assert.match(spec, /## Truth Hierarchy/);
+  assert.match(spec, /## Work Class \/ Risk Lane/);
   const planProgress = fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8");
   assert.match(planProgress, /## Spec Approval/);
   assert.match(planProgress, /## Execution Approval/);
+  assert.match(planProgress, /## Work Class \/ Risk Lane/);
   assert.match(planProgress, /## Execution Mode/);
   assert.match(planProgress, /## Goal Mode Objective/);
   assert.match(planProgress, /goal mechanism available in the current Codex session/);
@@ -1205,8 +1231,11 @@ test("health check requires state files to preserve approval gates", () => {
   } catch (error) {
     failed = true;
     assert.match(String(error.stdout), /spec\.md missing section: Approval Status/);
+    assert.match(String(error.stdout), /spec\.md missing section: Truth Hierarchy/);
+    assert.match(String(error.stdout), /spec\.md missing section: Work Class \/ Risk Lane/);
     assert.match(String(error.stdout), /plan-progress\.md missing section: Spec Approval/);
     assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Approval/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Work Class \/ Risk Lane/);
     assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Mode/);
     assert.match(String(error.stdout), /plan-progress\.md missing section: Goal Mode Objective/);
     assert.match(String(error.stdout), /plan-progress\.md missing section: Runtime Constraints/);
@@ -1229,6 +1258,12 @@ Fixture.
 ## Approval Status
 Approved by fixture.
 
+## Truth Hierarchy
+- Fixture hierarchy.
+
+## Work Class / Risk Lane
+- Lane 1 fixture.
+
 ## Approved Scope
 - Fixture.
 
@@ -1248,6 +1283,57 @@ Continue.
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /Result: pass/);
+});
+
+test("Stop does not require verification or checkpoint for docs-only discussion changes", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+  git(project, ["add", "."]);
+  git(project, ["commit", "-m", "baseline"]);
+  backdateContextFiles(project, ["verification.md", "handoff-summary.md"]);
+
+  write(path.join(project, "docs", "notes.md"), "docs-only discussion change\n");
+  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nRefresh docs state.\n");
+  write(path.join(project, ".codex-context", "artifact-index.md"), "# Artifact Index\n\n## Modified\n- docs/notes.md: docs-only discussion change.\n");
+  const refreshed = new Date();
+  for (const name of ["current-state.md", "artifact-index.md"]) {
+    const file = path.join(project, ".codex-context", name);
+    fs.utimesSync(file, refreshed, refreshed);
+  }
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.continue, true);
+});
+
+test("Stop still requires verification and checkpoint for code changes during discussion phases", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+  git(project, ["add", "."]);
+  git(project, ["commit", "-m", "baseline"]);
+  backdateContextFiles(project, ["verification.md", "handoff-summary.md"]);
+
+  write(path.join(project, "src", "runtime.mjs"), "export const value = 1;\n");
+  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nRefresh code state.\n");
+  write(path.join(project, ".codex-context", "artifact-index.md"), "# Artifact Index\n\n## Modified\n- src/runtime.mjs: code change.\n");
+  const refreshed = new Date();
+  for (const name of ["current-state.md", "artifact-index.md"]) {
+    const file = path.join(project, ".codex-context", name);
+    fs.utimesSync(file, refreshed, refreshed);
+  }
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /verification\.md is older than changed files/);
+  assert.match(output.reason, /verification\.md has neither command evidence nor explicit unverified gaps/);
+  assert.match(output.reason, /Git checkpoint needs review:/);
 });
 
 test("health check accepts codex-simplicity-review as workflow next skill", () => {

@@ -1,6 +1,6 @@
 workflow: standard
 phase: delivery
-next_skill: verification-before-completion
+next_skill: codex-git-checkpoint
 auto_next: true
 decision_required: none
 spec_status: approved
@@ -9,7 +9,7 @@ execution_mode: traditional
 execution_approval: approved-traditional
 verify_result: pass
 review_status: done
-checkpoint_status: deferred
-handoff_hash: 7b891ad26835532adc616a5822d44c4f0c432d8111f801f590fc32e4f19fe1d2
-updated_at: 2026-06-20T06:25:46.278Z
-note: Context hash refreshed
+checkpoint_status: pending
+handoff_hash: null
+updated_at: 2026-06-23T06:50:00.000Z
+note: Current optimization batch verified; checkpoint pending.

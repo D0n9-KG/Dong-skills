@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { assetGovernanceStatus } from "./assets.mjs";
 import { fileFresh, latestChangedMtime, mtimeMs, readText, shortList, writeJson } from "./core.mjs";
-import { gitChangedFiles, gitCheckpointStatus, gitStatusFiles } from "./git.mjs";
+import { changedPathsNeedVerification, gitChangedFiles, gitCheckpointStatus, gitStatusFiles, isGovernancePath } from "./git.mjs";
 import { handoffStatus, markdownStatus, meaningful, sectionContent, verificationStatus } from "./markdown.mjs";
 import {
   appendLearningObservation,
@@ -30,6 +30,8 @@ const WORKING_NOTES_REFRESH_FILES = [
 ];
 const ACTIVE_DISCUSSION_PHASES = new Set(["discovery", "brainstorming", "spec", "planning", "debugging"]);
 const ACTIVE_INVESTIGATION_PHASES = new Set(["discovery", "brainstorming", "spec", "planning", "execution", "debugging"]);
+const EVIDENCE_REQUIRED_PHASES = new Set(["execution", "debugging", "verification", "review", "delivery"]);
+const CHECKPOINT_REQUIRED_PHASES = new Set(["delivery", "handoff", "complete"]);
 
 export function sessionStart(root, ctx) {
   writeJson(sessionRecoveryContext(root, ctx, "SessionStart"));
@@ -68,6 +70,14 @@ function discussionWorkflowActive(state) {
 function investigationWorkflowActive(state) {
   return ACTIVE_INVESTIGATION_PHASES.has(state.phase) ||
     ["living-draft", "pending-approval"].includes(state.spec_status);
+}
+
+function executionEvidenceRequired(state, files) {
+  return EVIDENCE_REQUIRED_PHASES.has(state.phase) || changedPathsNeedVerification(files);
+}
+
+function checkpointReviewRequired(state, files) {
+  return CHECKPOINT_REQUIRED_PHASES.has(state.phase) || executionEvidenceRequired(state, files);
 }
 
 function promptIsSubstantive(prompt) {
@@ -200,7 +210,7 @@ export function postToolUse(input, root, ctx) {
 
   const reason = [
     "Codex Project Ops: non-context files changed, but .codex-context/artifact-index.md is not fresh.",
-    hookStatusText(root, ctx, latest, changed, { assets: false, checkpoint: false }),
+    hookStatusText(root, ctx, latest, changed, { assets: false, checkpoint: false, eventName: "PostToolUse" }),
     `Changed files: ${shortList(changed)}.`,
     "Update artifact-index.md with created/modified/read files and why they matter before continuing.",
     "Also update current-state.md if phase, assumption, or next action changed."
@@ -267,9 +277,10 @@ function hookStatusText(root, ctx, latest = 0, files = [], options = {}) {
   const checkpoint = options.checkpoint === false ? null : (options.checkpoint || gitCheckpointStatus(root, ctx, latest));
   const discussion = options.discussion === false ? null : (options.discussion || discussionStateStatus(root, ctx, workflow));
   const state = workflow.state || {};
-  const latestFile = latestFileByMtime(root, files);
+  const latestFile = latestFileByMtime(root, files.filter((file) => !isGovernancePath(file))) || latestFileByMtime(root, files);
   const lines = [
     "Hook status:",
+    `- Event: ${options.eventName || "unknown"}`,
     `- Actual Git root: ${root}`,
     `- Workflow: phase=${state.phase || "missing"} next_skill=${state.next_skill || "missing"} decision_required=${state.decision_required || "missing"} issues=${workflow.issues.length}`,
     learning
@@ -537,7 +548,7 @@ export function preCompact(input, root, ctx) {
     const rawRel = writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues, trigger);
     const message = [
       "Codex Project Ops allowed automatic compaction after preserving the existing handoff with an emergency notice.",
-      hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion }),
+      hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion, eventName: "PreCompact" }),
       "Recovery file: .codex-context/handoff-summary.md.",
       `Previous handoff snapshot: ${rawRel}.`,
       `Issues captured: ${issues.join("; ")}.`
@@ -555,7 +566,7 @@ export function preCompact(input, root, ctx) {
     stopReason: "codex-project-ops-handoff-not-ready",
     systemMessage: [
       "Codex Project Ops blocked compaction.",
-      hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion }),
+      hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion, eventName: "PreCompact" }),
       `Issues: ${issues.join("; ")}.`,
       "Refresh current-state.md, plan-progress.md, artifact-index.md, spec.md, decisions.md, open-questions.md, working-notes.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. Then compact again."
     ].join("\n")
@@ -571,14 +582,18 @@ export function stop(input, root, ctx) {
   const changed = gitChangedFiles(root);
   const learning = learningStatus(ctx);
   const statusFiles = gitStatusFiles(root);
-  const latest = latestChangedMtime(root, [...new Set([...changed, ...statusFiles])]);
-  const checkpoint = gitCheckpointStatus(root, ctx, latest);
+  const allStatusFiles = [...new Set([...changed, ...statusFiles])];
+  const latest = latestChangedMtime(root, allStatusFiles);
   const assets = assetGovernanceStatus(root, ctx);
   const workflow = workflowStatus(root, ctx);
+  const state = workflow.state || {};
+  const evidenceRequired = executionEvidenceRequired(state, allStatusFiles);
+  const checkpointRequired = checkpointReviewRequired(state, allStatusFiles);
+  const checkpoint = checkpointRequired ? gitCheckpointStatus(root, ctx, latest) : null;
   const discussion = discussionStateStatus(root, ctx, workflow);
   const statusLatest = Math.max(latest, discussion.latest);
 
-  if (changed.length === 0 && learning.ok && checkpoint.ok && assets.ok && workflow.ok && discussion.ok) {
+  if (changed.length === 0 && learning.ok && (!checkpointRequired || checkpoint.ok) && assets.ok && workflow.ok && discussion.ok) {
     writeJson({ continue: true });
     return;
   }
@@ -594,19 +609,21 @@ export function stop(input, root, ctx) {
       if (!status.ok) issues.push(status.issue);
     }
 
-    const verification = verificationStatus(ctx, latest);
-    if (verification.stale) issues.push("verification.md is older than changed files");
-    if (!verification.hasEvidence) issues.push("verification.md has neither command evidence nor explicit unverified gaps");
+    if (evidenceRequired) {
+      const verification = verificationStatus(ctx, latest);
+      if (verification.stale) issues.push("verification.md is older than changed files");
+      if (!verification.hasEvidence) issues.push("verification.md has neither command evidence nor explicit unverified gaps");
 
-    const handoff = handoffStatus(ctx, latest);
-    if (!handoff.ok) {
-      if (handoff.stale) issues.push("handoff-summary.md is older than changed files");
-      if (handoff.missing.length) issues.push(`handoff-summary.md missing: ${handoff.missing.join(", ")}`);
+      const handoff = handoffStatus(ctx, latest);
+      if (!handoff.ok) {
+        if (handoff.stale) issues.push("handoff-summary.md is older than changed files");
+        if (handoff.missing.length) issues.push(`handoff-summary.md missing: ${handoff.missing.join(", ")}`);
+      }
     }
   }
 
   issues.push(...learning.issues);
-  if (!checkpoint.ok) issues.push(checkpoint.summary);
+  if (checkpointRequired && !checkpoint.ok) issues.push(checkpoint.summary);
   issues.push(...assets.issues);
   issues.push(...workflow.issues);
   issues.push(...discussion.issues);
@@ -620,14 +637,14 @@ export function stop(input, root, ctx) {
     decision: "block",
     reason: [
       "Before stopping, refresh Codex Project Ops state.",
-      hookStatusText(root, ctx, statusLatest, [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion }),
+      hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" }),
       changed.length ? `Changed files: ${shortList(changed)}.` : "No non-context files changed.",
       `Issues: ${issues.join("; ")}.`,
       "Update artifact-index.md, current-state.md, spec.md, decisions.md, open-questions.md, working-notes.md, verification.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. If verification was not run, record the explicit gap instead of claiming success."
     ].join("\n"),
     hookSpecificOutput: {
       hookEventName: "Stop",
-      additionalContext: hookStatusText(root, ctx, statusLatest, [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion })
+      additionalContext: hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" })
     }
   });
 }

@@ -24,12 +24,32 @@ When Dong Skills project hooks are installed, start or refresh the workflow stat
 node .codex/hooks/project-ops.mjs workflow-state transition brainstorming-start
 ```
 
+## Truth Hierarchy And Risk Lane
+
+Natural-language spec is not system truth. Use this order when documents conflict:
+
+1. Latest user instruction.
+2. Verified behavior from code, tests, commands, product evidence, or live repo inspection.
+3. Approved written spec and approved plan for the current task.
+4. Current state files and handoff.
+5. Older chat, raw notes, stale specs, or unreviewed observations.
+
+Classify the work before choosing ceremony:
+
+- `Lane 0`: tiny mechanical edit with clear acceptance criteria.
+- `Lane 1`: small bounded change; use a compact plan and one approval point.
+- `Lane 2`: multi-file, behavior-changing, API/UX/data/workflow/architecture work; use living spec, approved written spec, then plan.
+- `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work; require stronger tests, review, evidence, and checkpointing.
+
+Use the lowest lane that still protects the user. The spec should lock the What: goals, boundaries, invariants, non-goals, user decisions, and executable acceptance criteria. Do not lock How such as technology choice, file structure, data structure, or implementation path unless the user explicitly decides it or the risk requires it.
+
 ## What Good Brainstorming Does
 
 - Understand the real problem, not just the first requested implementation.
 - Expose constraints, non-goals, risks, acceptance criteria, and open questions.
 - Explore alternatives before committing to one path, without overwhelming the user with a large questionnaire.
 - Produce a living written spec that survives compaction and new sessions even before final approval.
+- Keep spec as a current-task intent record, not a permanent system baseline.
 - Maintain forward motion through the brainstorming flow; state-file updates are never the final answer unless the user asked only for documentation.
 - Hand off to `writing-plans` for multi-step implementation.
 
@@ -39,7 +59,7 @@ node .codex/hooks/project-ops.mjs workflow-state transition brainstorming-start
 2. **Restate the objective.** One sentence, including the user-visible outcome.
 3. **Clarify.** Ask exactly one important question per assistant message when the answer changes scope, UX, architecture, data model, API, verification, or delivery. You may include 2-3 concrete choices for that one question, but do not bundle multiple questions.
 4. **Update the living spec, then continue.** As soon as the user confirms a decision, boundary, non-goal, acceptance criterion, or open question, update `.codex-context/spec.md` with `Approval Status: Living Draft / Not Approved`. Also refresh `.codex-context/decisions.md`, `.codex-context/open-questions.md`, `.codex-context/current-state.md`, and `.codex-context/handoff-summary.md` when the discussion is long enough that compaction would lose context. If your own discovery or analysis produced durable findings, rejected paths, current hypotheses, or next verification steps, update `.codex-context/working-notes.md` before ending the turn. Run `workflow-state transition spec-living` when the workflow state is available. After updating state, immediately continue the brainstorming loop in the same assistant response unless a tool failure or user instruction blocks you.
-5. **Explore options.** For direction-setting, architecture, product behavior, API, UX, data model, workflow, or other behavior-changing work, assume there is a real choice and compare 2-3 viable approaches before selecting one. Skip comparison only for tiny mechanical edits, an already-approved approach, or an explicit user request to skip. Include trade-offs and a recommendation, then ask one focused follow-up question.
+5. **Explore options.** For direction-setting, architecture, product behavior, API, UX, data model, workflow, or other behavior-changing work, assume there is a real choice and compare 2-3 viable approaches before selecting one. Skip comparison only for tiny mechanical edits, an already-approved approach, or an explicit user request to skip. Include trade-offs and a recommendation, then ask one focused follow-up question. Compare How options without freezing How in the spec unless the user approves that constraint.
 6. **Present the design section by section.** Scale detail to complexity. Cover only relevant sections: behavior, boundaries, files/modules, data flow, UX/API, error handling, migration, verification, non-goals. For complex work, ask for confirmation after each section before moving to the next section.
 7. **Ask for final approval.** Ask the user to approve the complete design/spec or request changes. Do not treat silence, vague acknowledgement, or a question as approval.
 8. **Finalize the spec draft.** After final discussion approval, rewrite `.codex-context/spec.md` from `Living Draft / Not Approved` into a clean written spec with `Approval Status: Pending written-spec approval`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` when the spec is too large for the state file, then link it from `spec.md`. Run `workflow-state transition spec-ready`; this records `decision_required: written-spec-approval`.
@@ -100,6 +120,16 @@ Use this structure unless the project already has a stronger one:
 ## Approval Status
 Living Draft / Not Approved, Pending written-spec approval, or Approved by user on [date/time].
 
+## Truth Hierarchy
+- Latest user instruction.
+- Verified behavior from code, tests, commands, product evidence, or live repo inspection.
+- Approved written spec and approved plan for this task.
+- Current state files and handoff.
+- Older chat, raw notes, stale specs, or unreviewed observations.
+
+## Work Class / Risk Lane
+- Lane 0 / Lane 1 / Lane 2 / Lane 3, with reason.
+
 ## User Decisions
 - [Decision, trade-off, and source.]
 
@@ -113,10 +143,10 @@ Living Draft / Not Approved, Pending written-spec approval, or Approved by user 
 - [What will be changed.]
 
 ## Design
-- [Behavior, architecture, API, UX, data flow, or other relevant design detail.]
+- [What changes: behavior, boundaries, invariants, UX/API contract, data flow constraints. Avoid locking How unless approved.]
 
 ## Acceptance Criteria
-- [How we know it works.]
+- [Executable or observable proof. Prefer WHEN [condition], THE SYSTEM SHALL [behavior] for behavioral criteria.]
 
 ## Open Questions
 - [Question or "None". Unresolved blockers must stop implementation.]
@@ -136,6 +166,8 @@ After the user approves the discussed design, but before `writing-plans`:
    - design, architecture, data flow, UX/API behavior, and acceptance criteria match the approved goals
    - non-goals and out-of-scope work are explicit
    - acceptance criteria are observable and testable
+   - the spec locks What and does not over-specify How without an explicit user decision
+   - the work class/risk lane fits the required ceremony
    - open questions are `None` or explicitly blocking
    - scope fits one implementation plan; if not, split the work or return to brainstorming
    - a fresh session could write a plan from the spec file without relying on chat memory

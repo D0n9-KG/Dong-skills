@@ -1,71 +1,67 @@
 # Spec
 
 ## Problem
-Dong Skills had two related recovery/governance gaps:
+Dong Skills still needed stricter execution discipline and better recovery signals:
 
-- Long discussions and agent exploration could be lost when Codex compacted before state files were refreshed.
-- Full Dong workflow skills installed globally could still appear in projects that were not initialized with Dong Skills, making routing ambiguous and risking project-local hook/state confusion.
-
-The user also explicitly required that local non-Dong skills must not be touched.
+- agents could drift into How too early instead of locking What
+- long tasks could accumulate freshness churn in state files
+- hooks could block, but the reason was not always precise enough to act on quickly
+- active context could grow without enough explicit lane-based control
 
 ## Goal
-- Keep important discussion decisions and investigation findings recoverable after compaction.
-- Make Dong Skills activation explicit per project: global install is only bootstrap/router, full workflow skills are project-local.
-- Preserve non-Dong local skills, including same-name conflicts, unless a directory is clearly Dong-managed.
-- Keep bootstrap/update simple for old projects.
+- Keep spec/plan writing focused on What, boundaries, invariants, and acceptance criteria.
+- Route work through the lowest sufficient risk lane.
+- Reduce unnecessary freshness churn for docs-only discussion work.
+- Make hook diagnostics and recovery state clearer when the agent nears compaction or checkpoint boundaries.
 
 ## Approval Status
-Approved by user through iterative instructions on 2026-06-18 to 2026-06-20.
+Approved by user through iterative instructions on 2026-06-23.
+
+## Truth Hierarchy
+- Latest user instruction.
+- Verified behavior from code, tests, commands, product evidence, or live repo inspection.
+- Approved written spec and approved plan for the current task.
+- Current state files and handoff.
+- Older chat, raw notes, stale specs, or unreviewed observations.
+
+## Work Class / Risk Lane
+- Lane 1 / Lane 2 for the current batch: multi-file Dong Skills governance and hook behavior changes, but not production-sensitive code.
 
 ## User Decisions
-- Use project-level hooks, not global hooks.
-- Global Dong Skills should be minimal and general.
-- Project initialization should install the full Dong Skills set into the workspace.
-- Do not touch local non-Dong skills.
-- Hooks should stay deterministic and lightweight; no model-in-hook summarization.
-- Preserve agent exploration as externalized findings, not hidden chain-of-thought.
-
-## Candidate Options
-- Keep all skills global: rejected because uninitialized projects can accidentally route through full workflow skills.
-- Embed the full project skill bundle inside onboarding assets: rejected because nested asset paths were fragile on Windows.
-- Source project skills from the real Dong Skills checkout via `.dong-skills-source.json`: selected.
+- Keep Dong Skills Codex-only.
+- Do not add global hooks.
+- Preserve non-Dong local skills.
+- Preserve the upstream brainstorming continuation loop and final spec gate.
+- Add explicit truth hierarchy and work-lane guidance.
+- Reduce freshness churn for docs-only discussion changes while keeping code-change verification intact.
+- Improve hook diagnostics rather than hiding failures.
 
 ## Non-Goals
 - Claude Code compatibility.
-- Cross-platform installer work in this batch.
-- Global hooks.
-- Storing raw transcripts or hidden reasoning.
-- Deleting or rewriting non-Dong local skills.
+- Cross-platform installer work.
+- Model-in-hook summarization.
+- Touching non-Dong local skills.
 
 ## Approved Scope
-- Add `dong-skills.manifest.json` and bootstrap asset copy.
-- Update Windows installer for split global/project-level skill installation.
-- Update onboarding bootstrap to install project-level skills from the source checkout.
-- Add project-level skill marker `.agents/skills/.dong-skills-project.json`.
-- Update `using-superpowers` and onboarding docs to gate full workflow routing on the project marker.
-- Add `working-notes.md` and `discussion-state.json` compaction-resilience behavior.
-- Update health/release checks and tests.
-- Rewrite README in Chinese/English without personal private data.
+- Update brainstorming, planning, execution, and governance skills with truth hierarchy and work-lane rules.
+- Tighten hook freshness checks so docs-only changes do not require code-style verification or Git checkpointing.
+- Keep code/config changes on the stronger verification path.
+- Refresh templates, health checks, tests, and bootstrap mirrors so the new rules are recoverable after compaction.
 
 ## Design
-- The manifest lists `global_skills` and `project_skills`.
-- Global install writes only bootstrap/router skills to `%USERPROFILE%\.agents\skills` and records the real source checkout in `.dong-skills-source.json`.
-- Old global heavy Dong skills are removed only when they are identifiable as Dong-managed; same-name non-Dong skills are preserved.
-- Project bootstrap resolves the project-skill source from `.dong-skills-source.json` or a sibling checkout, installs manifest-listed project skills into `.agents/skills/`, and writes per-skill management markers.
-- Bootstrap refuses to overwrite same-name non-Dong project skills.
-- Health check requires a project marker for ordinary initialized projects, while the source repo can use `dong-skills.manifest.json` as the source-of-truth exception.
-- Context recovery uses `working-notes.md` for compact externalized investigation state and `discussion-state.json` as ignored runtime freshness metadata.
+- The spec locks What, not How.
+- Docs-only discussion work may keep state fresh without forcing verification/checkpoint loops.
+- Code/config/script changes still require verification and checkpoint discipline.
+- Hook status output should name the Git root, phase, next skill, latest changed file, and whether checkpoint or learning state is the blocker.
 
 ## Acceptance Criteria
-- Global install leaves only Dong bootstrap/router skills globally.
-- Project install writes full workflow skills into target `.agents/skills/`.
-- Non-Dong local skills are preserved; same-name non-Dong project skills are not overwritten.
-- Health check detects missing project-level marker and bootstrap asset drift.
-- Release check passes privacy, readability, syntax, test, and runtime artifact scans.
-- Stop hook passes after state refresh.
+- Spec and plan files contain explicit `Truth Hierarchy` and `Work Class / Risk Lane` sections.
+- `Stop` does not force verification/checkpoint for docs-only discussion changes, but still blocks code/config changes that need verification.
+- Hook diagnostics identify stale handoff/checkpoint problems with a concrete refresh reason.
+- Bootstrap assets and root project-ops files stay synchronized.
 
 ## Open Questions
-- None blocking.
+- None.
 
 ## Next Step
-Commit and push the verified batch, then provide an old-project update prompt.
+executing-plans

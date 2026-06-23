@@ -7,25 +7,25 @@
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/working-notes.md`: project bootstrap template for working notes.
 
 ## Modified
+- `.agents/skills/brainstorming/SKILL.md`: added truth hierarchy, work-lane guidance, and What-not-How spec discipline.
+- `.agents/skills/writing-plans/SKILL.md`: added work-lane guidance and runtime/checkpoint constraints.
+- `.agents/skills/executing-plans/SKILL.md`: added lane-aware execution depth requirements.
+- `.agents/skills/using-superpowers/SKILL.md`: routes by the lowest sufficient work lane and truth hierarchy.
+- `.agents/skills/codex-project-governance/SKILL.md`: records the truth hierarchy, lane model, and spec current-task scope.
 - `scripts/install-windows.ps1`: split install model; global bootstrap/router only; writes `.dong-skills-source.json`; installs full project-level skills to target `.agents/skills`; removes only identifiable Dong-managed old global heavy skills; preserves same-name non-Dong skills.
 - `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`: installs full project-level skills from the source checkout; writes `.agents/skills/.dong-skills-project.json`; refuses same-name non-Dong project skill overwrite; preserves project-local non-Dong skills.
-- `.agents/skills/using-superpowers/SKILL.md`: requires project-level marker before routing to full workflow skills.
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`: documents bootstrap gate, project-level full skills, and non-Dong preservation.
-- `.agents/skills/brainstorming/SKILL.md`: preserves upstream continuation loop, Living Spec mode, final written-spec gate, and working-notes behavior.
-- `.agents/skills/codex-project-governance/SKILL.md`: documents workflow-state, phase gates, working-notes, discussion marker, and project-level lifecycle.
-- `.agents/skills/codex-docs-stewardship/SKILL.md` and `.agents/skills/codex-asset-governance/SKILL.md`: include working-notes/runtime marker asset lifecycle.
-- `.codex/scripts/lib/events.mjs`: discussion/investigation dirty markers, Stop freshness checks, PreCompact emergency handoff/raw snapshot behavior.
+- `.codex/scripts/lib/events.mjs`: status text now prefers non-governance latest files, and Stop/PreCompact freshness stays lane-aware.
+- `.codex/scripts/lib/git.mjs`: untracked directories are expanded with `--untracked-files=all` so code files inside fresh folders are not hidden.
 - `.codex/scripts/lib/recovery.mjs`: SessionStart recovery includes decisions, open questions, and working notes.
 - `.codex/scripts/lib/templates.mjs`: creates required `working-notes.md` template.
-- `.codex/hooks/project-ops.mjs` and `.codex/hooks.json`: PostToolUse input forwarding and broader exploration matcher coverage.
-- Bootstrap mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized hooks, hook libraries, helper scripts, AGENTS snippet, and templates.
-- `scripts/project-ops-health.mjs`: validates project-level marker, required project skills, working-notes sections, runtime ignore rules, and manifest/bootstrap asset parity.
+- `scripts/project-ops-health.mjs`: validates required spec/plan sections and bootstrap parity.
 - `scripts/release-check.mjs`: scans for runtime marker artifacts and readability/privacy issues.
 - `README.md`: rewritten in Chinese/English around the Codex-only split install model and lifecycle.
 - `AGENTS.md` and `AGENTS.project-ops.snippet.md`: recovery order and project ops guidance updated.
 - `.gitignore`: ignores `.codex-context/discussion-state.json`.
-- `tests/project-ops.test.mjs`: adds/updates coverage for split install, non-Dong preservation, discussion/working-notes hooks, PreCompact, recovery, health, release, and workflow gates.
-- `.codex-context/*.md` and `.codex-context/workflow-state.yaml`: refreshed for current delivery state.
+- `tests/project-ops.test.mjs`: adds/updates coverage for truth hierarchy, work lanes, freshness gating, hook diagnostics, split install, recovery, health, and release.
+- `.codex-context/spec.md`, `plan-progress.md`, `current-state.md`, `artifact-index.md`, `verification.md`, `handoff-summary.md`: refreshed for the current Dong Skills optimization batch.
+- Bootstrap mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized hooks, hook libraries, helper scripts, AGENTS snippet, and templates.
 
 ## Read / Inspected
 - `scripts/install-windows.ps1`

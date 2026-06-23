@@ -30,6 +30,56 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-23 - Reduce Active Context Footprint In Project Ops
+
+Status: proposed
+Priority: P1
+Affected area: hooks / scripts / context / docs
+Source: repeated project work showing heavy active context and large always-loaded project-ops files
+
+Signal:
+`context-budget` on a live Science Evo worktree estimated about 85k tokens across 63 files, with several `lib/*.mjs` and `project-ops-health.mjs` files contributing most of the active load. The system works, but the always-loaded surface is heavy enough to slow recovery and increase compaction pressure.
+
+Decision:
+Split the heaviest project-ops modules further into on-demand references or smaller units where possible, and keep the always-loaded path leaner without weakening phase gates or verification.
+
+Verification:
+`node .codex/hooks/project-ops.mjs context-budget`
+
+### 2026-06-23 - Reduce Freshness Churn From Frequent State Syncs
+
+Status: done
+Priority: P1
+Affected area: hooks / workflow-state / verification / handoff
+Source: repeated Stop-hook blocks during discussion because `current-state.md`, `artifact-index.md`, `verification.md`, and `handoff-summary.md` needed synchronized freshness updates
+Implemented: Stop now computes whether verification/checkpoint review is required from workflow phase plus changed-file type. Docs-only discussion changes still require fresh `current-state.md` and `artifact-index.md`, but do not force execution-level `verification.md` or Git checkpoint review. Code/config/script changes still require verification and checkpoint review.
+
+Signal:
+In the Science Evo worktree, Stop checks repeatedly blocked on state-file freshness even when the actual project state was correct. The protection is useful, but the mtime churn makes normal discussion feel noisier than it should.
+
+Decision:
+Keep freshness protection, but consider a less chatty sync model for discussion-phase state updates so the same change batch does not require repeated refresh loops.
+
+Verification:
+`node --test tests\project-ops.test.mjs` covers docs-only discussion changes being allowed and code changes during discussion phases still being blocked for verification/checkpoint.
+
+### 2026-06-23 - Surface Stale Hook Notification Backlogs Better
+
+Status: done
+Priority: P1
+Affected area: hooks / UI / diagnostics
+Source: screenshot showing many stacked `hook exited with code 1` notifications while live project checks still passed
+Implemented: Hook status output now includes the hook event, actual Git root, workflow phase/next skill, learning/assets/discussion/checkpoint status, and latest changed file. The latest-file line now prefers non-governance files so `.codex-context` maintenance writes do not hide the real project file. Scope note: Codex app notification stacking itself is outside this repo; this item is complete on the Dong Skills hook-output side.
+
+Signal:
+A Codex UI screenshot showed a stack of `hook exited with code 1` notifications even though current CLI checks on the same worktree passed. That suggests the user-facing notification layer can lag behind live hook state and confuse diagnosis.
+
+Decision:
+Improve hook diagnostics so the UI shows the current hook event/root/source more clearly and distinguishes stale notification backlog from a live failing hook.
+
+Verification:
+`node --test tests\project-ops.test.mjs` covers Stop hook diagnostic output and stale Git checkpoint basis. `node scripts\release-check.mjs .` confirms hook syntax and full regression suite.
+
 ### 2026-06-15 - Add Comet-Inspired Workflow State Machine
 
 Status: done

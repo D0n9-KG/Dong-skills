@@ -12,6 +12,9 @@
 ## Execution Mode
 Pending user choice. Allowed values: Traditional task-by-task execution; Codex Goal mode. Do not infer Codex Goal mode from "continue", "execute", or plan-then-execute.
 
+## Work Class / Risk Lane
+Pending. Record Lane 0, Lane 1, Lane 2, or Lane 3 and why that lane is sufficient. The lane controls plan depth, verification depth, state update cadence, review, rollback, and checkpoint cadence.
+
 ## Goal Mode Objective
 Not selected. If Codex Goal mode is explicitly selected, include the goal mechanism available in the current Codex session, objective, spec path, plan path, approved scope, non-goals, current step, verification commands, checkpoint cadence, required state updates, and stop conditions. Goal mode is unavailable when the current session does not expose an actual goal mechanism.
 

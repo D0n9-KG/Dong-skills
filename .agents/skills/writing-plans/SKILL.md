@@ -38,6 +38,17 @@ Before writing tasks, check whether the approved spec covers multiple independen
 
 Do not hide decomposition problems inside a long checklist. If the plan depends on unapproved architecture, data model, UX, or API decisions, return to `brainstorming`.
 
+## Work Class / Risk Lane
+
+Record one lane before task breakdown:
+
+- `Lane 0`: tiny mechanical edit. No full plan unless the user asks; record the acceptance criterion and verify the edit.
+- `Lane 1`: small bounded change. Use a compact checklist, one approval point, targeted verification, and a lightweight checkpoint decision.
+- `Lane 2`: multi-file or behavior-changing work. Use approved spec, acceptance mapping, test discovery, verification, review when meaningful, and checkpointing.
+- `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work. Use characterization/test-first work, stronger evidence, review, rollback notes, and checkpointing.
+
+The lane controls plan depth, test depth, state update cadence, and checkpoint cadence. Use the lowest lane that still protects the user.
+
 ## File Structure
 
 Before defining tasks, map files and responsibilities:
@@ -73,19 +84,20 @@ The gate is a constraint, not a research project. If a higher rung clearly works
 2. Map files to inspect, create, modify, and leave alone.
 3. Identify module boundaries and decomposition before tasks.
 4. Apply the Simplicity Gate: avoid building, standard library, native platform.
-5. Map every acceptance criterion to at least one task and one verification step.
-6. Break work into bite-sized tasks. Prefer 2-5 minute steps for risky code changes: write/adjust test, run expected failure, implement minimal change, run expected pass, update docs/state, checkpoint.
-7. Include exact commands and expected success signals where known.
-8. Include test scenarios: happy path, edge/error path, regression path, and any explicit non-goal that must remain unchanged.
-9. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
-10. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
-11. State that Codex Goal mode requires a real goal mechanism in the current Codex session, such as available `create_goal` and `update_goal` tools. If that mechanism is absent, Goal mode is not selectable.
-12. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
-13. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, rollback notes, and the Simplicity Gate decision.
-14. Record risks, assumptions, rollback notes, and open questions.
-15. Update `.codex-context/artifact-index.md` with files that matter.
-16. Review the plan for gaps before offering execution.
-17. When the plan is ready but execution is not yet approved, run `node .codex/hooks/project-ops.mjs workflow-state transition plan-ready`.
+5. Record `Work Class / Risk Lane` and why that lane is sufficient.
+6. Map every acceptance criterion to at least one task and one verification step. Prefer executable proof: unit/e2e/CLI/API command, product evidence, screenshot, rendered artifact, or explicit manual verification.
+7. Break work into bite-sized tasks. Prefer 2-5 minute steps for Lane 2/3 risky code changes: write/adjust test, run expected failure, implement minimal change, run expected pass, update docs/state, checkpoint.
+8. Include exact commands and expected success signals where known.
+9. Include test scenarios: happy path, edge/error path, regression path, and any explicit non-goal that must remain unchanged.
+10. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
+11. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
+12. State that Codex Goal mode requires a real goal mechanism in the current Codex session, such as available `create_goal` and `update_goal` tools. If that mechanism is absent, Goal mode is not selectable.
+13. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
+14. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, rollback notes, and the Simplicity Gate decision.
+15. Record risks, assumptions, rollback notes, and open questions.
+16. Update `.codex-context/artifact-index.md` with files that matter.
+17. Review the plan for gaps before offering execution.
+18. When the plan is ready but execution is not yet approved, run `node .codex/hooks/project-ops.mjs workflow-state transition plan-ready`.
 
 ## Plan Header
 
@@ -95,6 +107,7 @@ The gate is a constraint, not a research project. If a higher rung clearly works
 **Goal:** [One sentence.]
 **Spec:** [Path to approved spec or inline requirement.]
 **Spec Approval:** [Approved by user / skipped by user / mechanical exception.]
+**Work Class / Risk Lane:** Lane 0 / Lane 1 / Lane 2 / Lane 3, with reason.
 **Execution Mode:** Pending user choice.
 **Current Step:** Not started.
 **Verification:** [Commands or checks that prove success.]

@@ -82,25 +82,28 @@ Goal mode runtime constraints:
 2. Confirm execution approval, execution mode, and approved scope.
 3. If this is a new/resumed worktree, hook source paths are confusing, or branch cleanup may be needed later, use `codex-worktree-governance` and refresh `.codex-context/worktree-state.md`.
 4. Critique the plan before editing. Check for missing file paths, missing tests, vague steps, unapproved scope, impossible commands, and acceptance criteria with no task. If it has a blocking gap, stop and ask or revise the plan first.
-5. Read and honor the plan's `Execution Mode`, `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Execution Note`. If any of these are missing for non-tiny work, derive the missing non-Goal constraints from the plan and record them before editing; if Goal mode details are missing, stop and ask.
+5. Read and honor the plan's `Work Class / Risk Lane`, `Execution Mode`, `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Execution Note`. If any of these are missing for non-tiny work, derive the missing non-Goal constraints from the plan and record them before editing; if Goal mode details are missing, stop and ask.
 6. Run the Simplicity Gate before adding code, dependencies, abstractions, scripts, docs, or state files:
    - can the approved outcome be reached by avoiding the new thing?
    - does the standard library already do it?
    - does the native platform already do it?
    If the plan omitted the gate, record the decision in `.codex-context/plan-progress.md` before editing. Do not add one-line/minimum-implementation checks as mandatory Dong Skills rungs.
-7. Run Test Discovery before editing implementation files:
+7. Match execution depth to the lane without weakening acceptance criteria:
+   - Lane 0/1 may use compact state updates and targeted verification.
+   - Lane 2/3 must keep task-by-task evidence, review triggers, rollback notes, and checkpoint cadence current.
+8. Run Test Discovery before editing implementation files:
    - identify the closest existing unit/e2e/CLI/API tests for the touched area
    - identify the smallest command that proves the task
    - for behavior changes, decide whether to add/update a test before implementation or record why that is impractical
-8. Mark exactly one task as active.
-9. Implement the task using the repo's existing patterns.
-10. If taking a deliberate simplification with a known ceiling, mark it with a `dong-debt:` comment that names the ceiling and the revisit trigger.
-11. For behavior-changing tasks, add/update the planned test or record the explicit reason no automated test was added.
-12. Run the task's verification command or record why it cannot be run.
-13. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
-14. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
-15. Repeat until the plan is complete or a blocker is reached.
-16. When implementation tasks are complete and verification is next, run `node .codex/hooks/project-ops.mjs workflow-state transition execution-complete`.
+9. Mark exactly one task as active.
+10. Implement the task using the repo's existing patterns.
+11. If taking a deliberate simplification with a known ceiling, mark it with a `dong-debt:` comment that names the ceiling and the revisit trigger.
+12. For behavior-changing tasks, add/update the planned test or record the explicit reason no automated test was added.
+13. Run the task's verification command or record why it cannot be run.
+14. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
+15. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
+16. Repeat until the plan is complete or a blocker is reached.
+17. When implementation tasks are complete and verification is next, run `node .codex/hooks/project-ops.mjs workflow-state transition execution-complete`.
 
 ## Checkpoints
 
