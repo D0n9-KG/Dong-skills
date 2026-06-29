@@ -1030,8 +1030,10 @@ test("workflow-state checks report missing state without recreating it", () => {
   assert.equal(fs.existsSync(workflowFile), false);
 
   const stopOutput = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(stopOutput.decision, "block");
-  assert.match(stopOutput.reason, /workflow-state\.yaml is missing/);
+  assert.equal(stopOutput.continue, false);
+  assert.equal(stopOutput.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(stopOutput, "decision"), false);
+  assert.match(stopOutput.systemMessage, /workflow-state\.yaml is missing/);
   assert.equal(fs.existsSync(workflowFile), false);
 
   const compactOutput = runHook(project, { hook_event_name: "PreCompact", trigger: "manual" });
@@ -1205,8 +1207,10 @@ test("Stop requires structured Git Checkpoint fields when worktree is dirty", ()
 
   readyState(project, "- checkpoint noted but not structured\n");
   const vague = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(vague.decision, "block");
-  assert.match(vague.reason, /Git Checkpoint missing field/);
+  assert.equal(vague.continue, false);
+  assert.equal(vague.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(vague, "decision"), false);
+  assert.match(vague.systemMessage, /Git Checkpoint missing field/);
 
   readyState(project, `- Latest commit: not ready
 - Push state: not pushed because work is intentionally deferred
@@ -1236,15 +1240,17 @@ test("Stop explains stale Git Checkpoint handoff evidence", () => {
   fs.utimesSync(handoffFile, old, old);
 
   const output = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(output.decision, "block");
-  assert.match(output.reason, /Hook status:/);
-  assert.match(output.reason, /Actual Git root:/);
-  assert.match(output.reason, /Latest changed file: work\.txt/);
+  assert.equal(output.continue, false);
+  assert.equal(output.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(output, "decision"), false);
+  assert.match(output.systemMessage, /Hook status:/);
+  assert.match(output.systemMessage, /Actual Git root:/);
+  assert.match(output.systemMessage, /Latest changed file: work\.txt/);
   assert.match(output.hookSpecificOutput.additionalContext, /Hook status:/);
   assert.match(output.hookSpecificOutput.additionalContext, /Workflow: phase=execution next_skill=executing-plans/);
-  assert.match(output.reason, /handoff-summary\.md is older than changed files/);
-  assert.match(output.reason, /latest changed file: work\.txt/);
-  assert.match(output.reason, /refresh handoff-summary\.md after verification\/artifact\/current-state updates/);
+  assert.match(output.systemMessage, /handoff-summary\.md is older than changed files/);
+  assert.match(output.systemMessage, /latest changed file: work\.txt/);
+  assert.match(output.systemMessage, /refresh handoff-summary\.md after verification\/artifact\/current-state updates/);
 });
 
 test("health check requires state files to preserve approval gates", () => {
@@ -1362,10 +1368,12 @@ test("Stop still requires verification and checkpoint for code changes during di
   }
 
   const output = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(output.decision, "block");
-  assert.match(output.reason, /verification\.md is older than changed files/);
-  assert.match(output.reason, /verification\.md has neither command evidence nor explicit unverified gaps/);
-  assert.match(output.reason, /Git checkpoint needs review:/);
+  assert.equal(output.continue, false);
+  assert.equal(output.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(output, "decision"), false);
+  assert.match(output.systemMessage, /verification\.md is older than changed files/);
+  assert.match(output.systemMessage, /verification\.md has neither command evidence nor explicit unverified gaps/);
+  assert.match(output.systemMessage, /Git checkpoint needs review:/);
 });
 
 test("health check accepts codex-simplicity-review as workflow next skill", () => {
@@ -1724,11 +1732,13 @@ test("Stop blocks stale discussion state even when no project files changed", ()
   backdateContextFiles(project, ["spec.md", "current-state.md", "decisions.md", "open-questions.md", "handoff-summary.md"]);
 
   const blocked = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /No non-context files changed/);
-  assert.match(blocked.reason, /spec\.md is older than latest discussion or investigation marker/);
-  assert.match(blocked.reason, /decisions\.md is older than latest discussion or investigation marker/);
-  assert.match(blocked.reason, /Discussion: needs-state-refresh/);
+  assert.equal(blocked.continue, false);
+  assert.equal(blocked.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(blocked, "decision"), false);
+  assert.match(blocked.systemMessage, /No non-context files changed/);
+  assert.match(blocked.systemMessage, /spec\.md is older than latest discussion or investigation marker/);
+  assert.match(blocked.systemMessage, /decisions\.md is older than latest discussion or investigation marker/);
+  assert.match(blocked.systemMessage, /Discussion: needs-state-refresh/);
 
   write(path.join(project, ".codex-context", "spec.md"), "# Spec\n\n## Approval Status\nLiving Draft / Not Approved.\n\n## Open Questions\n- Continue discussion.\n");
   write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nAsk the next discussion question.\n");
@@ -1794,8 +1804,10 @@ test("PostToolUse exploration requires working notes before stopping", () => {
   backdateContextFiles(project, ["working-notes.md", "current-state.md", "handoff-summary.md"]);
 
   const blocked = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /working-notes\.md is older than latest discussion or investigation marker/);
+  assert.equal(blocked.continue, false);
+  assert.equal(blocked.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(blocked, "decision"), false);
+  assert.match(blocked.systemMessage, /working-notes\.md is older than latest discussion or investigation marker/);
 
   write(path.join(project, ".codex-context", "working-notes.md"), `# Working Notes
 
@@ -2131,8 +2143,10 @@ ${commands}
 `);
 
   const output = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(output.decision, "block");
-  assert.match(output.reason, /verification\.md has 41 command entries/);
+  assert.equal(output.continue, false);
+  assert.equal(output.stopReason, "codex-project-ops-state-not-ready");
+  assert.equal(Object.hasOwn(output, "decision"), false);
+  assert.match(output.systemMessage, /verification\.md has 41 command entries/);
 });
 
 test("health check fails when bootstrap assets drift from root files", () => {

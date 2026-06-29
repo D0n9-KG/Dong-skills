@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-29 - Fix Stop Hook Output Schema
+
+Status: done
+Priority: P0
+Affected area: hooks / Stop / Codex app compatibility / tests / bootstrap
+Source: user screenshot from downstream `cc-kg` project showing `hook returned invalid stop hook JSON output`
+Implemented: `Stop` hook blocking output now uses Codex-compatible `continue: false`, `stopReason`, and `systemMessage` fields instead of the older `decision: "block"` / `reason` shape. The compact `hookSpecificOutput` status remains for UI diagnostics. Bootstrap asset copies and regression tests were synchronized.
+
+Signal:
+The hooks were loaded and `PreCompact` worked, but `Stop` produced a UI error even though the emitted text was valid JSON. Local reproduction showed the Stop block path returned `decision: "block"`, which current Codex Stop hook handling rejects as invalid stop hook JSON output.
+
+Decision:
+Keep Stop blocking behavior and diagnostics, but emit the same common blocking schema used by `PreCompact`: `continue: false`, a stable `stopReason`, and a human-readable `systemMessage`. Do not weaken the state freshness gate.
+
+Verification:
+`node --test tests\project-ops.test.mjs`, `node .codex\hooks\project-ops.mjs health-check`, `node scripts\release-check.mjs .`, `git diff --check`, and downstream `cc-kg` Stop simulation passed. The downstream Stop output now returns `continue:false` instead of `decision:block`.
+
 ### 2026-06-23 - Reduce Active Context Footprint In Project Ops
 
 Status: accepted

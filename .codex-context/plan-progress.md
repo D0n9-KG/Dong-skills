@@ -1,16 +1,16 @@
 # Plan Progress
 
 ## Active Plan
-Optimize Dong Skills governance around truth hierarchy, risk lanes, What-not-How specs, reduced freshness churn, clearer hook diagnostics, and a more accurate context-budget model.
+Fix Dong Skills Stop hook blocking output so current Codex accepts it.
 
 ## Spec Approval
-Approved by user in the current Dong Skills optimization discussion on 2026-06-23.
+Mechanical bug fix requested by user on 2026-06-29 after screenshot diagnosis.
 
 ## Execution Approval
 User approved implementation. Traditional task-by-task execution mode.
 
 ## Work Class / Risk Lane
-Lane 2: multi-file skill, hook, template, and test changes with user-facing workflow impact.
+Lane 1 / Lane 2: narrow hook runtime compatibility fix with bootstrap and regression-test updates.
 
 ## Execution Mode
 Traditional task-by-task execution.
@@ -23,19 +23,17 @@ Not selected for this task.
 - Do not add global hooks.
 - Preserve non-Dong local skills.
 - Keep hooks deterministic and lightweight.
-- Do not weaken verification for code/config/script changes.
+- Do not weaken Stop freshness blocking semantics.
 - Keep root files and onboarding bootstrap assets synchronized.
 
 ## Checkpoint Cadence
 - Commit and push after tests, health check, release check, state refresh, and Stop hook pass.
 
 ## Acceptance Mapping
-- Truth hierarchy / work lanes -> skill docs, templates, health schema, and regression tests.
-- What-not-How spec discipline -> brainstorming/spec template tests.
-- Freshness churn reduction -> Stop hook tests for docs-only vs code changes.
-- Hook diagnostics -> status output and checkpoint diagnostic tests.
-- Context footprint governance -> hot/warm/cold budget report and release-check hot-path threshold.
-- Bootstrap parity -> health check and release check.
+- Stop block output -> `continue:false`, `stopReason`, `systemMessage`.
+- Diagnostics -> keep compact `hookSpecificOutput.additionalContext`.
+- Bootstrap parity -> copy runtime fix to onboarding bootstrap asset.
+- Regression tests -> Stop block tests assert no `decision` field is returned.
 
 ## Test Scenarios
 - `node --test tests\project-ops.test.mjs`.
@@ -44,28 +42,29 @@ Not selected for this task.
 - `git diff --check`.
 
 ## Tasks
-- [x] Add truth hierarchy and work-lane guidance to router, governance, brainstorming, planning, and execution skills.
-- [x] Add required spec/plan template sections and health-check schema.
-- [x] Adjust Stop hook verification/checkpoint requirement by phase and changed-file type.
-- [x] Add clearer hook event/status output.
-- [x] Update current project state files for the new spec/plan sections.
+- [x] Reproduce downstream Stop output.
+- [x] Confirm `PreCompact` works and only Stop block schema is incompatible.
+- [x] Change Stop block output from `decision:block` to `continue:false`.
 - [x] Synchronize bootstrap asset copies.
 - [x] Add and pass regression tests.
-- [x] Run final health/release checks.
-- [x] Add hot/warm/cold context-budget reporting and release-check thresholding.
+- [x] Run final health/release/context checks.
+- [x] Sync updated Dong Skills into `C:\Users\D0n9\Desktop\cc-kg`.
+- [x] Verify downstream `cc-kg` Stop simulation returns compatible schema.
 - [ ] Commit and push.
 
 ## Current Step
 Final checkpoint.
 
 ## Verification
-- `node --test tests\project-ops.test.mjs`: pass, 53/53 tests.
+- `node --test tests\project-ops.test.mjs`: pass, 55/55 tests.
 - `node .codex\hooks\project-ops.mjs health-check`: pass.
 - `node scripts\release-check.mjs .`: pass.
 - `git diff --check`: pass.
 - `node .codex\hooks\project-ops.mjs context-budget`: pass with hot budget ok.
+- `C:\Users\D0n9\Desktop\cc-kg` health-check: pass.
+- `C:\Users\D0n9\Desktop\cc-kg` Stop simulation: returns `continue:false` with `stopReason`, not invalid `decision:block`.
 
 ## Out Of Scope
 - Cross-platform installer support.
 - Claude adapter support.
-- Manual refresh of downstream projects in this turn.
+- Broad cleanup/checkpoint of downstream `cc-kg` state changes beyond verifying the synced hook.

@@ -7,6 +7,10 @@
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/working-notes.md`: project bootstrap template for working notes.
 
 ## Modified
+- `.codex/scripts/lib/events.mjs`: Stop hook blocking output now returns Codex-compatible `continue:false`, `stopReason`, and `systemMessage` fields instead of `decision:"block"` / `reason`.
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: bootstrap mirror synchronized with the Stop hook schema fix.
+- `tests/project-ops.test.mjs`: Stop block regression tests now assert `continue:false`, stable `stopReason`, `systemMessage`, and absence of the old `decision` field.
+- `docs/improvements/backlog.md`: records the downstream Stop hook invalid-output bug and fix.
 - `.codex/scripts/lib/budget.mjs`: context-budget now classifies files into hot recovery, warm on-demand, and cold runtime/bootstrap buckets, with hot-path warn/fail thresholds.
 - `scripts/context-budget.mjs`: standalone budget script mirrors the hot/warm/cold report.
 - `scripts/release-check.mjs`: release check now runs context-budget and fails when hot recovery context exceeds the fail threshold.
@@ -57,3 +61,5 @@
 - Existing projects must run/update project bootstrap to receive `.agents/skills/.dong-skills-project.json` and the new project-local skills.
 - Same-name non-Dong project skills intentionally block bootstrap; user must rename or approve manual resolution.
 - `working-notes.md` should stay compact; promote durable conclusions into spec/decisions/current-state/handoff/solution docs.
+- Downstream project refreshes can create many marker/state-file changes; checkpoint or defer them per project policy.
+- `cc-kg` was refreshed to validate the fix; leave its uncommitted refresh/checkpoint decision to that project session.

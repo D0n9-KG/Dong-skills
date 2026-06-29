@@ -633,15 +633,18 @@ export function stop(input, root, ctx) {
     return;
   }
 
+  const systemMessage = [
+    "Before stopping, refresh Codex Project Ops state.",
+    hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" }),
+    changed.length ? `Changed files: ${shortList(changed)}.` : "No non-context files changed.",
+    `Issues: ${issues.join("; ")}.`,
+    "Update artifact-index.md, current-state.md, spec.md, decisions.md, open-questions.md, working-notes.md, verification.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. If verification was not run, record the explicit gap instead of claiming success."
+  ].join("\n");
+
   writeJson({
-    decision: "block",
-    reason: [
-      "Before stopping, refresh Codex Project Ops state.",
-      hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" }),
-      changed.length ? `Changed files: ${shortList(changed)}.` : "No non-context files changed.",
-      `Issues: ${issues.join("; ")}.`,
-      "Update artifact-index.md, current-state.md, spec.md, decisions.md, open-questions.md, working-notes.md, verification.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. If verification was not run, record the explicit gap instead of claiming success."
-    ].join("\n"),
+    continue: false,
+    stopReason: "codex-project-ops-state-not-ready",
+    systemMessage,
     hookSpecificOutput: {
       hookEventName: "Stop",
       additionalContext: hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" })

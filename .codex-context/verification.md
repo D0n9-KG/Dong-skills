@@ -3,6 +3,42 @@
 ## Commands Run
 - `node --test tests\project-ops.test.mjs`
   - Result: pass.
+  - Evidence: 55/55 tests passed after Stop block tests were updated to require `continue:false`, stable `stopReason`, `systemMessage`, and no old `decision` field.
+  - Date: 2026-06-29 15:41 +08:00.
+- `node .codex\hooks\project-ops.mjs health-check`
+  - Result: pass.
+  - Evidence: no issues after syncing the bootstrap asset copy of `events.mjs`.
+  - Date: 2026-06-29 15:43 +08:00.
+- `node scripts\release-check.mjs .`
+  - Result: pass.
+  - Evidence: health check, context budget, syntax checks, tests, privacy/readability/large-file/runtime scans passed.
+  - Date: 2026-06-29 15:43 +08:00.
+- `git diff --check`
+  - Result: pass.
+  - Evidence: no whitespace errors; Git warned that `tests/project-ops.test.mjs` CRLF will normalize to LF when touched.
+  - Date: 2026-06-29 15:43 +08:00.
+- `@'{"hook_event_name":"Stop","session_id":"diagnostic","cwd":"C:\\Users\\D0n9\\Documents\\Codex\\2026-06-08\\muratcankoylan-agent-skills-for-context-engineering\\outputs\\codex-project-ops-kit"}'@ | node .codex\hooks\project-ops.mjs`
+  - Result: pass.
+  - Evidence: blocking output returned `continue:false`, `stopReason:"codex-project-ops-state-not-ready"`, and `systemMessage`.
+  - Date: 2026-06-29 15:43 +08:00.
+- `& '.\scripts\install-windows.ps1' -TargetProjectRoot 'C:\Users\D0n9\Desktop\cc-kg'`
+  - Result: pass.
+  - Evidence: project-level Dong Skills, hooks, scripts, and context templates synced to `cc-kg`; non-Dong global same-name skills were preserved with warnings.
+  - Date: 2026-06-29 15:45 +08:00.
+- `node .codex\hooks\project-ops.mjs health-check` in `C:\Users\D0n9\Desktop\cc-kg`
+  - Result: pass.
+  - Evidence: no issues in the downstream project after sync.
+  - Date: 2026-06-29 15:45 +08:00.
+- Stop simulation in `C:\Users\D0n9\Desktop\cc-kg`
+  - Result: pass.
+  - Evidence: Stop now returns `continue:false`, `stopReason`, and `systemMessage`; no old `decision:block` output.
+  - Date: 2026-06-29 15:45 +08:00.
+- Final source Stop simulation after state refresh
+  - Result: pass for schema compatibility.
+  - Evidence: Stop returned `continue:false`, `stopReason:"codex-project-ops-state-not-ready"`, `systemMessage`, and `hookSpecificOutput`; Codex-compatible blocking shape confirmed. Remaining block reason was expected uncommitted checkpoint/state freshness, not invalid JSON.
+  - Date: 2026-06-29 15:49 +08:00.
+- `node --test tests\project-ops.test.mjs`
+  - Result: pass.
   - Evidence: 55/55 tests passed.
   - Coverage: existing governance/hook behavior plus hot/warm/cold context-budget reporting and release-check failure when hot recovery context exceeds the fail threshold.
   - Date: 2026-06-23 15:35 +08:00.
