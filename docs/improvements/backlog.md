@@ -30,6 +30,23 @@ Do not record ordinary project memory here. Use:
 
 ## Items
 
+### 2026-06-30 - Add SkillOpt-Sleep Skill Evolution Layer
+
+Status: done
+Priority: P1
+Affected area: skill evolution / SkillOpt-Sleep / backlog / tests / bootstrap / docs
+Source: user request to introduce Microsoft SkillOpt as a strong self-evolution module for Dong Skills
+Implemented: Added `codex-skill-evolution`, `scripts/skill-evolution.mjs`, hook CLI dispatch, manifest/install/bootstrap wiring, health/release checks, runtime `.skillopt-sleep/` ignore/scanning, README/AGENTS/governance guidance, SkillOpt license attribution, and regression tests. The integration treats SkillOpt-Sleep as an offline staged-proposal evaluator for Dong Skills itself, not a replacement for project memory or a hook-time model call.
+
+Signal:
+Dong Skills had good real-time context governance and curated memory, but did not have a validation-gated way to evolve its own skills from repeated failures. SkillOpt-Sleep provides a harvest/mine/replay/consolidate/gate/stage/adopt pattern that fits Dong Skills meta-learning when kept offline and review-gated.
+
+Decision:
+Use SkillOpt-Sleep as an optional offline self-evolution layer. Keep `codex-learning-memory`, `codex-solution-memory`, and `docs/improvements/backlog.md` as the classification and candidate sources. Do not run SkillOpt-Sleep from hooks, do not use `--auto-adopt`, and do not use it for business project code.
+
+Verification:
+`node --check scripts\skill-evolution.mjs`, `node .codex\hooks\project-ops.mjs skill-evolution status`, `node --test tests\project-ops.test.mjs`, `node .codex\hooks\project-ops.mjs health-check`, `node scripts\release-check.mjs .`, `git diff --check`, and installer sync passed. Current environment does not have `skillopt_sleep` installed, so real SkillOpt optimization runs remain a setup-dependent follow-up.
+
 ### 2026-06-29 - Fix Stop Hook Output Schema
 
 Status: done

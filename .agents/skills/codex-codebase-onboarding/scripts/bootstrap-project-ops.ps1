@@ -71,6 +71,9 @@ function Read-DongSkillsManifest {
       throw "Dong Skills manifest missing field: $field"
     }
   }
+  if (-not ($manifest.PSObject.Properties.Name -contains "global_bootstrap_skills")) {
+    $manifest | Add-Member -MemberType NoteProperty -Name "global_bootstrap_skills" -Value @($manifest.global_skills)
+  }
   return $manifest
 }
 
@@ -235,7 +238,8 @@ function Install-ProjectDongSkills {
     managed_by = "Dong Skills"
     installed_at = (Get-Date).ToUniversalTime().ToString("o")
     installed_skills = $installedNames
-    global_bootstrap_skills_required = @($Manifest.global_skills)
+    global_entry_skills_required = @($Manifest.global_skills)
+    global_bootstrap_skills_required = @($Manifest.global_bootstrap_skills)
     note = "Only installed_skills are managed by Dong Skills in this project. Other .agents/skills directories are preserved."
   }
   Write-Utf8Text -File (Join-Path $targetProjectSkillsRoot ".dong-skills-project.json") -Content (($projectMarker | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
@@ -346,7 +350,7 @@ function Ensure-RuntimeGitignore {
   $gitignore = Join-Path $ProjectRoot ".gitignore"
   $markerStart = "# codex-project-ops-runtime:start"
   $markerEnd = "# codex-project-ops-runtime:end"
-  $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n.codex-context/discussion-state.json`n$markerEnd"
+  $block = "$markerStart`n.codex-context/raw/*`n!.codex-context/raw/.gitkeep`n.codex-context/discussion-state.json`n.skillopt-sleep/`n$markerEnd"
   if (Test-Path -LiteralPath $gitignore) {
     $content = Read-Utf8Text -File $gitignore
   } else {
@@ -362,7 +366,7 @@ function Ensure-RuntimeGitignore {
   if ($hasStart -and $hasEnd) {
     $pattern = "(?s)" + [regex]::Escape($markerStart) + ".*?" + [regex]::Escape($markerEnd)
     $updated = [regex]::Replace($content, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $block })
-  } elseif ($content.Contains(".codex-context/raw/*") -and $content.Contains("!.codex-context/raw/.gitkeep") -and $content.Contains(".codex-context/discussion-state.json")) {
+  } elseif ($content.Contains(".codex-context/raw/*") -and $content.Contains("!.codex-context/raw/.gitkeep") -and $content.Contains(".codex-context/discussion-state.json") -and $content.Contains(".skillopt-sleep/")) {
     return
   } else {
     $updated = $content.TrimEnd()
@@ -485,6 +489,7 @@ Copy-Item -LiteralPath (Join-Path $sourceScripts "state-prune.mjs") -Destination
 Copy-Item -LiteralPath (Join-Path $sourceScripts "workflow-state.mjs") -Destination (Join-Path $targetScriptDir "workflow-state.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "solutions.mjs") -Destination (Join-Path $targetScriptDir "solutions.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "session-history.mjs") -Destination (Join-Path $targetScriptDir "session-history.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "skill-evolution.mjs") -Destination (Join-Path $targetScriptDir "skill-evolution.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"

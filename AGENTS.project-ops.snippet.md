@@ -46,6 +46,7 @@ Use only the bundled curated set by default:
 - `codex-session-history`
 - `codex-strategy-anchor`
 - `codex-evidence-capture`
+- `codex-skill-evolution`
 - `requesting-code-review`
 - `receiving-code-review`
 - `codex-codebase-onboarding`
@@ -107,6 +108,8 @@ Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle
 
 Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 
+Use `codex-skill-evolution` only for offline, explicit SkillOpt-Sleep evolution of Dong Skills itself. It is a global maintenance entry, but it must operate on the real Dong Skills source repo, not the current business project. It turns Dong Skills backlog/outbox issues into reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. Do not run SkillOpt-Sleep from hooks, do not use `--auto-adopt`, and do not use it for business project code or project memory.
+
 ## Learning Memory
 
 Learning is curated. Hooks may automatically capture likely learning signals in `.codex-context/raw/observations.jsonl`, but those observations are compact/redacted and are not active rules.
@@ -118,6 +121,8 @@ For non-trivial verified fixes or reusable solutions, use `codex-solution-memory
 If the signal is about improving Dong Skills itself, such as hooks, skills, README, installer, bootstrap, recovery, or governance behavior, record it in `docs/improvements/backlog.md` in the Dong Skills repo. Do not mix Dong Skills meta-learning with project instincts or project solution memory.
 
 If the real Dong Skills repo cannot be found, write the item to `.codex-context/dong-skills-outbox.md` and report the target location, actual location, reason, risk, and migration next step. Use `node .codex/hooks/project-ops.mjs learning-status` to see the detected Dong Skills backlog target and pending outbox count. Never edit installed skill copies under `%USERPROFILE%\.agents\skills` as if they were source.
+
+For recurring Dong Skills failures that need validation before changing skills, use `codex-skill-evolution` after the issue is in `docs/improvements/backlog.md` or `.codex-context/dong-skills-outbox.md`. Keep `.skillopt-sleep/` and generated task drafts ignored unless a sanitized eval fixture is intentionally created.
 
 ## Session History
 

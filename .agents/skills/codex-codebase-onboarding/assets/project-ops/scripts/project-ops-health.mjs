@@ -121,6 +121,7 @@ const WORKFLOW_ALLOWED = {
     "codex-docs-stewardship",
     "codex-context-budget",
     "codex-asset-governance",
+    "codex-skill-evolution",
     "none"
   ],
   auto_next: ["true", "false"],
@@ -387,6 +388,9 @@ function checkRuntimeGitignore(root, issues) {
   if (!text.includes(".codex-context/discussion-state.json")) {
     issues.push(".gitignore does not ignore .codex-context/discussion-state.json");
   }
+  if (!text.includes(".skillopt-sleep/")) {
+    issues.push(".gitignore does not ignore .skillopt-sleep/");
+  }
 }
 
 function checkTrackedRaw(root, issues) {
@@ -586,6 +590,10 @@ function checkAssetParity(root, issues) {
     [
       path.join(root, "scripts", "session-history.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "session-history.mjs")
+    ],
+    [
+      path.join(root, "scripts", "skill-evolution.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "skill-evolution.mjs")
     ]
   ];
 
@@ -637,7 +645,7 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "lib", "core.mjs"))) {
     issues.push("Missing .codex/scripts/lib/core.mjs required by split project hook");
   }
-  for (const scriptName of ["asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs", "skill-evolution.mjs"]) {
     if (!fs.existsSync(path.join(root, ".codex", "scripts", scriptName)) &&
         !fs.existsSync(path.join(root, "scripts", scriptName))) {
       issues.push(`Missing project ops helper script: ${scriptName}`);

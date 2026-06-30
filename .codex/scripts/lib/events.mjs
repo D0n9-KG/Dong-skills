@@ -583,13 +583,14 @@ export function stop(input, root, ctx) {
   const learning = learningStatus(ctx);
   const statusFiles = gitStatusFiles(root);
   const allStatusFiles = [...new Set([...changed, ...statusFiles])];
-  const latest = latestChangedMtime(root, allStatusFiles);
+  const latest = latestChangedMtime(root, changed);
+  const checkpointLatest = latestChangedMtime(root, allStatusFiles);
   const assets = assetGovernanceStatus(root, ctx);
   const workflow = workflowStatus(root, ctx);
   const state = workflow.state || {};
   const evidenceRequired = executionEvidenceRequired(state, allStatusFiles);
   const checkpointRequired = checkpointReviewRequired(state, allStatusFiles);
-  const checkpoint = checkpointRequired ? gitCheckpointStatus(root, ctx, latest) : null;
+  const checkpoint = checkpointRequired ? gitCheckpointStatus(root, ctx, checkpointLatest) : null;
   const discussion = discussionStateStatus(root, ctx, workflow);
   const statusLatest = Math.max(latest, discussion.latest);
 

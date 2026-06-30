@@ -68,3 +68,6 @@ Approved by user through iterative instructions on 2026-06-23.
 
 ## Next Step
 executing-plans
+
+## Goals
+- [Goal.]

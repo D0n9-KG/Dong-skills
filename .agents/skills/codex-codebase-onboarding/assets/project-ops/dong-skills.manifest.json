@@ -3,6 +3,11 @@
   "managed_by": "Dong Skills",
   "global_skills": [
     "codex-codebase-onboarding",
+    "using-superpowers",
+    "codex-skill-evolution"
+  ],
+  "global_bootstrap_skills": [
+    "codex-codebase-onboarding",
     "using-superpowers"
   ],
   "project_skills": [
@@ -27,6 +32,7 @@
     "codex-solution-memory",
     "codex-session-history",
     "codex-strategy-anchor",
-    "codex-evidence-capture"
+    "codex-evidence-capture",
+    "codex-skill-evolution"
   ]
 }

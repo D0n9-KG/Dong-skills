@@ -11,5 +11,5 @@ verify_result: pass
 review_status: done
 checkpoint_status: pending
 handoff_hash: null
-updated_at: 2026-06-29T07:48:00.000Z
-note: Stop hook output schema fix verified; checkpoint pending.
+updated_at: 2026-06-30T00:00:00.000Z
+note: SkillOpt-Sleep global-entry integration verified and installed; checkpoint pending.

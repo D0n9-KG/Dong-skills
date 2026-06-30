@@ -1,32 +1,38 @@
 # Current State
 
 ## Objective
-Fix the Dong Skills Stop hook schema so current Codex accepts blocking Stop output instead of showing `hook returned invalid stop hook JSON output`.
+Add SkillOpt-Sleep as an offline, validation-gated self-evolution layer for Dong Skills, with `codex-skill-evolution` available as a global maintenance entry.
 
 ## Latest User Instruction
-User showed a `cc-kg` hooks screenshot where `PreCompact` worked but `Stop` reported invalid JSON output, then asked to fix it.
+User asked to adjust the design so relatively global maintenance functionality is not only project-scoped.
 
 ## Current Phase
 delivery
 
 ## Active Assumptions
 - Dong Skills remains Codex-only.
-- No global hooks should be installed.
-- Full workflow skills belong in each initialized project under `.agents/skills/`.
-- Installers and bootstraps must not silently delete or overwrite same-name non-Dong local skills.
-- Stop hook should keep blocking stale state, but blocking output must use Codex-compatible `continue:false` schema.
-- `hookSpecificOutput` can remain as diagnostic context, but it cannot replace the required Stop output fields.
+- SkillOpt-Sleep is an offline/manual maintenance workflow, not a hook runtime.
+- Existing `codex-learning-memory` and `codex-solution-memory` remain responsible for memory classification and project solution memory.
+- SkillOpt-Sleep should stage proposals and require explicit review/adoption; `--auto-adopt` stays disallowed.
+- Runtime `.skillopt-sleep/` artifacts and generated task drafts are private by default and must stay out of Git unless sanitized intentionally.
+- `codex-skill-evolution` can be globally visible, but it must locate and operate on the real Dong Skills source repo rather than the current business project.
 
 ## Blockers
-- None for implementation or local verification.
+- None. `skillopt_sleep` is now available through a user-level `SKILLOPT_SLEEP_REPO` pointing to the local Microsoft SkillOpt checkout.
 
 ## Next Action
-Commit and push the verified Stop hook schema fix. Downstream `cc-kg` has already been refreshed and verified, but its project-level refresh changes remain uncommitted in that project.
+Checkpoint this source change when requested.
 
 ## Final Verification Snapshot
-- Source Stop simulation now returns `continue:false`, `stopReason`, and `systemMessage`; the old Stop block `decision:block` shape is gone.
-- `cc-kg` Stop simulation now returns the same compatible shape.
-- Remaining Stop blocks are normal state/checkpoint freshness blocks, not invalid JSON output.
+- Related tests passed: `node --test tests\project-ops.test.mjs --test-name-pattern "skill-evolution|Windows installer"` reports 59/59 pass.
+- Full suite passed: `node --test tests\project-ops.test.mjs` reports 59/59 pass.
+- `node .codex\hooks\project-ops.mjs health-check`: pass.
+- `node .codex\hooks\project-ops.mjs skill-evolution status`: pass and reports `SkillOpt-Sleep available: yes`.
+- `git diff --check`: pass with CRLF normalization warnings only.
+- `node scripts\release-check.mjs .`: pass after final state refresh.
+- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1`: pass; global `codex-skill-evolution` is installed with marker scope `global-entry`.
+- Stop gate status refresh: artifact index, verification, and handoff were refreshed after the final installer wording change; Git checkpoint is deferred by explicit handoff reason.
+- Stop freshness fix: state freshness now compares against non-governance project changes while checkpoint review still sees the full dirty worktree; focused Stop regression tests and syntax checks passed.
 
 ## Last Updated
-2026-06-29 15:48 +08:00
+2026-06-30 22:14 +08:00

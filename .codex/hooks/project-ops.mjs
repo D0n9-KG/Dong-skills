@@ -15,6 +15,7 @@ import { learningStatusText } from "../scripts/lib/learning.mjs";
 
 const ROOTLESS_FIRST_ARGS = {
   "session-history": new Set(["scan", "help", "--help", "-h"]),
+  "skill-evolution": new Set(["status", "collect-candidates", "dry-run", "run", "inspect-stage", "adopt", "help", "--help", "-h"]),
   "workflow-state": new Set([
     "init",
     "status",
@@ -90,6 +91,7 @@ const projectOpsScripts = {
   "asset-governance": "asset-governance.mjs",
   "health-check": "project-ops-health.mjs",
   "release-check": "release-check.mjs",
+  "skill-evolution": "skill-evolution.mjs",
   "state-prune": "state-prune.mjs",
   "workflow-state": "workflow-state.mjs"
 };

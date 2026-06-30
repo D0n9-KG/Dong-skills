@@ -32,9 +32,9 @@ When the shell is already in the target repository, keep the working directory t
 & "<resolved-skill-dir>\scripts\bootstrap-project-ops.ps1" -TargetProjectRoot (Get-Location).Path
 ```
 
-The bootstrap script installs the full project-level Dong Skills set into `.agents/skills/`, installs project hooks and split hook libraries, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files including `workflow-state.yaml` and `working-notes.md`, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data plus `.codex-context/discussion-state.json`.
+The bootstrap script installs the full project-level Dong Skills set into `.agents/skills/`, installs project hooks and split hook libraries, merges the managed `AGENTS.md` block, creates missing `.codex-context/` files including `workflow-state.yaml` and `working-notes.md`, patches missing context-template sections, installs helper scripts, and ensures `.gitignore` protects `.codex-context/raw/` runtime data, `.codex-context/discussion-state.json`, and SkillOpt-Sleep runtime staging under `.skillopt-sleep/`.
 
-The global Dong Skills install is intentionally bootstrap-only. Bootstrap must preserve non-Dong project-local skill directories; only skill names listed in the Dong Skills manifest are managed.
+The global Dong Skills install intentionally exposes only entry skills: onboarding, the router, and Dong Skills maintenance. Full workflow skills and hooks are installed project-locally. Bootstrap must preserve non-Dong project-local skill directories; only skill names listed in the Dong Skills manifest are managed.
 
 If all Bootstrap Gate files exist, run a health check before assuming the installed project configuration is current:
 

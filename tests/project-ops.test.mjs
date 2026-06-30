@@ -17,6 +17,7 @@ const health = path.join(root, "scripts", "project-ops-health.mjs");
 const assetGovernance = path.join(root, "scripts", "asset-governance.mjs");
 const releaseCheck = path.join(root, "scripts", "release-check.mjs");
 const workflowState = path.join(root, "scripts", "workflow-state.mjs");
+const skillEvolution = path.join(root, "scripts", "skill-evolution.mjs");
 
 function decodePowerShellEncodedCommand(command) {
   const match = String(command).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
@@ -82,7 +83,8 @@ function writeDongProjectSkillsFixture(projectRoot) {
     "codex-solution-memory",
     "codex-session-history",
     "codex-strategy-anchor",
-    "codex-evidence-capture"
+    "codex-evidence-capture",
+    "codex-skill-evolution"
   ];
 
   const skillsRoot = path.join(projectRoot, ".agents", "skills");
@@ -91,6 +93,7 @@ function writeDongProjectSkillsFixture(projectRoot) {
     managed_by: "Dong Skills",
     installed_at: "fixture",
     installed_skills: names,
+    global_entry_skills_required: ["codex-codebase-onboarding", "using-superpowers", "codex-skill-evolution"],
     global_bootstrap_skills_required: ["codex-codebase-onboarding", "using-superpowers"]
   }, null, 2));
 
@@ -209,10 +212,10 @@ function readyHealthFixture(projectRoot) {
   write(path.join(projectRoot, ".codex", "hooks", "project-ops.mjs"), "console.log('root hook');\n");
   write(path.join(projectRoot, ".codex", "hooks", "launch-project-ops.mjs"), "console.log('launcher');\n");
   write(path.join(projectRoot, ".codex", "scripts", "lib", "core.mjs"), "export const value = 1;\n");
-  for (const scriptName of ["instincts.mjs", "asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs"]) {
+  for (const scriptName of ["instincts.mjs", "asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs", "skill-evolution.mjs"]) {
     write(path.join(projectRoot, "scripts", scriptName), "#!/usr/bin/env node\n");
   }
-  write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n.codex-context/discussion-state.json\n");
+  write(path.join(projectRoot, ".gitignore"), ".codex-context/raw/*\n!.codex-context/raw/.gitkeep\n.codex-context/discussion-state.json\n.skillopt-sleep/\n");
 
   for (const name of [
     "current-state.md",
@@ -522,6 +525,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /actual goal mechanism/);
   assert.match(router, /working-notes\.md/);
   assert.match(router, /hidden chain-of-thought/);
+  assert.match(router, /codex-skill-evolution/);
 
   const governance = readSkill("codex-project-governance");
   assert.match(governance, /workflow-state\.yaml/);
@@ -533,6 +537,8 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /Hook output includes a compact status line/);
   assert.match(governance, /discussion-state\.json/);
   assert.match(governance, /working-notes\.md/);
+  assert.match(governance, /codex-skill-evolution/);
+  assert.match(governance, /SkillOpt-Sleep/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -565,6 +571,12 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const evidence = readSkill("codex-evidence-capture");
   assert.match(evidence, /Direct product use can count as product evidence/);
   assert.match(evidence, /shipped CLI/);
+
+  const skillEvolutionText = readSkill("codex-skill-evolution");
+  assert.match(skillEvolutionText, /offline, validation-gated SkillOpt-Sleep runs/);
+  assert.match(skillEvolutionText, /Do not run SkillOpt-Sleep from `Stop`, `PreCompact`, `PostToolUse`/);
+  assert.match(skillEvolutionText, /Do not use `--auto-adopt`/);
+  assert.match(skillEvolutionText, /adopt --confirm-reviewed/);
 
   const solutionMemory = readSkill("codex-solution-memory");
   assert.match(solutionMemory, /## Evaluation Gate/);
@@ -737,6 +749,7 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.match(gitignore, /\.codex-context\/raw\/\*/);
   assert.match(gitignore, /!\.codex-context\/raw\/\.gitkeep/);
   assert.match(gitignore, /\.codex-context\/discussion-state\.json/);
+  assert.match(gitignore, /\.skillopt-sleep\//);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "core.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "lib", "workflow.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "state-prune.mjs")), true);
@@ -744,6 +757,7 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "asset-governance.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "solutions.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "session-history.mjs")), true);
+  assert.equal(fs.existsSync(path.join(project, ".codex", "scripts", "skill-evolution.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex", "hooks", "launch-project-ops.mjs")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "archive", ".gitkeep")), true);
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "solution-index.md")), true);
@@ -753,6 +767,7 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "working-notes.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", ".dong-skills-project.json")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-skill-evolution", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", ".dong-skill-managed.json")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "brainstorming", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md")), true);
@@ -813,11 +828,15 @@ test("Windows installer preserves existing UTF-8 Chinese AGENTS.md", () => {
   assert.doesNotMatch(agents, /\uFFFD/);
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "using-superpowers", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-skill-evolution", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), false);
   assert.equal(fs.existsSync(path.join(skillsRoot, "brainstorming", "SKILL.md")), false);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", ".dong-skills-project.json")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, ".dong-skills-source.json")), true);
+  const sourceMarker = readJson(path.join(skillsRoot, ".dong-skills-source.json"));
+  assert.deepEqual(sourceMarker.global_bootstrap_skills, ["codex-codebase-onboarding", "using-superpowers"]);
+  assert.ok(sourceMarker.global_skills.includes("codex-skill-evolution"));
 });
 
 test("Windows installer removes only managed Dong global skills and preserves non-Dong local skills", () => {
@@ -843,6 +862,7 @@ test("Windows installer removes only managed Dong global skills and preserves no
   assert.equal(fs.existsSync(path.join(skillsRoot, "doc", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "using-superpowers", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-skill-evolution", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), false);
   assert.equal(fs.existsSync(path.join(skillsRoot, "brainstorming", "SKILL.md")), false);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
@@ -870,6 +890,7 @@ test("Windows installer preserves same-name non-Dong global skills", () => {
   assert.equal(fs.readFileSync(userSkill, "utf8"), userSkillText);
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "using-superpowers", "SKILL.md")), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, "codex-skill-evolution", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
 });
 
@@ -1200,6 +1221,128 @@ test("learning-status locates Dong Skills source repo from environment", () => {
   assert.match(out, /Pending outbox items: 0/);
 });
 
+test("skill-evolution collects backlog candidates into reviewed-task draft", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "docs", "improvements", "backlog.md"), `# Backlog
+
+## Items
+
+### 2026-06-30 - Brainstorming should continue one question at a time
+
+Status: accepted
+Priority: P0
+Affected area: brainstorming / SkillOpt
+
+Signal:
+The brainstorming skill sometimes stops after updating files instead of asking the next focused question.
+`);
+  write(path.join(project, ".agents", "skills", "codex-skill-evolution", "SKILL.md"), "---\nname: codex-skill-evolution\n---\n");
+  write(path.join(project, ".agents", "skills", "brainstorming", "SKILL.md"), "---\nname: brainstorming\n---\n");
+
+  const tasksFile = path.join(project, ".codex-context", "raw", "skill-evolution-tasks.json");
+  const out = execFileSync(process.execPath, [skillEvolution, project, "collect-candidates", "--output", tasksFile], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, DONG_SKILLS_REPO: project, DONG_SKILLS_HOME: "", DONG_SKILLS_DISABLE_SOURCE_MARKER: "1" },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Tasks: 1/);
+  const payload = readJson(tasksFile);
+  assert.equal(payload.format, "skillopt_sleep.tasks.v1");
+  assert.equal(payload.reviewed, false);
+  assert.equal(payload.tasks.length, 1);
+  assert.match(payload.tasks[0].intent, /Brainstorming should continue/);
+  assert.equal(payload.tasks[0].reference_kind, "rule");
+  assert.equal(payload.tasks[0].judge.checks.some((check) => check.arg === "ask one focused next question"), true);
+});
+
+test("skill-evolution uses Dong Skills source repo when invoked from a business project", () => {
+  const source = tempProject();
+  const business = tempProject();
+  write(path.join(source, "docs", "improvements", "backlog.md"), `# Backlog
+
+### 2026-06-30 - Hook status should explain stale handoff evidence
+
+Status: accepted
+Priority: P1
+Affected area: hooks / checkpoint
+`);
+  write(path.join(source, ".agents", "skills", "codex-skill-evolution", "SKILL.md"), "---\nname: codex-skill-evolution\n---\n");
+  write(path.join(source, ".agents", "skills", "brainstorming", "SKILL.md"), "---\nname: brainstorming\n---\n");
+  write(path.join(business, ".codex-context", "dong-skills-outbox.md"), `# Dong Skills Outbox
+
+### 2026-06-30 - Brainstorming should ask one next question
+
+Status: pending
+Priority: P0
+Affected area: brainstorming
+`);
+
+  const tasksFile = path.join(source, ".codex-context", "raw", "skill-evolution-tasks.json");
+  const out = execFileSync(process.execPath, [skillEvolution, business, "collect-candidates"], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, DONG_SKILLS_REPO: source, DONG_SKILLS_HOME: "", DONG_SKILLS_DISABLE_SOURCE_MARKER: "1" },
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, new RegExp(`Dong Skills repo: ${escapeRegExp(source)}`));
+  assert.match(out, /Repo source: DONG_SKILLS_REPO/);
+  assert.match(out, /Tasks: 2/);
+  assert.equal(fs.existsSync(tasksFile), true);
+  assert.equal(fs.existsSync(path.join(business, ".codex-context", "raw", "skill-evolution-tasks.json")), false);
+  const payload = readJson(tasksFile);
+  assert.equal(payload.project, source);
+  assert.equal(payload.invocation_project, business);
+  assert.equal(payload.tasks.length, 2);
+  assert.equal(payload.tasks.some((task) => task.source_sessions.some((sourcePath) => sourcePath.includes("dong-skills-outbox.md"))), true);
+});
+
+test("skill-evolution safety gates reject unreviewed run and unconfirmed adopt", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const tasksFile = path.join(project, ".codex-context", "raw", "skill-evolution-tasks.json");
+  write(tasksFile, JSON.stringify({
+    format: "skillopt_sleep.tasks.v1",
+    project,
+    reviewed: false,
+    tasks: []
+  }, null, 2));
+
+  assert.throws(() => {
+    execFileSync(process.execPath, [skillEvolution, project, "run", "--tasks-file", tasksFile, "--backend", "mock"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+
+  assert.throws(() => {
+    execFileSync(process.execPath, [skillEvolution, project, "adopt"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+});
+
+test("project hook dispatches skill-evolution status", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+
+  const out = execFileSync(process.execPath, [hook, "skill-evolution", project, "status"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Dong Skills SkillOpt-Sleep integration status/);
+  assert.match(out, /SkillOpt-Sleep available:/);
+  assert.match(out, /Safety:/);
+});
+
 test("Stop requires structured Git Checkpoint fields when worktree is dirty", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -1251,6 +1394,64 @@ test("Stop explains stale Git Checkpoint handoff evidence", () => {
   assert.match(output.systemMessage, /handoff-summary\.md is older than changed files/);
   assert.match(output.systemMessage, /latest changed file: work\.txt/);
   assert.match(output.systemMessage, /refresh handoff-summary\.md after verification\/artifact\/current-state updates/);
+});
+
+test("Stop freshness does not chase newer governance state files", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  write(path.join(project, "work.txt"), "dirty\n");
+
+  readyState(project, `- Latest commit: not ready
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: test fixture keeps dirty work uncommitted
+- Next checkpoint: commit after fixture completes
+`);
+
+  write(path.join(project, ".codex-context", "artifact-index.md"), "# Artifact Index\n\n## Modified\n- work.txt\n");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- fixture verification.\n");
+  write(path.join(project, ".codex-context", "handoff-summary.md"), `# Handoff Summary
+
+## Objective
+Fixture.
+
+## Latest User Instruction
+Fixture.
+
+## Approved Scope / Spec
+Fixture.
+
+## Plan Status
+Fixture.
+
+## Files Modified
+- work.txt
+
+## Decisions Made
+- Fixture.
+
+## Verification Evidence
+- fixture verification.
+
+## Git Checkpoint
+- Latest commit: not ready
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: test fixture keeps dirty work uncommitted
+- Next checkpoint: commit after fixture completes
+
+## Next Action
+Continue.
+
+## Files To Re-read First
+- work.txt
+`);
+  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nContinue.\n");
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.continue, true);
 });
 
 test("health check requires state files to preserve approval gates", () => {

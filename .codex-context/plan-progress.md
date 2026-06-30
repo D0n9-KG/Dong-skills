@@ -1,16 +1,16 @@
 # Plan Progress
 
 ## Active Plan
-Fix Dong Skills Stop hook blocking output so current Codex accepts it.
+Introduce SkillOpt-Sleep as Dong Skills' offline skill self-evolution layer and expose `codex-skill-evolution` as a global maintenance entry.
 
 ## Spec Approval
-Mechanical bug fix requested by user on 2026-06-29 after screenshot diagnosis.
+User approved the SkillOpt-Sleep integration after discussing that it should evolve Dong Skills itself, not replace project memory or hook runtime behavior.
 
 ## Execution Approval
 User approved implementation. Traditional task-by-task execution mode.
 
 ## Work Class / Risk Lane
-Lane 1 / Lane 2: narrow hook runtime compatibility fix with bootstrap and regression-test updates.
+Lane 2: new workflow skill, CLI wrapper, manifest/install/bootstrap/health/release/docs/test updates, with no live auto-adoption.
 
 ## Execution Mode
 Traditional task-by-task execution.
@@ -20,20 +20,26 @@ Not selected for this task.
 
 ## Runtime Constraints
 - Keep Dong Skills Codex-only.
-- Do not add global hooks.
-- Preserve non-Dong local skills.
-- Keep hooks deterministic and lightweight.
-- Do not weaken Stop freshness blocking semantics.
+- Do not run SkillOpt-Sleep inside hooks.
+- Do not enable `--auto-adopt`.
+- Do not replace `codex-learning-memory` or `codex-solution-memory`.
+- Keep generated `.skillopt-sleep/` staging and raw task drafts out of Git by default.
 - Keep root files and onboarding bootstrap assets synchronized.
+- Missing `skillopt_sleep` should be reported as a setup/status issue, not a Dong Skills runtime failure.
+- Global `codex-skill-evolution` must locate the Dong Skills source repo and avoid writing SkillOpt staging into a business project by default.
 
 ## Checkpoint Cadence
 - Commit and push after tests, health check, release check, state refresh, and Stop hook pass.
 
 ## Acceptance Mapping
-- Stop block output -> `continue:false`, `stopReason`, `systemMessage`.
-- Diagnostics -> keep compact `hookSpecificOutput.additionalContext`.
-- Bootstrap parity -> copy runtime fix to onboarding bootstrap asset.
-- Regression tests -> Stop block tests assert no `decision` field is returned.
+- `codex-skill-evolution` -> documents offline SkillOpt-Sleep workflow, safety boundaries, and adoption rules.
+- `skill-evolution.mjs` -> supports `status`, `collect-candidates`, `dry-run`, `run`, `inspect-stage`, and `adopt`.
+- Router -> `node .codex/hooks/project-ops.mjs skill-evolution ...` dispatches to the wrapper.
+- Installer/bootstrap -> project installs include the new skill and helper script.
+- Split install -> global install includes onboarding, router, and `codex-skill-evolution`; complete workflow skills and hooks remain project-level.
+- Source targeting -> `skill-evolution.mjs` resolves the Dong Skills source repo via CLI/env/global marker and can read a business project outbox without using the business project as the execution root.
+- Safety -> `run` refuses unreviewed task files; `adopt` requires `--confirm-reviewed`; `.skillopt-sleep/` is ignored.
+- Tests -> cover candidate collection, safety gates, router dispatch, and skill guidance.
 
 ## Test Scenarios
 - `node --test tests\project-ops.test.mjs`.
@@ -42,29 +48,39 @@ Not selected for this task.
 - `git diff --check`.
 
 ## Tasks
-- [x] Reproduce downstream Stop output.
-- [x] Confirm `PreCompact` works and only Stop block schema is incompatible.
-- [x] Change Stop block output from `decision:block` to `continue:false`.
-- [x] Synchronize bootstrap asset copies.
-- [x] Add and pass regression tests.
-- [x] Run final health/release/context checks.
-- [x] Sync updated Dong Skills into `C:\Users\D0n9\Desktop\cc-kg`.
-- [x] Verify downstream `cc-kg` Stop simulation returns compatible schema.
-- [ ] Commit and push.
+- [x] Add `codex-skill-evolution` skill.
+- [x] Add `scripts/skill-evolution.mjs` wrapper.
+- [x] Wire project hook dispatcher and manifest.
+- [x] Wire installer/bootstrap/health/release/runtime ignore rules.
+- [x] Update AGENTS/README/governance/router docs.
+- [x] Add SkillOpt license attribution.
+- [x] Add regression tests.
+- [x] Run unit tests and health check.
+- [x] Rerun release check after state refresh.
+- [x] Install SkillOpt / SkillOpt-Sleep source and set `SKILLOPT_SLEEP_REPO`.
+- [x] Make `codex-skill-evolution` a global maintenance entry.
+- [x] Teach `skill-evolution.mjs` to target the real Dong Skills source repo from business projects.
+- [ ] Run full verification after the global-entry adjustment.
+- [ ] Sync local/project install if needed.
 
 ## Current Step
-Final checkpoint.
+Full verification after global-entry adjustment.
 
 ## Verification
-- `node --test tests\project-ops.test.mjs`: pass, 55/55 tests.
+- `node --check scripts\skill-evolution.mjs`: pass.
+- `node --check .codex\hooks\project-ops.mjs`: pass.
+- `node scripts\skill-evolution.mjs . status`: pass; reports missing `skillopt_sleep` as setup diagnostic.
+- `node .codex\hooks\project-ops.mjs skill-evolution status`: pass; dispatcher works.
+- `node --test tests\project-ops.test.mjs`: pass, 58/58 tests.
 - `node .codex\hooks\project-ops.mjs health-check`: pass.
-- `node scripts\release-check.mjs .`: pass.
 - `git diff --check`: pass.
-- `node .codex\hooks\project-ops.mjs context-budget`: pass with hot budget ok.
-- `C:\Users\D0n9\Desktop\cc-kg` health-check: pass.
-- `C:\Users\D0n9\Desktop\cc-kg` Stop simulation: returns `continue:false` with `stopReason`, not invalid `decision:block`.
+- `node scripts\release-check.mjs .`: pass after state refresh.
+- `node --test tests\project-ops.test.mjs --test-name-pattern "skill-evolution|Windows installer"`: pass, 59/59 tests.
 
 ## Out Of Scope
 - Cross-platform installer support.
 - Claude adapter support.
-- Broad cleanup/checkpoint of downstream `cc-kg` state changes beyond verifying the synced hook.
+- Vendoring Microsoft SkillOpt source code into Dong Skills.
+- Automatically scheduling nightly runs.
+- Auto-adopting SkillOpt proposals.
+- Using SkillOpt-Sleep for business project code or project memory.

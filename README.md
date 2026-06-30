@@ -25,13 +25,13 @@ Dong Skills 把这些信息移到项目内的 `.codex-context/`、`docs/solution
 
 Dong Skills 使用“全局最小、项目完整”的安装模型：
 
-- 全局用户 skills 只保留 bootstrap/router：`codex-codebase-onboarding` 和 `using-superpowers`。
+- 全局用户 skills 只保留入口能力：`codex-codebase-onboarding`、`using-superpowers` 和 `codex-skill-evolution`。
 - 完整工作流 skills 安装到每个项目自己的 `.agents/skills/`。
 - 项目 hooks 也只安装到项目 `.codex/hooks.json` 和 `.codex/hooks/`，不安装全局 hooks。
 - 安装器只管理 `dong-skills.manifest.json` 里列出的 Dong skill 名称。
 - 非 Dong 的本地 skills 会被保留；同名但无法确认是 Dong 管理的目录不会被静默覆盖或删除。
 
-这个模型避免“某个项目没初始化 Dong Skills，但全局重型 skill 仍然被隐式调用”的混乱。
+这个模型避免“某个项目没初始化 Dong Skills，但全局重型 workflow skill 仍然被隐式调用”的混乱，同时允许 Dong Skills 自身维护入口在全局可用。
 
 ### 安装
 
@@ -49,7 +49,7 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 
 安装器会：
 
-- 安装全局 bootstrap/router skills 到 `%USERPROFILE%\.agents\skills`。
+- 安装全局入口 skills 到 `%USERPROFILE%\.agents\skills`，包括 onboarding、router 和 Dong Skills 自进化维护入口。
 - 写入 `%USERPROFILE%\.agents\skills\.dong-skills-source.json`，让项目 bootstrap 能定位真实 Dong Skills 源仓库。
 - 清理能明确识别为 Dong 旧全局安装的重型 skills。
 - 保留所有非 Dong 本地 skills。
@@ -90,6 +90,7 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 - `codex-learning-memory`：短的项目 instincts；Dong Skills 优化候选进入 Dong Skills backlog 或项目 outbox。
 - `codex-solution-memory`：结构化、可复用的项目解决方案。
 - `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构。
+- `codex-skill-evolution`：作为全局维护入口接入 SkillOpt-Sleep，离线把 Dong Skills backlog/outbox 中的反复失败转成可回放任务，生成 staged proposal，验证通过并经用户确认后才采纳；它操作真实 Dong Skills 源仓库，不优化业务项目代码。
 - `codex-review-panel` / `codex-simplicity-review`：交付前审查和反过度工程。
 
 ### 上下文恢复
@@ -125,6 +126,8 @@ node .codex/hooks/project-ops.mjs health-check
 node .codex/hooks/project-ops.mjs context-budget
 node .codex/hooks/project-ops.mjs asset-governance
 node .codex/hooks/project-ops.mjs learning-status
+node .codex/hooks/project-ops.mjs skill-evolution status
+node .codex/hooks/project-ops.mjs skill-evolution collect-candidates --output .codex-context/raw/skill-evolution-tasks.json
 node .codex/hooks/project-ops.mjs solution-status --update-index
 node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 ```
@@ -143,6 +146,7 @@ node scripts/release-check.mjs "."
 - 本机个人路径或私有目录结构。
 - credentials、keys、cookies、headers、private query strings。
 - raw observations、日志、临时文件、备份文件。
+- `.skillopt-sleep/` staging、未脱敏 task drafts、原始 transcript 或 session-derived 私有内容。
 - 客户资料、未脱敏 URL、私有项目代码。
 
 发布前运行：
@@ -173,14 +177,14 @@ It helps with:
 
 Dong Skills uses a split model:
 
-- Global user skills contain only `codex-codebase-onboarding` and `using-superpowers`.
+- Global user skills contain entry skills only: `codex-codebase-onboarding`, `using-superpowers`, and `codex-skill-evolution`.
 - Full workflow skills are installed per project into `.agents/skills/`.
 - Project hooks are installed per project into `.codex/hooks.json` and `.codex/hooks/`.
 - The installer manages only names listed in `dong-skills.manifest.json`.
 - Non-Dong local skills are preserved.
 - Same-name directories that cannot be identified as Dong-managed are not silently overwritten or deleted.
 
-This prevents uninitialized projects from accidentally invoking heavy global Dong workflow skills.
+This prevents uninitialized projects from accidentally invoking heavy Dong workflow skills while still allowing global Dong Skills maintenance.
 
 ### Installation
 
@@ -198,7 +202,7 @@ When running from the target repository, omit the target path:
 
 The installer:
 
-- installs global bootstrap/router skills to `%USERPROFILE%\.agents\skills`
+- installs global entry skills to `%USERPROFILE%\.agents\skills`: onboarding, the router, and Dong Skills maintenance
 - writes `%USERPROFILE%\.agents\skills\.dong-skills-source.json`
 - removes old global heavy Dong skills only when they are identifiable as Dong-managed
 - preserves non-Dong local skills
@@ -216,7 +220,7 @@ After Dong Skills has been installed once, start Codex from the target repositor
 Use codex-codebase-onboarding to start this project.
 ```
 
-The onboarding skill bootstraps missing project-level skills, hooks, context files, and guidance, then maps the repository.
+The onboarding skill bootstraps missing project-level workflow skills, hooks, context files, and guidance, then maps the repository.
 
 A healthy project install has `.agents/skills/.dong-skills-project.json`. Run this from the target project to check:
 
@@ -238,6 +242,7 @@ node .codex/hooks/project-ops.mjs health-check
 - Project hooks inject recovery context, check compaction readiness, track changed artifacts, mark discussion/exploration state dirty, and block final stopping when state is stale.
 - Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue.
 - `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets.
+- `codex-skill-evolution` is also installed as a global maintenance entry and integrates SkillOpt-Sleep as an offline evolution layer for Dong Skills itself. It uses backlog/outbox issues as candidates, creates reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. It is not a hook, not project memory, and not a business-code optimizer.
 
 ### Commands
 
@@ -250,6 +255,8 @@ node .codex/hooks/project-ops.mjs health-check
 node .codex/hooks/project-ops.mjs context-budget
 node .codex/hooks/project-ops.mjs asset-governance
 node .codex/hooks/project-ops.mjs learning-status
+node .codex/hooks/project-ops.mjs skill-evolution status
+node .codex/hooks/project-ops.mjs skill-evolution collect-candidates --output .codex-context/raw/skill-evolution-tasks.json
 node .codex/hooks/project-ops.mjs solution-status --update-index
 node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 ```
@@ -267,6 +274,8 @@ Do not publish private runtime data with this kit. A clean release should not in
 
 Keep memory stores distinct: reusable project behavior belongs in `codex-learning-memory`, verified project solutions belong in `docs/solutions/`, current progress belongs in `.codex-context/`, and Dong Skills optimization ideas belong in the Dong Skills repo `docs/improvements/backlog.md`. If that repo is unavailable, use `.codex-context/dong-skills-outbox.md` and migrate it later.
 
+SkillOpt-Sleep artifacts are runtime/private by default. Keep `.skillopt-sleep/`, unsanitized task files, and transcript-derived material out of commits. Adopted SkillOpt proposals must still pass Dong Skills tests and `scripts/release-check.mjs`.
+
 Before release:
 
 ```powershell
@@ -281,4 +290,5 @@ node scripts/release-check.mjs "."
 - Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).
 - Workflow-state ideas are adapted from [rpamis/comet](https://github.com/rpamis/comet).
 - Simplicity review ideas are adapted from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail).
+- Skill self-evolution ideas and the offline sleep-cycle integration are adapted from [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt).
 - License files are included under `licenses/`.

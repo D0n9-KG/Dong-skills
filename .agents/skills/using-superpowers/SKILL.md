@@ -26,9 +26,10 @@ When records conflict, follow the truth hierarchy: latest user instruction; veri
 
 Dong Skills uses a split installation model:
 
-- Global install should expose only the bootstrap/router skills: `codex-codebase-onboarding` and `using-superpowers`.
+- Global install exposes entry skills: `codex-codebase-onboarding`, `using-superpowers`, and the global maintenance entry `codex-skill-evolution`.
 - Full workflow skills are project-scoped and should live in the target repo at `.agents/skills/`.
-- Do not assume full Dong Skills are available in an uninitialized project just because this global router is visible.
+- Do not assume full Dong Skills are available in an uninitialized project just because global entry skills are visible.
+- `codex-skill-evolution` is the exception to the project bootstrap gate only for Dong Skills maintenance. It must locate and operate on the real Dong Skills source repo, not the current business project.
 
 Before routing to any full workflow skill, confirm the current repository has project-level Dong Skills installed. The expected marker is:
 
@@ -37,6 +38,8 @@ Before routing to any full workflow skill, confirm the current repository has pr
 ```
 
 If the marker is missing, or `.codex-context/workflow-state.yaml`, `.codex/hooks/project-ops.mjs`, `.codex/hooks.json`, or the `AGENTS.md` managed block is missing, use `codex-codebase-onboarding` first and bootstrap the project. Do not route directly to `brainstorming`, `writing-plans`, `executing-plans`, review, learning, or governance skills until project bootstrap is present.
+
+If the user is asking to inspect, run, validate, adopt, or improve Dong Skills itself through SkillOpt/SkillOpt-Sleep, route to `codex-skill-evolution` even without project bootstrap. Do not install project hooks just to perform Dong Skills maintenance.
 
 For a project with Dong Skills installed, read `.codex-context/workflow-state.yaml` or run this before routing:
 
@@ -86,6 +89,7 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Stale, duplicate, orphaned, bloated, unsafe, or lifecycle-unclear docs/state/raw/code assets: `codex-asset-governance`.
 - Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
 - Prior session context needed beyond project files: `codex-session-history`.
+- Offline validation-gated evolution of Dong Skills itself from backlog/outbox issues: `codex-skill-evolution`.
 - Before completion claim: `verification-before-completion`.
 - Observable UI/CLI/API/artifact behavior needs proof: `codex-evidence-capture`.
 - Before long pause, compaction, final delivery, or GitHub archive/push: `codex-git-checkpoint`.
