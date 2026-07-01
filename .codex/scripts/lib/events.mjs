@@ -41,6 +41,17 @@ export function postCompact() {
   writeJson({ continue: true });
 }
 
+function allowStop() {
+  writeJson({});
+}
+
+function blockStop(reason) {
+  writeJson({
+    decision: "block",
+    reason
+  });
+}
+
 function readJsonFile(file) {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -575,7 +586,7 @@ export function preCompact(input, root, ctx) {
 
 export function stop(input, root, ctx) {
   if (input.stop_hook_active) {
-    writeJson({ continue: true });
+    allowStop();
     return;
   }
 
@@ -595,7 +606,7 @@ export function stop(input, root, ctx) {
   const statusLatest = Math.max(latest, discussion.latest);
 
   if (changed.length === 0 && learning.ok && (!checkpointRequired || checkpoint.ok) && assets.ok && workflow.ok && discussion.ok) {
-    writeJson({ continue: true });
+    allowStop();
     return;
   }
 
@@ -630,7 +641,7 @@ export function stop(input, root, ctx) {
   issues.push(...discussion.issues);
 
   if (issues.length === 0) {
-    writeJson({ continue: true });
+    allowStop();
     return;
   }
 
@@ -642,13 +653,5 @@ export function stop(input, root, ctx) {
     "Update artifact-index.md, current-state.md, spec.md, decisions.md, open-questions.md, working-notes.md, verification.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. If verification was not run, record the explicit gap instead of claiming success."
   ].join("\n");
 
-  writeJson({
-    continue: false,
-    stopReason: "codex-project-ops-state-not-ready",
-    systemMessage,
-    hookSpecificOutput: {
-      hookEventName: "Stop",
-      additionalContext: hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" })
-    }
-  });
+  blockStop(systemMessage);
 }

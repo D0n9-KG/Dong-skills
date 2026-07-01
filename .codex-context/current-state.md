@@ -1,24 +1,24 @@
 # 当前状态
 
 ## 目标
-优化 Dong Skills 在 Windows 上的 hook 和中文文件处理规则：hook 在可用时优先使用 PowerShell 7 / `pwsh`，降低中文 UTF-8 显示和读写风险，同时保留 Windows PowerShell 5.1 回退，避免旧机器或旧项目 hooks 直接失效。
+修复 Dong Skills Stop hook 与当前 Codex App 的返回协议不兼容问题，避免 UI 显示 `hook returned invalid stop hook JSON output`，并保证新项目 bootstrap 资产同步修复。
 
 ## 最新用户指令
-用户已经安装 PowerShell 7 并重启 Codex，确认当前 Codex shell 是 PowerShell 7；随后追问为什么 hooks 不全部切到 PowerShell 7，以及旧版是否仍会导致乱码，并要求继续优化 Dong Skills。
+用户发来 Codex UI 钩子摘要截图，询问 `hook returned invalid stop hook JSON output` 是否需要理会、是什么问题。
 
 ## 当前阶段
 delivery
 
 ## 当前假设
-- 发布版 hooks 不应硬依赖 `pwsh`，因为旧项目或其他机器可能没有 PowerShell 7。
-- `commandWindows` 继续用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand` 作为外壳，内部检测 `Get-Command pwsh`，可用则委派到 `pwsh -NoProfile -EncodedCommand`，不可用则执行旧回退逻辑。
-- 用户可读中文 Markdown 统一按 UTF-8 处理；Windows PowerShell 5.1 的 `Get-Content` 显示结果不能作为文件损坏证据。
+- 目标旧项目的 Stop hook 能输出合法 JSON，但旧字段为 `{continue:false, stopReason, systemMessage, hookSpecificOutput}`。
+- 当前 Codex App 对 Stop 阻断更适配 `{decision:"block", reason:"..."}`；旧字段会被 UI 判为 invalid stop hook JSON output。
+- PreCompact / PostCompact 的返回协议暂不改动，因为本次截图和复现只指向 Stop hook。
 
 ## 阻塞项
 - 无。
 
 ## 下一步动作
-给用户旧项目更新提示词。
+向用户说明根因、已修复的源头文件、验证结果，并提醒旧项目需要重新运行 Dong Skills 更新/bootstrap 且在 `/hooks` 里重新 trust。
 
 ## 最后更新
-2026-07-01 15:41 本地时间。
+2026-07-01 16:25 本地时间。

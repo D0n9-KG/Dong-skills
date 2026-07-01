@@ -4,6 +4,9 @@
 - 无。
 
 ## 已修改
+- `.codex/scripts/lib/events.mjs`: Stop hook 通过时输出空对象，阻断时输出 `{decision:"block", reason:"..."}`，不再为 Stop 输出旧的 `continue/stopReason/systemMessage/hookSpecificOutput`。
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: 同步 bootstrap 发布资产中的 Stop hook 协议修复。
+- `tests/project-ops.test.mjs`: 更新 Stop hook 回归测试，断言阻断输出使用 `decision/reason`，通过输出为空对象；PreCompact 旧协议测试保持不变。
 - `.codex/hooks.json`: Windows hooks 改为外层兼容 `powershell.exe`，内部优先检测并委派 `pwsh`，保留无 PowerShell 7 环境的回退路径。
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`: 同步新项目 bootstrap 发布资产中的 Windows hook 命令。
 - `scripts/project-ops-health.mjs`: health check 增加 `commandWindows` 形状检查，要求优先 `pwsh` 且保留 `powershell.exe` fallback。
@@ -36,10 +39,12 @@
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
 - `scripts/project-ops-health.mjs`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
+- `.codex/scripts/lib/events.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
 - `tests/project-ops.test.mjs`
 
 ## 原始输出
 - 未新增 raw 输出。
 
 ## 最新刷新
-- 2026-07-01：等待完整验证结果写入。
+- 2026-07-01：记录 Stop hook 输出协议修复；完整验证已通过。
