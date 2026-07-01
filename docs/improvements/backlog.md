@@ -53,16 +53,16 @@ Status: done
 Priority: P0
 Affected area: hooks / Stop / Codex app compatibility / tests / bootstrap
 Source: user screenshot from downstream `cc-kg` project showing `hook returned invalid stop hook JSON output`
-Implemented: `Stop` hook blocking output now uses Codex-compatible `continue: false`, `stopReason`, and `systemMessage` fields instead of the older `decision: "block"` / `reason` shape. The compact `hookSpecificOutput` status remains for UI diagnostics. Bootstrap asset copies and regression tests were synchronized.
+Implemented: `Stop` hook blocking output now uses the current Codex-compatible `decision: "block"` / `reason` shape instead of the older `continue: false`, `stopReason`, `systemMessage`, and `hookSpecificOutput` shape. Passing Stop hooks emit `{}`. Bootstrap asset copies, installed global copies, and regression tests were synchronized.
 
 Signal:
-The hooks were loaded and `PreCompact` worked, but `Stop` produced a UI error even though the emitted text was valid JSON. Local reproduction showed the Stop block path returned `decision: "block"`, which current Codex Stop hook handling rejects as invalid stop hook JSON output.
+The hooks were loaded and `PreCompact` worked, but `Stop` produced a UI error even though the emitted text was valid JSON. Local reproduction showed the Stop block path returned `continue:false`, `stopReason`, `systemMessage`, and `hookSpecificOutput`; current Codex Stop hook handling rejected that shape as invalid stop hook JSON output.
 
 Decision:
-Keep Stop blocking behavior and diagnostics, but emit the same common blocking schema used by `PreCompact`: `continue: false`, a stable `stopReason`, and a human-readable `systemMessage`. Do not weaken the state freshness gate.
+Keep Stop blocking behavior and diagnostics, but emit Stop-specific blocking output as `decision: "block"` plus a human-readable `reason`. Do not weaken the state freshness gate. Keep PreCompact on its separate `continue` / `stopReason` contract unless a separate PreCompact compatibility issue is observed.
 
 Verification:
-`node --test tests\project-ops.test.mjs`, `node .codex\hooks\project-ops.mjs health-check`, `node scripts\release-check.mjs .`, `git diff --check`, and downstream `cc-kg` Stop simulation passed. The downstream Stop output now returns `continue:false` instead of `decision:block`.
+`node --test tests\project-ops.test.mjs`, `node .codex\hooks\project-ops.mjs health-check`, `node scripts\release-check.mjs .`, `git diff --check`, and downstream Stop simulation passed. The downstream Stop output now returns `decision:block` instead of `continue:false`.
 
 ### 2026-06-23 - Reduce Active Context Footprint In Project Ops
 
