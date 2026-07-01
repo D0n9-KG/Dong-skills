@@ -57,9 +57,24 @@ function readText(file) {
   }
 }
 
+const HEADING_ALIASES = {
+  "Archived Evidence": ["已归档证据"],
+  "Commands Run": ["已运行命令"]
+};
+
+const OUTPUT_HEADINGS = {
+  "Archived Evidence": "已归档证据",
+  "Commands Run": "已运行命令"
+};
+
+function headingAliases(heading) {
+  return [heading, ...(HEADING_ALIASES[heading] || [])];
+}
+
 function sectionBody(markdown, heading) {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  const headings = headingAliases(heading);
+  const start = lines.findIndex((line) => headings.some((candidate) => line.trim() === `## ${candidate}`));
   if (start === -1) return "";
   const body = [];
   for (let i = start + 1; i < lines.length; i += 1) {
@@ -71,8 +86,10 @@ function sectionBody(markdown, heading) {
 
 function replaceSection(markdown, heading, body) {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
-  if (start === -1) return `${markdown.trimEnd()}\n\n## ${heading}\n${body.trimEnd()}\n`;
+  const headings = headingAliases(heading);
+  const start = lines.findIndex((line) => headings.some((candidate) => line.trim() === `## ${candidate}`));
+  const outputHeading = OUTPUT_HEADINGS[heading] || heading;
+  if (start === -1) return `${markdown.trimEnd()}\n\n## ${outputHeading}\n${body.trimEnd()}\n`;
 
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i += 1) {
@@ -142,8 +159,8 @@ function appendArchive(file, archivedItems) {
 function prependArchivePointer(markdown, archivedCount, keptCount, relArchive) {
   const date = new Date().toISOString().slice(0, 10);
   const pointer = [
-    `- ${date}: Archived ${archivedCount} older command entr${archivedCount === 1 ? "y" : "ies"} to \`${relArchive}\`; kept latest ${keptCount}.`,
-    "  - After pruning, refresh `artifact-index.md` and `handoff-summary.md` if this changed active project state."
+    `- ${date}: 已将 ${archivedCount} 条较旧命令记录归档到 \`${relArchive}\`；当前文件保留最新 ${keptCount} 条。`,
+    "  - 如果本次归档改变了当前项目状态，随后刷新 `artifact-index.md` 和 `handoff-summary.md`。"
   ].join("\n");
   const existing = sectionBody(markdown, "Archived Evidence");
   const body = existing ? `${pointer}\n${existing}` : pointer;

@@ -1,28 +1,28 @@
-# Worktree State
+# Worktree 状态
 
-## Current Workspace
+## 当前工作区
 - Role: unknown
-- Path: not detected yet
-- Detection date: not detected yet
+- Path: 尚未检测
+- Detection date: 尚未检测
 
-## Primary Checkout
-- Path: not detected yet
-- Relationship: not detected yet
+## 主检出区
+- Path: 尚未检测
+- Relationship: 尚未检测
 
-## Branch State
-- Branch: not detected yet
-- Detached HEAD: not detected yet
-- Base branch: not detected yet
+## 分支状态
+- Branch: 尚未检测
+- Detached HEAD: 尚未检测
+- Base branch: 尚未检测
 
-## Ownership And Cleanup
+## 所有权与清理
 - Cleanup owner: unknown
-- Cleanup rule: do not remove any worktree unless it is explicitly recorded as `dong-managed-worktree` and cleanup is user-approved.
+- Cleanup rule: 除非明确记录为 `dong-managed-worktree` 且用户批准清理，否则不要删除任何 worktree。
 
-## Hook Root Notes
-- Hook source root: not detected yet
-- Actual Git root: not detected yet
-- Notes: update this if Codex UI shows hooks from a different checkout than the current Git root.
+## Hook 根目录记录
+- Hook source root: 尚未检测
+- Actual Git root: 尚未检测
+- Notes: 如果 Codex UI 显示的 hooks 来源 checkout 与当前 Git root 不同，更新这里。
 
-## Resume Instructions
-- Re-run `git rev-parse --show-toplevel`, `git rev-parse --git-dir`, `git rev-parse --git-common-dir`, and `git branch --show-current` before branch completion or cleanup.
-- If this session resumes from a Codex App worktree, update this file before editing project files.
+## 恢复指令
+- 分支完成或清理前，重新运行 `git rev-parse --show-toplevel`、`git rev-parse --git-dir`、`git rev-parse --git-common-dir` 和 `git branch --show-current`。
+- 如果 session 从 Codex App worktree 恢复，编辑项目文件前先更新本文件。

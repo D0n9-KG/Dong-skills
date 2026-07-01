@@ -1,22 +1,22 @@
-# Working Notes
+# 工作笔记
 
-## Purpose
-Capture compact, externalized investigation state that should survive compaction. Do not store hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning here.
+## 用途
+记录需要跨压缩保留的紧凑外部化调查状态。不要在这里保存隐藏思维链、完整聊天记录、原始日志、密钥或私密推理。
 
-## Current Findings
-- None yet.
+## 当前发现
+- 暂无。
 
-## Current Hypothesis
-- None yet.
+## 当前假设
+- 暂无。
 
-## Rejected Paths
-- None yet.
+## 已排除路径
+- 暂无。
 
-## Open Investigation Questions
-- None yet.
+## 开放调查问题
+- 暂无。
 
-## Next Verification Step
-- None yet.
+## 下一步验证
+- 暂无。
 
-## Promotion Notes
-- Promote durable conclusions into spec.md, decisions.md, current-state.md, handoff-summary.md, or docs/solutions/ at phase boundaries.
+## 提升记录
+- 在阶段边界，把持久结论提升到 spec.md、decisions.md、current-state.md、handoff-summary.md 或 docs/solutions/。

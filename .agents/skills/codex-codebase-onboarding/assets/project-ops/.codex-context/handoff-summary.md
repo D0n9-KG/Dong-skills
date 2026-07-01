@@ -1,35 +1,35 @@
-# Handoff Summary
+# Handoff 摘要
 
-## Objective
+## 目标
 
-## Latest User Instruction
+## 最新用户指令
 
-## Approved Scope / Spec
+## 已批准范围 / 规格
 
-## Plan Status
+## 计划状态
 
-## Files Modified
+## 已修改文件
 
-## Files Read But Not Changed
+## 已读取但未修改文件
 
-## Decisions Made
+## 已做决策
 
-## Open Questions And Assumptions
+## 开放问题与假设
 
-## Risks
+## 风险
 
-## Verification Evidence
+## 验证证据
 
-## Git Checkpoint
-- Latest commit:
-- Push state:
-- Files included:
-- Files intentionally left uncommitted:
-- Deferred reason:
-- Next checkpoint:
+## Git 存档
+- 最新提交:
+- 推送状态:
+- 已包含文件:
+- 有意保留未提交的文件:
+- 暂缓原因:
+- 下次存档:
 
-## Learned Instincts To Preserve
+## 需要保留的经验沉淀
 
-## Next Action
+## 下一步动作
 
-## Files To Re-read First
+## 优先重读文件

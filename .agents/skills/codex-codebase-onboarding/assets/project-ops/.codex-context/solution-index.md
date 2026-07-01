@@ -1,18 +1,18 @@
-# Solution Index
+# Solution 索引
 
-## Knowledge Store
-- docs/solutions present: no
-- CONCEPTS.md present: no
-- Solution docs: 0
+## 知识库
+- docs/solutions 存在：否
+- CONCEPTS.md 存在：否
+- Solution 文档数量：0
 
-## Categories
-- None yet.
+## 分类
+- 暂无。
 
-## Validation
-- No validation issues found.
+## 验证
+- 暂未发现验证问题。
 
-## Refresh Signals
-- No refresh candidates found.
+## 刷新信号
+- 暂无需要刷新的候选。
 
-## Last Updated
-- None yet.
+## 最后更新
+- 暂无。

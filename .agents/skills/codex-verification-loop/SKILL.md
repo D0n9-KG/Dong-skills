@@ -21,23 +21,23 @@ Use project evidence, not guesses:
 
 ## Minimum Record
 
-Append new entries to the end of `.codex-context/verification.md` under `Commands Run` and `Product Evidence`. `state-prune` keeps the newest entries by file order, so prepending fresh evidence can cause it to be archived by mistake.
+Append new entries to the end of `.codex-context/verification.md` under `已运行命令` and `产品证据` when the file uses Chinese headings. Existing English headings `Commands Run` and `Product Evidence` are still valid. `state-prune` keeps the newest entries by file order, so prepending fresh evidence can cause it to be archived by mistake.
 
 ```markdown
-## Commands Run
+## 已运行命令
 - `[command]`
   - Result: pass | fail | blocked
-  - Evidence: [short output summary]
-  - Date: [YYYY-MM-DD HH:mm local]
+  - Evidence: [简短输出摘要]
+  - Date: [YYYY-MM-DD HH:mm 本地时间]
 
-## Product Evidence
+## 产品证据
 - `[action]`
   - Result: pass | fail | blocked
-  - Evidence: [screenshot path, rendered artifact path, command output summary, or explicit reason not applicable]
-  - Date: [YYYY-MM-DD HH:mm local]
+  - Evidence: [截图路径、渲染产物路径、命令输出摘要，或明确说明不适用]
+  - Date: [YYYY-MM-DD HH:mm 本地时间]
 
-## Not Yet Verified
-- [gap and why]
+## 尚未验证
+- [验证缺口及原因]
 ```
 
 If verification fails, return to `systematic-debugging` before further fixes.

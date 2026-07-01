@@ -13,7 +13,7 @@ Do not implement while writing the plan.
 
 Before planning, confirm one of these is true:
 
-- `.codex-context/spec.md` has `Approval Status: Approved by user` for the current task.
+- `.codex-context/spec.md` has `审批状态: Approved by user` or `Approval Status: Approved by user` for the current task.
 - The current chat contains explicit approval of the written spec file or inline written spec.
 - The user gave clear requirements and explicitly asked to skip brainstorming.
 - The work is a tiny mechanical edit that does not need a multi-step plan.
@@ -31,6 +31,8 @@ node .codex/hooks/project-ops.mjs workflow-state transition plan-start
 Always update `.codex-context/plan-progress.md`.
 
 If the plan is larger than a compact checklist, also write it to `docs/codex/plans/YYYY-MM-DD-<topic>.md` and link it from `.codex-context/plan-progress.md`.
+
+Write user-facing plan documents in Chinese by default. Keep file paths, commands, status enum values, skill names, `Traditional task-by-task execution`, and `Codex Goal mode` unchanged when precision matters.
 
 ## Scope Check
 
@@ -102,71 +104,71 @@ The gate is a constraint, not a research project. If a higher rung clearly works
 ## Plan Header
 
 ```markdown
-# [Feature] Implementation Plan
+# [功能] 实施计划
 
-**Goal:** [One sentence.]
-**Spec:** [Path to approved spec or inline requirement.]
-**Spec Approval:** [Approved by user / skipped by user / mechanical exception.]
-**Work Class / Risk Lane:** Lane 0 / Lane 1 / Lane 2 / Lane 3, with reason.
-**Execution Mode:** Pending user choice.
-**Current Step:** Not started.
-**Verification:** [Commands or checks that prove success.]
-**Execution Approval:** Pending user choice and execution mode.
+**目标:** [一句话。]
+**规格:** [已批准规格路径或 inline requirement。]
+**规格审批:** [Approved by user / skipped by user / mechanical exception。]
+**工作类别 / 风险等级:** Lane 0 / Lane 1 / Lane 2 / Lane 3，并说明理由。
+**执行模式:** 等待用户选择。
+**当前步骤:** 尚未开始。
+**验证:** [证明成功的命令或检查。]
+**执行审批:** 等待用户选择和执行模式。
 ```
 
 Include these sections in the plan when the work is not tiny:
 
 ```markdown
-## Execution Mode
-- Pending user choice.
-- Option A: Traditional task-by-task execution.
-- Option B: Codex Goal mode.
-- Do not infer Codex Goal mode from vague "continue", "execute", or plan-then-execute language.
+## 执行模式
+- 等待用户选择。
+- 选项 A：Traditional task-by-task execution。
+- 选项 B：Codex Goal mode。
+- 不要从模糊的“继续”、“执行”或 plan-then-execute 推断为 Codex Goal mode。
 
-## Goal Mode Objective Draft
-Use only if the user explicitly selects Codex Goal mode.
-- Goal mechanism available in this session:
-- Objective:
-- Spec path:
-- Plan path:
-- Approved scope:
-- Non-goals:
-- Current step:
-- Verification commands:
-- Checkpoint cadence:
-- Required state updates:
-- Stop conditions:
+## Goal 模式目标草案
+仅在用户明确选择 Codex Goal mode 后使用。
+- 当前 session 可用的 goal 机制:
+- 目标:
+- 规格路径:
+- 计划路径:
+- 已批准范围:
+- 非目标:
+- 当前步骤:
+- 验证命令:
+- 存档节奏:
+- 必须更新的状态文件:
+- 停止条件:
 
 Goal mode is unavailable if the current Codex session does not expose an actual goal mechanism. Do not treat this draft as permission to simulate Goal mode manually.
 
-## Runtime Constraints
-- Follow the approved plan tasks in order unless a blocker requires replanning.
-- Keep `.codex-context/plan-progress.md`, `artifact-index.md`, `verification.md`, `current-state.md`, and `handoff-summary.md` current.
-- Stop on ambiguity, failed verification loops, scope changes, destructive actions, missing credentials, missing user decisions, or architecture conflicts.
-- Do not silently expand scope beyond the approved spec.
-- Apply the Simplicity Gate before adding code, dependencies, abstractions, scripts, docs, or state files: can avoid building; standard library; native platform.
-- Re-read the spec and plan at milestones and compare progress against acceptance criteria.
+## 运行约束
+- 除非阻塞项要求重新规划，否则按已批准计划顺序执行。
+- 保持 `.codex-context/plan-progress.md`、`artifact-index.md`、`verification.md`、`current-state.md` 和 `handoff-summary.md` 更新。
+- 遇到需求模糊、验证循环失败、范围变化、破坏性操作、缺少凭据、缺少用户决策或架构冲突时停止。
+- 不要静默扩大已批准规格之外的范围。
+- 添加代码、依赖、抽象、脚本、文档或状态文件前应用 Simplicity Gate：can avoid building；standard library；native platform。
+- 在里程碑重读 spec 和 plan，对照验收标准检查进度。
 
-## Checkpoint Cadence
-- Checkpoint after each meaningful verified task or milestone.
-- If a checkpoint is deferred, record the reason and next checkpoint in `handoff-summary.md`.
+## 存档节奏
+- 每个有意义且已验证的任务或里程碑后做 checkpoint。
+- 如果暂缓 checkpoint，在 `handoff-summary.md` 记录原因和下次 checkpoint。
 
-## Acceptance Mapping
-- [Criterion] -> Task N -> Verification command/action.
+## 验收映射
+- [标准] -> 任务 N -> 验证命令 / 动作。
 
-## Test Scenarios
+## 测试场景
 - Happy path:
 - Regression path:
 - Error/edge path:
 - Non-goal preservation:
 
-## Execution Note
-- Read first:
-- Do not touch:
+## 执行备注
+- 优先读取:
+- 不要触碰:
 - Simplicity Gate:
-- Test-first / characterization-first requirement:
-- Preferred verification:
-- Rollback:
+- Test-first / characterization-first 要求:
+- 优先验证:
+- 回滚:
 ```
 
 ## Task Shape
@@ -174,7 +176,7 @@ Goal mode is unavailable if the current Codex session does not expose an actual 
 Use checkbox tasks so progress survives compaction:
 
 ```markdown
-## Tasks
+## 任务
 
 - [ ] Task 1: [specific outcome]
   - Files: `path/to/file`

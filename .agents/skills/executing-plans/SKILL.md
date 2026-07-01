@@ -9,15 +9,15 @@ Execute the plan without losing the thread. Keep progress, evidence, and next ac
 
 ## Hard Gate
 
-Do not execute a plan until `.codex-context/plan-progress.md` records one of these values under `## Execution Approval`:
+Do not execute a plan until `.codex-context/plan-progress.md` records one of these values under `## 执行审批` or legacy `## Execution Approval`:
 
 - `Approved by user for Traditional task-by-task execution`
 - `Approved by user for Codex Goal mode`
-- `plan-then-execute requested` with `## Execution Mode` set to `Traditional task-by-task execution`
+- `plan-then-execute requested` with `## 执行模式` or `## Execution Mode` set to `Traditional task-by-task execution`
 
 If execution approval is missing or pending, stop and ask the user whether to execute, revise the plan, or pause. Do not treat a written plan as permission to implement.
 
-If `## Execution Mode` is missing, ambiguous, or set to Codex Goal mode without explicit user selection, stop and ask for the execution mode. Do not infer Codex Goal mode from "continue", "execute", "go ahead", or plan-then-execute.
+If `## 执行模式` / `## Execution Mode` is missing, ambiguous, or set to Codex Goal mode without explicit user selection, stop and ask for the execution mode. Do not infer Codex Goal mode from "continue", "execute", "go ahead", or plan-then-execute.
 
 Also stop if `.codex-context/spec.md` has no approved scope for the current task, unless the user explicitly skipped brainstorming or the task is a tiny mechanical edit.
 
@@ -82,7 +82,7 @@ Goal mode runtime constraints:
 2. Confirm execution approval, execution mode, and approved scope.
 3. If this is a new/resumed worktree, hook source paths are confusing, or branch cleanup may be needed later, use `codex-worktree-governance` and refresh `.codex-context/worktree-state.md`.
 4. Critique the plan before editing. Check for missing file paths, missing tests, vague steps, unapproved scope, impossible commands, and acceptance criteria with no task. If it has a blocking gap, stop and ask or revise the plan first.
-5. Read and honor the plan's `Work Class / Risk Lane`, `Execution Mode`, `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Execution Note`. If any of these are missing for non-tiny work, derive the missing non-Goal constraints from the plan and record them before editing; if Goal mode details are missing, stop and ask.
+5. Read and honor the plan's `工作类别 / 风险等级`, `执行模式`, `Goal 模式目标`, `运行约束`, `存档节奏`, and `执行备注` sections, or their legacy English equivalents. If any of these are missing for non-tiny work, derive the missing non-Goal constraints from the plan and record them before editing; if Goal mode details are missing, stop and ask.
 6. Run the Simplicity Gate before adding code, dependencies, abstractions, scripts, docs, or state files:
    - can the approved outcome be reached by avoiding the new thing?
    - does the standard library already do it?

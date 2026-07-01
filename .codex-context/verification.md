@@ -1,103 +1,27 @@
-# Verification
+# 验证
 
-## Commands Run
-- `node --check scripts\skill-evolution.mjs`
-  - Result: pass.
-  - Evidence: no syntax errors in the new SkillOpt-Sleep wrapper.
-  - Date: 2026-06-30.
-- `node --check .codex\hooks\project-ops.mjs`
-  - Result: pass.
-  - Evidence: no syntax errors after adding the `skill-evolution` dispatcher.
-  - Date: 2026-06-30.
-- `node scripts\skill-evolution.mjs . status`
-  - Result: pass.
-  - Evidence: reports integration status and expected missing `skillopt_sleep` setup diagnostic without failing Dong Skills.
-  - Date: 2026-06-30.
-- `node .codex\hooks\project-ops.mjs skill-evolution status`
-  - Result: pass.
-  - Evidence: hook CLI dispatcher routes `skill-evolution` to the wrapper and returns the same status/safety output.
-  - Date: 2026-06-30.
+## 已运行命令
 - `node --test tests\project-ops.test.mjs`
-  - Result: pass.
-  - Evidence: 59/59 tests passed, including SkillOpt-Sleep candidate collection, source-repo targeting from business projects, unreviewed-run refusal, adoption confirmation gate, and hook dispatch tests.
-  - Date: 2026-06-30.
+  - Result: pass
+  - Evidence: 63/63 tests passed. 覆盖中文状态模板、中文/英文标题 health check 兼容、中文 Git 存档字段、中文 verification 归档、bootstrap 安装资产和既有流程回归。
+  - Date: 2026-07-01 01:00 本地时间。
+- `node scripts\release-check.mjs .`
+  - Result: pass
+  - Evidence: health-check、context budget、Node syntax checks、PowerShell parse checks、完整 Node tests、privacy scan、text readability scan、large file scan、runtime artifact scan 均通过。
+  - Date: 2026-07-01 01:03 本地时间。
 - `node .codex\hooks\project-ops.mjs health-check`
-  - Result: pass.
-  - Evidence: no context, hook, script, worktree, workflow-state, or bootstrap parity issues.
-  - Date: 2026-06-30.
-- `node scripts\release-check.mjs .`
-  - Result: failed before state refresh.
-  - Evidence: code checks, tests, readability, large-file, and runtime scans passed; privacy scan found old local-path notes in active `.codex-context` state files.
-  - Date: 2026-06-30.
+  - Result: pass
+  - Evidence: worktree、Git root、branch、hook/script/state/bootstrap parity 均无问题。
+  - Date: 2026-07-01 01:24 本地时间。
 - `git diff --check`
-  - Result: pass.
-  - Evidence: no whitespace errors; Git warned that `tests/project-ops.test.mjs` CRLF will normalize to LF when touched.
-  - Date: 2026-06-30.
-- `node scripts\release-check.mjs .`
-  - Result: pass.
-  - Evidence: health-check, context budget, syntax checks, PowerShell parse checks, full Node test suite, privacy scan, text readability scan, large file scan, and runtime artifact scan passed.
-  - Date: 2026-06-30.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1`
-  - Result: pass.
-  - Evidence: global bootstrap skills and current source project install were synchronized; same-name non-Dong global skills were preserved with warnings as designed.
-  - Date: 2026-06-30.
-- `node scripts\release-check.mjs .`
-  - Result: pass.
-  - Evidence: release check still passes after installation sync.
-  - Date: 2026-06-30.
-- `node --test tests\project-ops.test.mjs --test-name-pattern "skill-evolution|Windows installer"`
-  - Result: pass.
-  - Evidence: focused regression run passed before full test suite; covered global install entries and source-repo targeting.
-  - Date: 2026-06-30.
-- `node .codex\hooks\project-ops.mjs skill-evolution status`
-  - Result: pass.
-  - Evidence: reports `SkillOpt-Sleep available: yes`, resolves the Dong Skills repo from the global source marker, and keeps safety warnings visible.
-  - Date: 2026-06-30.
-- `git diff --check`
-  - Result: pass.
-  - Evidence: no whitespace errors after clearing the extra EOF blank line; Git only reported CRLF normalization warnings.
-  - Date: 2026-06-30.
-- `node scripts\release-check.mjs .`
-  - Result: pass.
-  - Evidence: health-check, context budget, syntax checks, PowerShell parse checks, full Node test suite, privacy scan, text readability scan, large file scan, and runtime artifact scan passed after the global-entry adjustment.
-  - Date: 2026-06-30.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1`
-  - Result: pass.
-  - Evidence: synchronized global entry skills and current source project install; global `codex-skill-evolution` now exists with marker scope `global-entry`; same-name non-Dong global skills were preserved with warnings as designed.
-  - Date: 2026-06-30.
-- Final state refresh after `scripts/install-windows.ps1` scope wording change
-  - Result: pass.
-  - Evidence: `node .codex\hooks\project-ops.mjs health-check` passed; `node scripts\release-check.mjs .` passed; `git diff --check` passed with CRLF normalization warnings only.
-  - Date: 2026-06-30.
-- `node --test tests\project-ops.test.mjs --test-name-pattern "Stop freshness|Stop requires structured|Stop explains stale"`
-  - Result: pass.
-  - Evidence: 60/60 tests passed in the focused run, including the new Stop freshness regression.
-  - Date: 2026-06-30.
-- `node --check .codex\scripts\lib\events.mjs`
-  - Result: pass.
-  - Evidence: no syntax errors after changing Stop freshness baseline.
-  - Date: 2026-06-30.
-- `node --check .agents\skills\codex-codebase-onboarding\assets\project-ops\.codex\scripts\lib\events.mjs`
-  - Result: pass.
-  - Evidence: bootstrap mirror syntax is valid.
-  - Date: 2026-06-30.
-- `node --check tests\project-ops.test.mjs`
-  - Result: pass.
-  - Evidence: no syntax errors after adding the Stop freshness regression.
-  - Date: 2026-06-30.
+  - Result: pass
+  - Evidence: 无 whitespace error；仅有 Git CRLF normalization warnings。
+  - Date: 2026-07-01 01:24 本地时间。
 
-## Product Evidence
-- `skill-evolution status` works both directly and through `.codex/hooks/project-ops.mjs`.
-- Global `codex-skill-evolution` is installed and visible under the user skills root as a maintenance entry.
-- `collect-candidates` creates SkillOpt-Sleep task-file drafts from Dong Skills backlog/outbox entries.
-- From a business project, `skill-evolution` resolves the real Dong Skills source repo and can read the business project's outbox without using it as the execution root.
-- `run` refuses unreviewed task files.
-- `adopt` requires `--confirm-reviewed`.
-- `.skillopt-sleep/` is included in generated runtime ignore rules and release runtime-artifact scanning.
+## 产品证据
+- bootstrap 静态模板 `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/spec.md` 已包含 `## 审批状态`、`## 事实优先级`、`## 工作类别 / 风险等级`。
+- `project-ops-health.mjs` 接受中文状态文档标题，同时保持英文旧项目兼容。
+- `state-prune.mjs` 接受中文 `## 已运行命令` 并写入中文 `## 已归档证据`。
 
-## Review
-- Scope intentionally avoids vendoring SkillOpt source or scheduling nightly runs.
-- Real optimization execution is still intentionally gated on user approval and reviewed task files, even though `skillopt_sleep` is now callable in this environment through a local Microsoft SkillOpt checkout.
-
-## Not Yet Verified
-- Real `skillopt_sleep run --backend codex` has not been executed because it requires explicit budget approval and reviewed/sanitized task files.
+## 尚未验证
+- 尚未在一个真实旧业务项目里重新 bootstrap 并人工查看 UI hooks 显示；代码路径和测试夹具已覆盖安装生成内容。

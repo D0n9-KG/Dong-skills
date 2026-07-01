@@ -1,16 +1,16 @@
-# Risks
+# 风险
 
-## Context Risks
-- None known.
+## 上下文风险
+- 暂无已知风险。
 
-## Technical Risks
-- None known.
+## 技术风险
+- 暂无已知风险。
 
-## Architecture Risks
-- None known.
+## 架构风险
+- 暂无已知风险。
 
-## Documentation Risks
-- None known.
+## 文档风险
+- 暂无已知风险。
 
-## Safety / Destructive Risks
-- None known.
+## 安全 / 破坏性风险
+- 暂无已知风险。

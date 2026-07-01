@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { sectionContent } from "./markdown.mjs";
 
 const DEFAULTS = {
   verificationKeep: 8,
@@ -80,18 +81,6 @@ function estimateTokens(file, text) {
   if (codeLike) return Math.ceil(text.length / 4);
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.ceil(words * 1.3);
-}
-
-function sectionBody(markdown, heading) {
-  const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
-  if (start === -1) return "";
-  const body = [];
-  for (let index = start + 1; index < lines.length; index += 1) {
-    if (lines[index].startsWith("## ")) break;
-    body.push(lines[index]);
-  }
-  return body.join("\n").trim();
 }
 
 function splitCommandItems(body) {
@@ -256,7 +245,7 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
 
   const verificationFile = path.join(ctx, "verification.md");
   const verification = readText(verificationFile);
-  const verificationCommands = splitCommandItems(sectionBody(verification, "Commands Run"));
+  const verificationCommands = splitCommandItems(sectionContent(verification, "Commands Run"));
   if (verificationCommands.length > options.verificationIssueThreshold) {
     issues.push(`verification.md has ${verificationCommands.length} command entries; run asset-governance/state-prune to keep the newest ${options.verificationKeep}`);
     actions.push(`node .codex/hooks/project-ops.mjs state-prune --keep ${options.verificationKeep} --apply`);

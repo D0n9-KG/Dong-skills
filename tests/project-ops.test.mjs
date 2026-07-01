@@ -443,7 +443,7 @@ test("brainstorming skill preserves upstream continuation loop", () => {
   assert.match(skill, /Do not end a brainstorming turn by only saying that files were updated/);
   assert.match(skill, /compare 2-3 viable approaches/);
   assert.match(skill, /The spec should lock the What/);
-  assert.match(skill, /WHEN \[condition\], THE SYSTEM SHALL \[behavior\]/);
+  assert.match(skill, /WHEN \[条件\], THE SYSTEM SHALL \[行为\]/);
   assert.match(skill, /## Final Spec Gate/);
   assert.match(skill, /workflow-state transition spec-living/);
   assert.match(skill, /workflow-state transition spec-ready/);
@@ -470,15 +470,15 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(writing, /Do not add the Ponytail one-line\/minimum-implementation rungs/);
   assert.match(writing, /Lane 0/);
   assert.match(writing, /Lane 3/);
-  assert.match(writing, /## Execution Note/);
+  assert.match(writing, /## 执行备注/);
   assert.match(writing, /2-5 minute steps/);
-  assert.match(writing, /## Acceptance Mapping/);
-  assert.match(writing, /## Execution Mode/);
+  assert.match(writing, /## 验收映射/);
+  assert.match(writing, /## 执行模式/);
   assert.match(writing, /Traditional task-by-task execution/);
   assert.match(writing, /Codex Goal mode/);
-  assert.match(writing, /## Goal Mode Objective Draft/);
-  assert.match(writing, /## Runtime Constraints/);
-  assert.match(writing, /## Checkpoint Cadence/);
+  assert.match(writing, /## Goal 模式目标草案/);
+  assert.match(writing, /## 运行约束/);
+  assert.match(writing, /## 存档节奏/);
   assert.match(writing, /workflow-state transition plan-ready/);
 
   const debugging = readSkill("systematic-debugging");
@@ -493,7 +493,8 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /does the standard library already do it/);
   assert.match(executing, /does the native platform already do it/);
   assert.match(executing, /dong-debt:/);
-  assert.match(executing, /Work Class \/ Risk Lane/);
+  assert.match(executing, /工作类别 \/ 风险等级/);
+  assert.match(executing, /legacy English equivalents/);
   assert.match(executing, /Match execution depth to the lane/);
   assert.match(executing, /Run Test Discovery before editing implementation files/);
   assert.match(executing, /For behavior-changing tasks, add\/update the planned test/);
@@ -773,18 +774,18 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md")), true);
   assert.match(fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8"), /next_skill: codex-codebase-onboarding/);
   const spec = fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8");
-  assert.match(spec, /## Approval Status/);
-  assert.match(spec, /## Truth Hierarchy/);
-  assert.match(spec, /## Work Class \/ Risk Lane/);
+  assert.match(spec, /## 审批状态/);
+  assert.match(spec, /## 事实优先级/);
+  assert.match(spec, /## 工作类别 \/ 风险等级/);
   const planProgress = fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8");
-  assert.match(planProgress, /## Spec Approval/);
-  assert.match(planProgress, /## Execution Approval/);
-  assert.match(planProgress, /## Work Class \/ Risk Lane/);
-  assert.match(planProgress, /## Execution Mode/);
-  assert.match(planProgress, /## Goal Mode Objective/);
-  assert.match(planProgress, /goal mechanism available in the current Codex session/);
-  assert.match(planProgress, /## Runtime Constraints/);
-  assert.match(planProgress, /## Checkpoint Cadence/);
+  assert.match(planProgress, /## 规格审批/);
+  assert.match(planProgress, /## 执行审批/);
+  assert.match(planProgress, /## 工作类别 \/ 风险等级/);
+  assert.match(planProgress, /## 执行模式/);
+  assert.match(planProgress, /## Goal 模式目标/);
+  assert.match(planProgress, /当前 Codex session 可用的 goal 机制/);
+  assert.match(planProgress, /## 运行约束/);
+  assert.match(planProgress, /## 存档节奏/);
 
   const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
   const recovery = execFileSync(process.execPath, [installedHook], {
@@ -1366,6 +1367,22 @@ test("Stop requires structured Git Checkpoint fields when worktree is dirty", ()
   assert.equal(structured.continue, true);
 });
 
+test("Stop accepts Chinese Git checkpoint field labels", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  write(path.join(project, "work.txt"), "dirty\n");
+
+  readyState(project, `- 最新提交: not ready
+- 推送状态: not pushed because work is intentionally deferred
+- 已包含文件: none
+- 有意保留未提交的文件: work.txt
+- 暂缓原因: test fixture keeps dirty work uncommitted
+- 下次存档: commit after fixture completes
+`);
+  const structured = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(structured.continue, true);
+});
+
 test("Stop explains stale Git Checkpoint handoff evidence", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -1469,16 +1486,16 @@ test("health check requires state files to preserve approval gates", () => {
     });
   } catch (error) {
     failed = true;
-    assert.match(String(error.stdout), /spec\.md missing section: Approval Status/);
-    assert.match(String(error.stdout), /spec\.md missing section: Truth Hierarchy/);
-    assert.match(String(error.stdout), /spec\.md missing section: Work Class \/ Risk Lane/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Spec Approval/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Approval/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Work Class \/ Risk Lane/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Mode/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Goal Mode Objective/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Runtime Constraints/);
-    assert.match(String(error.stdout), /plan-progress\.md missing section: Checkpoint Cadence/);
+    assert.match(String(error.stdout), /spec\.md missing section: Approval Status or 审批状态/);
+    assert.match(String(error.stdout), /spec\.md missing section: Truth Hierarchy or 事实优先级/);
+    assert.match(String(error.stdout), /spec\.md missing section: Work Class \/ Risk Lane or 工作类别 \/ 风险等级/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Spec Approval or 规格审批/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Approval or 执行审批/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Work Class \/ Risk Lane or 工作类别 \/ 风险等级/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Execution Mode or 执行模式/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Goal Mode Objective or Goal 模式目标/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Runtime Constraints or 运行约束/);
+    assert.match(String(error.stdout), /plan-progress\.md missing section: Checkpoint Cadence or 存档节奏/);
   }
   assert.equal(failed, true);
 });
@@ -1514,6 +1531,171 @@ Approved by fixture.
 
 ## Next Step
 Continue.
+`);
+
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Result: pass/);
+});
+
+test("health check accepts Chinese state document headings", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const ctx = path.join(project, ".codex-context");
+
+  write(path.join(ctx, "spec.md"), `# 规格
+
+## 问题
+Fixture.
+
+## 目标
+- Fixture.
+
+## 审批状态
+Approved by fixture.
+
+## 事实优先级
+- Fixture hierarchy.
+
+## 工作类别 / 风险等级
+- Lane 1 fixture.
+
+## 已批准范围
+- Fixture.
+
+## 验收标准
+- Fixture passes.
+
+## 开放问题
+- 无。
+
+## 下一步
+Continue.
+`);
+
+  write(path.join(ctx, "plan-progress.md"), `# 计划进度
+
+## 当前计划
+Fixture.
+
+## 规格审批
+Approved by fixture.
+
+## 执行审批
+Approved by user for Traditional task-by-task execution.
+
+## 执行模式
+Traditional task-by-task execution.
+
+## 工作类别 / 风险等级
+Lane 1 fixture.
+
+## Goal 模式目标
+未选择。
+
+## 运行约束
+- Follow the fixture plan.
+
+## 存档节奏
+- Checkpoint after verified fixture work.
+
+## 任务
+- [x] Fixture task.
+
+## 当前步骤
+无。
+
+## 验证
+- Fixture check.
+
+## 范围外
+- 无。
+`);
+
+  write(path.join(ctx, "working-notes.md"), `# 工作笔记
+
+## 用途
+Fixture investigation notes.
+
+## 当前发现
+- Fixture finding.
+
+## 当前假设
+- Fixture hypothesis.
+
+## 已排除路径
+- 无。
+
+## 开放调查问题
+- 无。
+
+## 下一步验证
+- Fixture verification.
+
+## 提升记录
+- 无。
+`);
+
+  write(path.join(ctx, "worktree-state.md"), `# Worktree 状态
+
+## 当前工作区
+- Role: primary-checkout
+
+## 主检出区
+- Path: fixture
+
+## 分支状态
+- Branch: fixture
+
+## 所有权与清理
+- Cleanup owner: none
+
+## Hook 根目录记录
+- Actual Git root: fixture
+
+## 恢复指令
+- Re-detect before cleanup.
+`);
+
+  write(path.join(ctx, "handoff-summary.md"), `# Handoff 摘要
+
+## 目标
+Test.
+
+## 最新用户指令
+Test.
+
+## 已批准范围 / 规格
+Test.
+
+## 计划状态
+Test.
+
+## 已修改文件
+None.
+
+## 已做决策
+None.
+
+## 验证证据
+Fixture.
+
+## Git 存档
+- 最新提交: fixture
+- 推送状态: not pushed
+- 已包含文件: none
+- 有意保留未提交的文件: none
+- 暂缓原因: none
+- 下次存档: none
+
+## 下一步动作
+Continue.
+
+## 优先重读文件
+- .codex-context/handoff-summary.md
 `);
 
   const out = execFileSync(process.execPath, [health, project], {
@@ -2150,9 +2332,10 @@ test("PreCompact writes emergency handoff and allows automatic compaction", () =
   assert.equal(Object.hasOwn(output, "hookSpecificOutput"), false);
 
   const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
-  assert.match(handoff, /Emergency recovery snapshot before automatic compaction/);
-  assert.match(handoff, /Automatic compaction was about to run/);
+  assert.match(handoff, /自动压缩前的应急恢复快照/);
+  assert.match(handoff, /自动压缩即将运行/);
   assert.match(handoff, /## PreCompact Issues/);
+  assert.match(handoff, /## Git 存档/);
   assert.match(handoff, /work\.txt/);
 
   const rawFiles = fs.readdirSync(path.join(project, ".codex-context", "raw"));
@@ -2256,7 +2439,7 @@ test("state-prune archives old verification commands and keeps recent evidence",
   assert.match(verification, /command 3/);
   assert.match(verification, /command 4/);
   assert.match(verification, /UI trust prompt/);
-  assert.match(verification, /## Archived Evidence/);
+  assert.match(verification, /## 已归档证据/);
   assert.match(verification, /verification-\d{4}-\d{2}-\d{2}-test-bloat\.md/);
 
   const archives = fs.readdirSync(path.join(ctx, "archive")).filter((name) => name.startsWith("verification-"));
@@ -2265,6 +2448,41 @@ test("state-prune archives old verification commands and keeps recent evidence",
   const archive = fs.readFileSync(path.join(ctx, "archive", archives[0]), "utf8");
   assert.match(archive, /command 1/);
   assert.match(archive, /command 2/);
+});
+
+test("state-prune accepts Chinese verification headings", () => {
+  const project = tempProject();
+  const ctx = path.join(project, ".codex-context");
+  write(path.join(ctx, "verification.md"), `# 验证
+
+## 已运行命令
+- command 1
+  - Result: pass
+- command 2
+  - Result: pass
+- command 3
+  - Result: pass
+- command 4
+  - Result: pass
+
+## 尚未验证
+- UI trust prompt.
+`);
+
+  const out = execFileSync(process.execPath, [statePrune, project, "--verification", "--archive", "--keep-latest", "2", "--reason", "test-bloat", "--apply"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Archive: 2 item/);
+
+  const verification = fs.readFileSync(path.join(ctx, "verification.md"), "utf8");
+  assert.doesNotMatch(verification, /command 1/);
+  assert.doesNotMatch(verification, /command 2/);
+  assert.match(verification, /command 3/);
+  assert.match(verification, /command 4/);
+  assert.match(verification, /## 已归档证据/);
+  assert.match(verification, /已将 2 条较旧命令记录归档/);
 });
 
 test("asset-governance prunes only excess precompact raw snapshots", () => {

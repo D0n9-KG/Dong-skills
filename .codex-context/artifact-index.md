@@ -1,43 +1,38 @@
-# Artifact Index
+# 资产索引
 
-## Created
-- `.agents/skills/codex-skill-evolution/SKILL.md`: Dong Skills workflow skill for offline SkillOpt-Sleep evolution.
-- `scripts/skill-evolution.mjs`: wrapper around SkillOpt-Sleep status, candidate collection, dry-run/run, staging inspection, and adoption.
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/skill-evolution.mjs`: bootstrap asset copy of the wrapper.
-- `docs/improvements/evolution-log.md`: adoption log for future SkillOpt-Sleep proposals.
-- `licenses/SKILLOPT-LICENSE`: Microsoft SkillOpt MIT license attribution.
+## 已创建
+- 无。
 
-## Modified
-- `.codex/hooks/project-ops.mjs`: routes `skill-evolution` CLI commands.
-- `.codex/scripts/lib/events.mjs`: Stop freshness uses non-governance project changes as the state freshness baseline so state files do not chase each other's mtimes.
-- `dong-skills.manifest.json`: includes `codex-skill-evolution` in global entry skills and project-level skills; adds `global_bootstrap_skills` to distinguish bootstrap entries from maintenance entries.
-- `scripts/install-windows.ps1`: installs global entry skills, records `global_bootstrap_skills`, marks global entries with scope `global-entry`, installs the new helper script, and ignores `.skillopt-sleep/`.
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`: bootstraps the new helper script and ignores `.skillopt-sleep/`.
-- `scripts/project-ops-health.mjs`: validates `skill-evolution.mjs`, workflow allow-list, bootstrap parity, and `.skillopt-sleep/` ignore rule.
-- `scripts/release-check.mjs`: treats `.skillopt-sleep/` as a runtime artifact.
-- `.gitignore`: ignores `.skillopt-sleep/`.
-- `AGENTS.md` and `AGENTS.project-ops.snippet.md`: document `codex-skill-evolution` boundaries.
-- `README.md`: describes SkillOpt-Sleep integration, commands, privacy rules, and source attribution.
-- `.agents/skills/codex-project-governance/SKILL.md`: adds skill evolution to lifecycle and completion gates.
-- `.agents/skills/using-superpowers/SKILL.md`: routes offline Dong Skills evolution to `codex-skill-evolution` even when the current project has not installed project-level Dong Skills.
-- `.agents/skills/codex-codebase-onboarding/SKILL.md`: documents entry-skill install behavior and `.skillopt-sleep/` ignore behavior.
-- `tests/project-ops.test.mjs`: adds regression coverage for SkillOpt-Sleep integration, global install behavior, source-repo targeting from business projects, Stop freshness, and install/health behavior.
-- Bootstrap mirrors under `.agents/skills/codex-codebase-onboarding/assets/project-ops/`: synchronized manifest, hook, scripts, and AGENTS snippet.
-- `.codex-context/current-state.md`, `plan-progress.md`, `verification.md`, `artifact-index.md`, `handoff-summary.md`: refreshed for this task.
+## 已修改
+- `.codex/scripts/lib/markdown.mjs`: 增加中文标题别名、中文 Git 存档字段解析和中文占位内容判断。
+- `.codex/scripts/lib/templates.mjs`: 将新项目默认 `.codex-context/*.md` 模板改为中文。
+- `.codex/scripts/lib/events.mjs`: 自动压缩应急 handoff 改为中文用户可读内容。
+- `.codex/scripts/lib/assets.mjs`: 资产治理统计验证记录时复用标题别名解析。
+- `scripts/project-ops-health.mjs`: health check 接受中文/英文状态文档标题。
+- `scripts/state-prune.mjs`: verification 归档支持中文标题，并写入中文归档指针。
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/**`: 同步 bootstrap 安装资产，包括静态 `.codex-context` 中文模板和脚本镜像。
+- `.agents/skills/brainstorming/SKILL.md`: spec 形状和 living spec 指令改为中文状态文档优先。
+- `.agents/skills/writing-plans/SKILL.md`: plan 模板和执行审批文档改为中文状态文档优先。
+- `.agents/skills/executing-plans/SKILL.md`: 执行前 gate 支持中文计划标题和 legacy 英文标题。
+- `.agents/skills/codex-git-checkpoint/SKILL.md`: handoff 的 Git 存档示例改为中文字段。
+- `.agents/skills/codex-verification-loop/SKILL.md`、`.agents/skills/verification-before-completion/SKILL.md`: verification 记录示例改为中文标题。
+- `.agents/skills/codex-project-governance/SKILL.md`、`AGENTS.md`、`AGENTS.project-ops.snippet.md`: 增加用户可读状态文档中文优先规则。
+- `tests/project-ops.test.mjs`: 增加中文标题兼容、中文 Git 存档字段、中文 verification 归档和中文 bootstrap 模板回归测试。
 
-## Read / Inspected
-- Microsoft SkillOpt README, SkillOpt-Sleep README, Codex `skillopt-sleep` skill, and local SkillOpt-Sleep source files from a temporary inspection checkout.
-- Existing Dong Skills learning, solution memory, governance, installer, bootstrap, health-check, release-check, router, and test files.
+## 已读取 / 已检查
+- `.agents/skills/using-superpowers/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
+- `.codex/scripts/lib/markdown.mjs`
+- `.codex/scripts/lib/templates.mjs`
+- `.codex/scripts/lib/events.mjs`
+- `.codex/scripts/lib/assets.mjs`
+- `.codex/scripts/lib/workflow.mjs`
+- `scripts/project-ops-health.mjs`
+- `scripts/state-prune.mjs`
+- `tests/project-ops.test.mjs`
 
-## Raw Outputs
-- No raw outputs added.
-- `.skillopt-sleep/` is ignored and should remain runtime/private unless sanitized artifacts are intentionally promoted.
+## 原始输出
+- 未新增 raw 输出。
 
-## Residual Watchpoints
-- `skillopt_sleep` is callable through the local Microsoft SkillOpt checkout, but real Codex backend runs still require explicit budget approval and reviewed task drafts.
-- Generated SkillOpt task files require manual privacy review before setting `"reviewed": true`.
-- Adopted SkillOpt proposals must still pass `node --test tests/project-ops.test.mjs` and `node scripts/release-check.mjs .`.
-
-## Latest Refresh
-- 2026-06-30: refreshed after changing the global-entry install scope in `scripts/install-windows.ps1`; release check and health check passed after this source change.
-- 2026-06-30: refreshed after adding the Stop freshness regression test and syncing the `events.mjs` bootstrap mirror.
+## 最新刷新
+- 2026-07-01：完整测试、release check、hook health check 和 diff check 均已通过；准备提交并推送。

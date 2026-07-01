@@ -21,316 +21,316 @@ export const REQUIRED_FILES = {
 };
 
 export const TEMPLATES = {
-  "current-state.md": `# Current State
+  "current-state.md": `# 当前状态
 
-## Objective
-[One sentence.]
+## 目标
+[一句话说明当前目标。]
 
-## Latest User Instruction
-[Most recent instruction that changes scope or priority.]
+## 最新用户指令
+[最近一次改变范围或优先级的用户指令。]
 
-## Current Phase
+## 当前阶段
 [discovery | brainstorming | spec | planning | implementation | debugging | verification | review | delivery | blocked | handoff]
 
-## Active Assumptions
-- [Assumption and why it is acceptable.]
+## 当前假设
+- [假设内容，以及为什么现在可以接受。]
 
-## Blockers
-- None.
+## 阻塞项
+- 无。
 
-## Next Action
-[Exactly one next action.]
+## 下一步动作
+[只写一个下一步动作。]
 
-## Last Updated
-[YYYY-MM-DD HH:mm local time.]
+## 最后更新
+[YYYY-MM-DD HH:mm 本地时间。]
 `,
-  "project-map.md": `# Project Map
+  "project-map.md": `# 项目地图
 
-## Purpose
-[What this project does, or "Unknown".]
+## 用途
+[这个项目做什么；未知则写“未知”。]
 
-## Stack
-- [Language/framework/package manager.]
+## 技术栈
+- [语言 / 框架 / 包管理器。]
 
-## Architecture
-- [Key components and how they connect.]
+## 架构
+- [关键组件及其连接方式。]
 
-## Important Paths
-- \`path\`: [purpose]
+## 重要路径
+- \`path\`: [用途]
 
-## Entry Points
-- \`path\`: [runtime or command entry point]
+## 入口点
+- \`path\`: [运行时或命令入口]
 
-## Commands
-- Dev: \`[command or unknown]\`
-- Build: \`[command or unknown]\`
-- Typecheck: \`[command or unknown]\`
-- Lint: \`[command or unknown]\`
-- Test: \`[command or unknown]\`
+## 命令
+- Dev: \`[命令或未知]\`
+- Build: \`[命令或未知]\`
+- Typecheck: \`[命令或未知]\`
+- Lint: \`[命令或未知]\`
+- Test: \`[命令或未知]\`
 
-## Conventions
-- [Evidence-backed convention.]
+## 约定
+- [有证据支持的项目约定。]
 
-## Where To Change Things
-- [Task type]: \`path\`
+## 修改位置指南
+- [任务类型]: \`path\`
 
-## Architecture Watchpoints
-- [Large files, flat directories, coupling, or unclear ownership to revisit.]
+## 架构关注点
+- [需要复查的大文件、平铺目录、耦合或所有权不清问题。]
 
-## Unknowns
-- [Unknown and how to verify.]
+## 未知项
+- [未知内容，以及如何验证。]
 `,
-  "spec.md": `# Spec
+  "spec.md": `# 规格
 
-## Problem
-[What user wants solved.]
+## 问题
+[用户想解决什么。]
 
-## Goals
-- [Goal.]
+## 目标
+- [目标。]
 
-## Approval Status
-Living Draft / Not Approved. Use Pending written-spec approval after final discussion approval, and Approved by user on [date/time] only after written-spec approval.
+## 审批状态
+Living Draft / Not Approved。最终讨论通过后使用 Pending written-spec approval；只有用户批准书面规格后才写 Approved by user on [日期/时间]。
 
-## Truth Hierarchy
-- Latest user instruction.
-- Verified behavior from code, tests, commands, product evidence, or live repo inspection.
-- Approved written spec and approved plan for this task.
-- Current state files and handoff.
-- Older chat, raw notes, stale specs, or unreviewed observations.
+## 事实优先级
+- 最新用户指令。
+- 代码、测试、命令、产品证据或实时仓库检查得到的已验证行为。
+- 当前任务已批准的书面规格和计划。
+- 当前状态文件和 handoff。
+- 更早的聊天、原始记录、过期规格或未审查观察。
 
-## Work Class / Risk Lane
-- Lane 0 / Lane 1 / Lane 2 / Lane 3, with reason.
+## 工作类别 / 风险等级
+- Lane 0 / Lane 1 / Lane 2 / Lane 3，并说明理由。
 
-## Non-Goals
-- [Explicitly out of scope.]
+## 非目标
+- [明确不做的事项。]
 
-## Approved Scope
-- [What has been approved.]
+## 已批准范围
+- [已批准的内容。]
 
-## User Decisions
-- [Decision and date.]
+## 用户决策
+- [决策和日期。]
 
-## Candidate Options
-- None yet.
+## 候选方案
+- 暂无。
 
-## Design
-- Not drafted yet.
+## 设计
+- 尚未起草。
 
-## Acceptance Criteria
-- [Observable outcome.]
+## 验收标准
+- [可观察结果。]
 
-## Open Questions
-- [Question or "None".]
+## 开放问题
+- [问题或“无”。]
 
-## Next Step
+## 下一步
 [brainstorming | writing-plans | executing-plans | direct tiny edit | pause]
 `,
-  "plan-progress.md": `# Plan Progress
+  "plan-progress.md": `# 计划进度
 
-## Active Plan
-[Path to detailed plan/spec, or "No formal plan yet".]
+## 当前计划
+[详细计划 / 规格路径；没有正式计划则写“暂无正式计划”。]
 
-## Spec Approval
-[Approved by user / skipped by user / mechanical exception / pending.]
+## 规格审批
+[Approved by user / skipped by user / mechanical exception / pending。]
 
-## Execution Approval
-Not approved yet. Record "Approved by user for Traditional task-by-task execution on [date/time]", "Approved by user for Codex Goal mode on [date/time]", or "plan-then-execute requested; Traditional task-by-task execution" before implementation.
+## 执行审批
+尚未批准。实现前记录 “Approved by user for Traditional task-by-task execution on [日期/时间]”、“Approved by user for Codex Goal mode on [日期/时间]”，或 “plan-then-execute requested; Traditional task-by-task execution”。
 
-## Execution Mode
-Pending user choice. Allowed values: Traditional task-by-task execution; Codex Goal mode. Do not infer Codex Goal mode from "continue", "execute", or plan-then-execute.
+## 执行模式
+等待用户选择。可选值：Traditional task-by-task execution；Codex Goal mode。不要从“继续”、“执行”或 plan-then-execute 推断为 Codex Goal mode。
 
-## Work Class / Risk Lane
-Pending. Record Lane 0, Lane 1, Lane 2, or Lane 3 and why that lane is sufficient. The lane controls plan depth, verification depth, state update cadence, review, rollback, and checkpoint cadence.
+## 工作类别 / 风险等级
+待定。记录 Lane 0、Lane 1、Lane 2 或 Lane 3，并说明为什么足够。该等级决定计划深度、验证深度、状态更新节奏、审查、回滚和存档节奏。
 
-## Goal Mode Objective
-Not selected. If Codex Goal mode is explicitly selected, include the goal mechanism available in the current Codex session, objective, spec path, plan path, approved scope, non-goals, current step, verification commands, checkpoint cadence, required state updates, and stop conditions. Goal mode is unavailable when the current session does not expose an actual goal mechanism.
+## Goal 模式目标
+未选择。如果用户明确选择 Codex Goal mode，写明当前 Codex session 可用的 goal 机制、目标、规格路径、计划路径、已批准范围、非目标、当前步骤、验证命令、存档节奏、必须更新的状态文件和停止条件。若当前 session 没有真实 goal 机制，则 Goal mode 不可用。
 
-## Runtime Constraints
-- Follow the approved plan tasks in order unless a blocker requires replanning.
-- Keep \`plan-progress.md\`, \`artifact-index.md\`, \`verification.md\`, \`current-state.md\`, and \`handoff-summary.md\` current.
-- Stop on ambiguity, repeated verification failure, scope change, destructive action, missing credentials, missing user decisions, architecture conflict, or state contradiction.
-- Do not silently expand scope beyond the approved spec.
+## 运行约束
+- 除非阻塞项要求重新规划，否则按已批准计划顺序执行。
+- 保持 \`plan-progress.md\`、\`artifact-index.md\`、\`verification.md\`、\`current-state.md\` 和 \`handoff-summary.md\` 更新。
+- 遇到需求模糊、重复验证失败、范围变化、破坏性操作、缺少凭据、缺少用户决策、架构冲突或状态矛盾时停止。
+- 不要静默扩大已批准规格之外的范围。
 
-## Checkpoint Cadence
-- Checkpoint after each meaningful verified task or milestone, or record why checkpointing is deferred.
+## 存档节奏
+- 每个有意义且已验证的任务或里程碑后做 checkpoint；若暂缓，记录原因。
 
-## Tasks
-- [ ] Task 1: [status and evidence]
+## 任务
+- [ ] 任务 1：[状态和证据]
 
-## Current Step
-[Exactly one active step, or "None".]
+## 当前步骤
+[只写一个当前活动步骤，或“无”。]
 
-## Verification
-- [Command/check and expected signal.]
+## 验证
+- [命令 / 检查及预期信号。]
 
-## Out Of Scope
-- [Explicit non-goals.]
+## 范围外
+- [明确非目标。]
 `,
-  "artifact-index.md": `# Artifact Index
+  "artifact-index.md": `# 资产索引
 
-## Created
-- None yet.
+## 已创建
+- 暂无。
 
-## Modified
-- None yet.
+## 已修改
+- 暂无。
 
-## Read / Inspected
-- None yet.
+## 已读取 / 已检查
+- 暂无。
 
-## Raw Outputs
-- None yet.
+## 原始输出
+- 暂无。
 `,
-  "decisions.md": `# Decisions
+  "decisions.md": `# 决策
 
-## Accepted
-- None yet.
+## 已接受
+- 暂无。
 
-## Rejected
-- None yet.
+## 已拒绝
+- 暂无。
 `,
-  "open-questions.md": `# Open Questions
+  "open-questions.md": `# 开放问题
 
-- None.
+- 无。
 `,
-  "risks.md": `# Risks
+  "risks.md": `# 风险
 
-## Context Risks
-- None known.
+## 上下文风险
+- 暂无已知风险。
 
-## Technical Risks
-- None known.
+## 技术风险
+- 暂无已知风险。
 
-## Architecture Risks
-- None known.
+## 架构风险
+- 暂无已知风险。
 
-## Documentation Risks
-- None known.
+## 文档风险
+- 暂无已知风险。
 
-## Safety / Destructive Risks
-- None known.
+## 安全 / 破坏性风险
+- 暂无已知风险。
 `,
-  "verification.md": `# Verification
+  "verification.md": `# 验证
 
-## Commands Run
-- None yet.
+## 已运行命令
+- 暂无。
 
-## Product Evidence
-- None yet.
+## 产品证据
+- 暂无。
 
-## Not Yet Verified
-- None yet.
+## 尚未验证
+- 暂无。
 `,
-  "working-notes.md": `# Working Notes
+  "working-notes.md": `# 工作笔记
 
-## Purpose
-Capture compact, externalized investigation state that should survive compaction. Do not store hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning here.
+## 用途
+记录需要跨压缩保留的紧凑外部化调查状态。不要在这里保存隐藏思维链、完整聊天记录、原始日志、密钥或私密推理。
 
-## Current Findings
-- None yet.
+## 当前发现
+- 暂无。
 
-## Current Hypothesis
-- None yet.
+## 当前假设
+- 暂无。
 
-## Rejected Paths
-- None yet.
+## 已排除路径
+- 暂无。
 
-## Open Investigation Questions
-- None yet.
+## 开放调查问题
+- 暂无。
 
-## Next Verification Step
-- None yet.
+## 下一步验证
+- 暂无。
 
-## Promotion Notes
-- Promote durable conclusions into spec.md, decisions.md, current-state.md, handoff-summary.md, or docs/solutions/ at phase boundaries.
+## 提升记录
+- 在阶段边界，把持久结论提升到 spec.md、decisions.md、current-state.md、handoff-summary.md 或 docs/solutions/。
 `,
-  "learned-instincts.md": `# Learned Instincts
+  "learned-instincts.md": `# 经验沉淀
 
-## Summary
-Keep this file as a compact index. Store individual instincts under \`.codex-context/instincts/\`.
+## 摘要
+这个文件只作为紧凑索引。单条 instinct 存放在 \`.codex-context/instincts/\`。
 
-## Raw Observation Review
-- Last reviewed raw observations: None yet.
-- Review rule: convert useful events into instincts, absorb duplicates into existing docs, or record a deliberate drop.
+## 原始观察审查
+- 上次审查 raw observations：暂无。
+- 审查规则：有用事件转成 instincts，重复内容吸收到已有文档，噪音明确记录为丢弃。
 
-## Active Project Instincts
-- None yet.
+## 当前项目有效经验
+- 暂无。
 
-## Candidate Instincts
-- None yet.
+## 候选经验
+- 暂无。
 
-## Retired / Contradicted / Superseded
-- None yet.
+## 已退役 / 已矛盾 / 已替代
+- 暂无。
 
-## Promotion Candidates
-- None yet.
+## 待提升候选
+- 暂无。
 
-## Maintenance Log
-- None yet.
+## 维护记录
+- 暂无。
 `,
-  "dong-skills-outbox.md": `# Dong Skills Improvement Outbox
+  "dong-skills-outbox.md": `# Dong Skills 优化 Outbox
 
-## Purpose
-This file is a fallback queue for Dong Skills improvement ideas when the real Dong Skills source repository cannot be found or written.
+## 用途
+当无法找到或写入真实 Dong Skills 源仓库时，这个文件作为 Dong Skills 优化想法的 fallback 队列。
 
-Do not treat entries here as project instincts, project rules, or solution memory. Migrate useful entries to the Dong Skills repository at \`docs/improvements/backlog.md\`.
+不要把这里的条目当成项目经验、项目规则或 solution memory。有用条目应迁移到 Dong Skills 源仓库的 \`docs/improvements/backlog.md\`。
 
-## Target
-- Preferred location: Dong Skills repo \`docs/improvements/backlog.md\`
-- Discovery order: \`DONG_SKILLS_REPO\`, \`DONG_SKILLS_HOME\`, global source marker, current repo if it is Dong Skills, then this outbox
+## 目标位置
+- 优先位置：Dong Skills repo 的 \`docs/improvements/backlog.md\`
+- 发现顺序：\`DONG_SKILLS_REPO\`、\`DONG_SKILLS_HOME\`、全局 source marker、当前 repo 如果就是 Dong Skills、最后才写这个 outbox
 
-## Pending Improvements
-- None.
+## 待迁移优化
+- 暂无。
 
-## Migrated
-- None.
+## 已迁移
+- 暂无。
 `,
-  "solution-index.md": `# Solution Index
+  "solution-index.md": `# Solution 索引
 
-## Knowledge Store
-- docs/solutions present: no
-- CONCEPTS.md present: no
-- Solution docs: 0
+## 知识库
+- docs/solutions 存在：否
+- CONCEPTS.md 存在：否
+- Solution 文档数量：0
 
-## Categories
-- None yet.
+## 分类
+- 暂无。
 
-## Validation
-- No validation issues found.
+## 验证
+- 暂未发现验证问题。
 
-## Refresh Signals
-- No refresh candidates found.
+## 刷新信号
+- 暂无需要刷新的候选。
 
-## Last Updated
-- None yet.
+## 最后更新
+- 暂无。
 `,
-  "worktree-state.md": `# Worktree State
+  "worktree-state.md": `# Worktree 状态
 
-## Current Workspace
+## 当前工作区
 - Role: unknown
-- Path: not detected yet
-- Detection date: not detected yet
+- Path: 尚未检测
+- Detection date: 尚未检测
 
-## Primary Checkout
-- Path: not detected yet
-- Relationship: not detected yet
+## 主检出区
+- Path: 尚未检测
+- Relationship: 尚未检测
 
-## Branch State
-- Branch: not detected yet
-- Detached HEAD: not detected yet
-- Base branch: not detected yet
+## 分支状态
+- Branch: 尚未检测
+- Detached HEAD: 尚未检测
+- Base branch: 尚未检测
 
-## Ownership And Cleanup
+## 所有权与清理
 - Cleanup owner: unknown
-- Cleanup rule: do not remove any worktree unless it is explicitly recorded as \`dong-managed-worktree\` and cleanup is user-approved.
+- Cleanup rule: 除非明确记录为 \`dong-managed-worktree\` 且用户批准清理，否则不要删除任何 worktree。
 
-## Hook Root Notes
-- Hook source root: not detected yet
-- Actual Git root: not detected yet
-- Notes: update this if Codex UI shows hooks from a different checkout than the current Git root.
+## Hook 根目录记录
+- Hook source root: 尚未检测
+- Actual Git root: 尚未检测
+- Notes: 如果 Codex UI 显示的 hooks 来源 checkout 与当前 Git root 不同，更新这里。
 
-## Resume Instructions
-- Re-run \`git rev-parse --show-toplevel\`, \`git rev-parse --git-dir\`, \`git rev-parse --git-common-dir\`, and \`git branch --show-current\` before branch completion or cleanup.
-- If this session resumes from a Codex App worktree, update this file before editing project files.
+## 恢复指令
+- 分支完成或清理前，重新运行 \`git rev-parse --show-toplevel\`、\`git rev-parse --git-dir\`、\`git rev-parse --git-common-dir\` 和 \`git branch --show-current\`。
+- 如果 session 从 Codex App worktree 恢复，编辑项目文件前先更新本文件。
 `,
   "workflow-state.yaml": `workflow: standard
 phase: discovery
@@ -348,41 +348,41 @@ handoff_hash: null
 updated_at: not-started
 note: initialized
 `,
-  "handoff-summary.md": `# Handoff Summary
+  "handoff-summary.md": `# Handoff 摘要
 
-## Objective
+## 目标
 
-## Latest User Instruction
+## 最新用户指令
 
-## Approved Scope / Spec
+## 已批准范围 / 规格
 
-## Plan Status
+## 计划状态
 
-## Files Modified
+## 已修改文件
 
-## Files Read But Not Changed
+## 已读取但未修改文件
 
-## Decisions Made
+## 已做决策
 
-## Open Questions And Assumptions
+## 开放问题与假设
 
-## Risks
+## 风险
 
-## Verification Evidence
+## 验证证据
 
-## Git Checkpoint
-- Latest commit:
-- Push state:
-- Files included:
-- Files intentionally left uncommitted:
-- Deferred reason:
-- Next checkpoint:
+## Git 存档
+- 最新提交:
+- 推送状态:
+- 已包含文件:
+- 有意保留未提交的文件:
+- 暂缓原因:
+- 下次存档:
 
-## Learned Instincts To Preserve
+## 需要保留的经验沉淀
 
-## Next Action
+## 下一步动作
 
-## Files To Re-read First
+## 优先重读文件
 `
 };
 

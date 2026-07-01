@@ -371,7 +371,7 @@ function discussionStateStatus(root, ctx, workflow = null) {
 function stripHandoffTitle(markdown) {
   return String(markdown || "")
     .trim()
-    .replace(/^# Handoff Summary[ \t]*\r?\n+/i, "")
+    .replace(/^# (?:Handoff Summary|Handoff 摘要)[ \t]*\r?\n+/i, "")
     .trim();
 }
 
@@ -381,52 +381,52 @@ function hasMeaningfulHandoff(markdown) {
 }
 
 function emergencyFallbackSections(statusFiles) {
-  return `## Objective
-Emergency recovery snapshot before automatic compaction.
+  return `## 目标
+自动压缩前的应急恢复快照。
 
-## Latest User Instruction
-Automatic compaction was about to run while Codex Project Ops state had unresolved freshness issues.
+## 最新用户指令
+自动压缩即将运行，但 Codex Project Ops 状态仍有未解决的 freshness 问题。
 
-## Approved Scope / Spec
-Allow automatic compaction after writing this emergency handoff. On recovery, inspect the listed files and refresh normal project state before continuing substantive work.
+## 已批准范围 / 规格
+写入这个应急 handoff 后允许自动压缩。恢复后先检查列出的文件，并刷新正常项目状态，再继续实质工作。
 
-## Plan Status
-Emergency PreCompact fallback. This is not a normal milestone handoff.
+## 计划状态
+Emergency PreCompact fallback。这不是正常里程碑 handoff。
 
-## Files Modified
+## 已修改文件
 ${markdownList(statusFiles)}
 
-## Files Read But Not Changed
-- No previous handoff content was available.
+## 已读取但未修改文件
+- 没有可用的旧 handoff 内容。
 
-## Decisions Made
-- Automatic compaction was allowed to avoid a silent hard stop at context pressure.
-- Manual compaction should still refresh project state before compacting.
+## 已做决策
+- 为避免上下文压力下静默硬停，允许自动压缩继续。
+- 手动压缩前仍应刷新项目状态。
 
-## Open Questions And Assumptions
-- Assumption: preserving a recoverable handoff is safer than blocking automatic compaction without reliable chat feedback.
-- Open question: after recovery, verify whether any project-specific state files need richer updates.
+## 开放问题与假设
+- 假设：保留可恢复 handoff 比在没有可靠聊天反馈时阻止自动压缩更安全。
+- 开放问题：恢复后确认是否有项目特定状态文件需要更完整更新。
 
-## Risks
-- This emergency handoff may be less complete than a deliberate handoff.
-- Some state files listed in the issues above may still be stale after compaction.
+## 风险
+- 这个应急 handoff 可能不如主动 handoff 完整。
+- 上方 issues 中列出的部分状态文件在压缩后可能仍然过期。
 
-## Verification Evidence
-- Not verified in this emergency PreCompact path. Review \`.codex-context/verification.md\` after recovery.
+## 验证证据
+- 应急 PreCompact 路径中未验证。恢复后检查 \`.codex-context/verification.md\`。
 
-## Git Checkpoint
-- Latest commit: not checked during automatic PreCompact
-- Push state: not checked during automatic PreCompact
-- Files included: none during automatic PreCompact
-- Files intentionally left uncommitted: ${statusFiles.length ? shortList(statusFiles, 20) : "none reported"}
-- Deferred reason: automatic compaction was allowed after emergency handoff to avoid a silent block
-- Next checkpoint: run codex-git-checkpoint after recovery if work should be archived
+## Git 存档
+- 最新提交: automatic PreCompact 期间未检查
+- 推送状态: automatic PreCompact 期间未检查
+- 已包含文件: automatic PreCompact 期间无
+- 有意保留未提交的文件: ${statusFiles.length ? shortList(statusFiles, 20) : "none reported"}
+- 暂缓原因: 为避免静默阻塞，写入应急 handoff 后允许自动压缩继续
+- 下次存档: 恢复后如果需要归档工作，运行 codex-git-checkpoint
 
-## Learned Instincts To Preserve
-- Review \`.codex-context/learned-instincts.md\` and pending raw observations after recovery.
+## 需要保留的经验沉淀
+- 恢复后检查 \`.codex-context/learned-instincts.md\` 和待审查 raw observations。
 
-## Next Action
-After compaction, re-read this handoff, inspect the unresolved issues, then refresh current-state.md, plan-progress.md, artifact-index.md, verification.md, learned-instincts.md, and Git Checkpoint as applicable.`;
+## 下一步动作
+压缩后重读这个 handoff，检查未解决 issues，然后按需刷新 current-state.md、plan-progress.md、artifact-index.md、verification.md、learned-instincts.md 和 Git 存档。`;
 }
 
 function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues, trigger) {
@@ -485,14 +485,14 @@ function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues
     ? preservedHandoff
     : emergencyFallbackSections(statusFiles);
 
-  fs.writeFileSync(handoffFile, `# Handoff Summary
+  fs.writeFileSync(handoffFile, `# Handoff 摘要
 
 ## PreCompact Emergency Notice
 - Created: ${timestamp}
 - Trigger: ${trigger}
 - Raw snapshot: \`${rawRel}\`
-- Previous handoff: preserved below this emergency notice.
-- Recovery rule: resolve the PreCompact issues first, then continue from the preserved handoff sections below.
+- Previous handoff: 已保留在这个应急 notice 下方。
+- Recovery rule: 先解决 PreCompact issues，再从下方保留的 handoff sections 继续。
 
 ## PreCompact Issues
 ${markdownList(issues)}

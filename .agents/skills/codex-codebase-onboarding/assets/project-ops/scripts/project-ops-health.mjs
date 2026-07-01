@@ -33,52 +33,52 @@ const REQUIRED_HOOK_EVENTS = [
 ];
 
 const REQUIRED_HANDOFF_SECTIONS = [
-  "Objective",
-  "Latest User Instruction",
-  "Approved Scope / Spec",
-  "Plan Status",
-  "Files Modified",
-  "Decisions Made",
-  "Verification Evidence",
-  "Git Checkpoint",
-  "Next Action",
-  "Files To Re-read First"
+  ["Objective", "目标"],
+  ["Latest User Instruction", "最新用户指令"],
+  ["Approved Scope / Spec", "已批准范围 / 规格"],
+  ["Plan Status", "计划状态"],
+  ["Files Modified", "已修改文件"],
+  ["Decisions Made", "已做决策"],
+  ["Verification Evidence", "验证证据"],
+  ["Git Checkpoint", "Git 存档"],
+  ["Next Action", "下一步动作"],
+  ["Files To Re-read First", "优先重读文件"]
 ];
 
 const REQUIRED_SPEC_SECTIONS = [
-  ["Problem"],
-  ["Goal", "Goals"],
-  ["Approval Status"],
-  ["Truth Hierarchy"],
-  ["Work Class / Risk Lane"],
-  ["Approved Scope"],
-  ["Acceptance Criteria"],
-  ["Open Questions"],
-  ["Next Step"]
+  ["Problem", "问题"],
+  ["Goal", "Goals", "目标"],
+  ["Approval Status", "审批状态"],
+  ["Truth Hierarchy", "事实优先级"],
+  ["Work Class / Risk Lane", "工作类别 / 风险等级"],
+  ["Approved Scope", "已批准范围"],
+  ["Acceptance Criteria", "验收标准"],
+  ["Open Questions", "开放问题"],
+  ["Next Step", "下一步"]
 ];
 
 const REQUIRED_PLAN_SECTIONS = [
-  ["Active Plan"],
-  ["Spec Approval"],
-  ["Execution Approval"],
-  ["Execution Mode"],
-  ["Work Class / Risk Lane"],
-  ["Goal Mode Objective"],
-  ["Runtime Constraints"],
-  ["Checkpoint Cadence"],
-  ["Tasks"],
-  ["Current Step"],
-  ["Verification"],
-  ["Out Of Scope"]
+  ["Active Plan", "当前计划"],
+  ["Spec Approval", "规格审批"],
+  ["Execution Approval", "执行审批"],
+  ["Execution Mode", "执行模式"],
+  ["Work Class / Risk Lane", "工作类别 / 风险等级"],
+  ["Goal Mode Objective", "Goal 模式目标"],
+  ["Runtime Constraints", "运行约束"],
+  ["Checkpoint Cadence", "存档节奏"],
+  ["Tasks", "任务"],
+  ["Current Step", "当前步骤"],
+  ["Verification", "验证"],
+  ["Out Of Scope", "范围外"]
 ];
 
 const REQUIRED_CHECKPOINT_FIELDS = [
-  ["Latest commit", "Latest functional commit"],
-  ["Push state"],
-  ["Files included"],
-  ["Files intentionally left uncommitted"],
-  ["Deferred reason"],
-  ["Next checkpoint"]
+  ["Latest commit", "Latest functional commit", "最新提交", "最新功能提交"],
+  ["Push state", "推送状态"],
+  ["Files included", "已包含文件"],
+  ["Files intentionally left uncommitted", "有意保留未提交的文件"],
+  ["Deferred reason", "暂缓原因"],
+  ["Next checkpoint", "下次存档"]
 ];
 
 const WORKFLOW_ALLOWED = {
@@ -275,9 +275,10 @@ function walkFiles(dir, out = []) {
   return out;
 }
 
-function sectionContent(markdown, heading) {
+function sectionContent(markdown, headingOrHeadings) {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  const headings = Array.isArray(headingOrHeadings) ? headingOrHeadings : [headingOrHeadings];
+  const start = lines.findIndex((line) => headings.some((heading) => line.trim() === `## ${heading}`));
   if (start === -1) return "";
   const body = [];
   for (let i = start + 1; i < lines.length; i += 1) {
@@ -431,13 +432,13 @@ function checkContext(root, issues) {
   }
 
   const handoff = readText(path.join(ctx, "handoff-summary.md"));
-  for (const heading of REQUIRED_HANDOFF_SECTIONS) {
-    if (!handoff.includes(`## ${heading}`)) {
-      issues.push(`handoff-summary.md missing section: ${heading}`);
+  for (const headings of REQUIRED_HANDOFF_SECTIONS) {
+    if (!hasAnyHeading(handoff, headings)) {
+      issues.push(`handoff-summary.md missing section: ${headingLabel(headings)}`);
     }
   }
 
-  const checkpoint = sectionContent(handoff, "Git Checkpoint");
+  const checkpoint = sectionContent(handoff, ["Git Checkpoint", "Git 存档"]);
   for (const labels of REQUIRED_CHECKPOINT_FIELDS) {
     if (!labels.some((field) => checkpoint.includes(`${field}:`))) {
       issues.push(`handoff-summary.md Git Checkpoint missing field label: ${labels.join(" or ")}`);
@@ -445,31 +446,31 @@ function checkContext(root, issues) {
   }
 
   const worktree = readText(path.join(ctx, "worktree-state.md"));
-  for (const heading of [
-    "Current Workspace",
-    "Primary Checkout",
-    "Branch State",
-    "Ownership And Cleanup",
-    "Hook Root Notes",
-    "Resume Instructions"
+  for (const headings of [
+    ["Current Workspace", "当前工作区"],
+    ["Primary Checkout", "主检出区"],
+    ["Branch State", "分支状态"],
+    ["Ownership And Cleanup", "所有权与清理"],
+    ["Hook Root Notes", "Hook 根目录记录"],
+    ["Resume Instructions", "恢复指令"]
   ]) {
-    if (!worktree.includes(`## ${heading}`)) {
-      issues.push(`worktree-state.md missing section: ${heading}`);
+    if (!hasAnyHeading(worktree, headings)) {
+      issues.push(`worktree-state.md missing section: ${headingLabel(headings)}`);
     }
   }
 
   const workingNotes = readText(path.join(ctx, "working-notes.md"));
-  for (const heading of [
-    "Purpose",
-    "Current Findings",
-    "Current Hypothesis",
-    "Rejected Paths",
-    "Open Investigation Questions",
-    "Next Verification Step",
-    "Promotion Notes"
+  for (const headings of [
+    ["Purpose", "用途"],
+    ["Current Findings", "当前发现"],
+    ["Current Hypothesis", "当前假设"],
+    ["Rejected Paths", "已排除路径"],
+    ["Open Investigation Questions", "开放调查问题"],
+    ["Next Verification Step", "下一步验证"],
+    ["Promotion Notes", "提升记录"]
   ]) {
-    if (!workingNotes.includes(`## ${heading}`)) {
-      issues.push(`working-notes.md missing section: ${heading}`);
+    if (!hasAnyHeading(workingNotes, headings)) {
+      issues.push(`working-notes.md missing section: ${headingLabel(headings)}`);
     }
   }
 

@@ -1,23 +1,23 @@
-# Learned Instincts
+# 经验沉淀
 
-## Summary
-Keep this file as a compact index. Store individual instincts under `.codex-context/instincts/`.
+## 摘要
+这个文件只作为紧凑索引。单条 instinct 存放在 `.codex-context/instincts/`。
 
-## Raw Observation Review
-- Last reviewed raw observations: None yet.
-- Review rule: convert useful events into instincts, absorb duplicates into existing docs, or record a deliberate drop.
+## 原始观察审查
+- 上次审查 raw observations：暂无。
+- 审查规则：有用事件转成 instincts，重复内容吸收到已有文档，噪音明确记录为丢弃。
 
-## Active Project Instincts
-- None yet.
+## 当前项目有效经验
+- 暂无。
 
-## Candidate Instincts
-- None yet.
+## 候选经验
+- 暂无。
 
-## Retired / Contradicted / Superseded
-- None yet.
+## 已退役 / 已矛盾 / 已替代
+- 暂无。
 
-## Promotion Candidates
-- None yet.
+## 待提升候选
+- 暂无。
 
-## Maintenance Log
-- None yet.
+## 维护记录
+- 暂无。

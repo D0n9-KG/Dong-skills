@@ -1,41 +1,44 @@
-# Spec
+# 规格
 
-## Problem
-[What user wants solved.]
+## 问题
+[用户想解决什么。]
 
-## Goals
-- [Goal.]
+## 目标
+- [目标。]
 
-## Approval Status
-Living Draft / Not Approved. Use Pending written-spec approval after final discussion approval, and Approved by user on [date/time] only after written-spec approval.
+## 审批状态
+Living Draft / Not Approved。最终讨论通过后使用 Pending written-spec approval；只有用户批准书面规格后才写 Approved by user on [日期/时间]。
 
-## Truth Hierarchy
-- Latest user instruction.
-- Verified behavior from code, tests, commands, product evidence, or live repo inspection.
-- Approved written spec and approved plan for this task.
-- Current state files and handoff.
-- Older chat, raw notes, stale specs, or unreviewed observations.
+## 事实优先级
+- 最新用户指令。
+- 代码、测试、命令、产品证据或实时仓库检查得到的已验证行为。
+- 当前任务已批准的书面规格和计划。
+- 当前状态文件和 handoff。
+- 更早的聊天、原始记录、过期规格或未审查观察。
 
-## Work Class / Risk Lane
-- Lane 0 / Lane 1 / Lane 2 / Lane 3, with reason.
+## 工作类别 / 风险等级
+- Lane 0 / Lane 1 / Lane 2 / Lane 3，并说明理由。
 
-## User Decisions
-- [Decision, trade-off, source, and date.]
+## 非目标
+- [明确不做的事项。]
 
-## Non-Goals
-- [Explicitly out of scope.]
+## 已批准范围
+- [已批准的内容。]
 
-## Approved Scope
-- [What has been approved.]
+## 用户决策
+- [决策和日期。]
 
-## Design
-- [What changes: behavior, boundaries, invariants, UX/API contract, data flow constraints. Avoid locking How unless approved.]
+## 候选方案
+- 暂无。
 
-## Acceptance Criteria
-- [Executable or observable proof. Prefer WHEN [condition], THE SYSTEM SHALL [behavior] for behavioral criteria.]
+## 设计
+- 尚未起草。
 
-## Open Questions
-- [Question or "None".]
+## 验收标准
+- [可观察结果。]
 
-## Next Step
-[brainstorming / writing-plans / executing-plans / direct tiny edit / pause]
+## 开放问题
+- [问题或“无”。]
+
+## 下一步
+[brainstorming | writing-plans | executing-plans | direct tiny edit | pause]

@@ -2,9 +2,116 @@ import path from "node:path";
 import { mtimeMs, readText } from "./core.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 
+const HEADING_ALIASES = {
+  "Active Assumptions": ["当前假设"],
+  "Active Plan": ["当前计划"],
+  "Approval Status": ["审批状态"],
+  "Approved Scope": ["已批准范围"],
+  "Approved Scope / Spec": ["已批准范围 / 规格"],
+  "Architecture Risks": ["架构风险"],
+  "Architecture Watchpoints": ["架构关注点"],
+  "Acceptance Criteria": ["验收标准"],
+  "Archived Evidence": ["已归档证据"],
+  "Blockers": ["阻塞项"],
+  "Branch State": ["分支状态"],
+  "Candidate Options": ["候选方案"],
+  "Categories": ["分类"],
+  "Checkpoint Cadence": ["存档节奏"],
+  "Commands": ["命令"],
+  "Commands Run": ["已运行命令"],
+  "Conventions": ["约定"],
+  "Created": ["已创建"],
+  "Current Findings": ["当前发现"],
+  "Current Hypothesis": ["当前假设"],
+  "Current Phase": ["当前阶段"],
+  "Current Step": ["当前步骤"],
+  "Current Workspace": ["当前工作区"],
+  "Decisions Made": ["已做决策"],
+  "Design": ["设计"],
+  "Documentation Risks": ["文档风险"],
+  "Entry Points": ["入口点"],
+  "Execution Approval": ["执行审批"],
+  "Execution Mode": ["执行模式"],
+  "Files Modified": ["已修改文件"],
+  "Files Read But Not Changed": ["已读取但未修改文件"],
+  "Files To Re-read First": ["优先重读文件"],
+  "Git Checkpoint": ["Git 存档"],
+  "Goal": ["目标"],
+  "Goals": ["目标"],
+  "Goal Mode Objective": ["Goal 模式目标"],
+  "Important Paths": ["重要路径"],
+  "Latest User Instruction": ["最新用户指令"],
+  "Learned Instincts To Preserve": ["需要保留的经验沉淀"],
+  "Latest commit": ["最新提交"],
+  "Latest functional commit": ["最新功能提交"],
+  "Modified": ["已修改"],
+  "Next Action": ["下一步动作"],
+  "Next checkpoint": ["下次存档"],
+  "Next Step": ["下一步"],
+  "Next Verification Step": ["下一步验证"],
+  "Non-Goals": ["非目标"],
+  "Not Yet Verified": ["尚未验证"],
+  "Objective": ["目标"],
+  "Open Investigation Questions": ["开放调查问题"],
+  "Open Questions": ["开放问题"],
+  "Open Questions And Assumptions": ["开放问题与假设"],
+  "Out Of Scope": ["范围外"],
+  "Ownership And Cleanup": ["所有权与清理"],
+  "Plan Status": ["计划状态"],
+  "Primary Checkout": ["主检出区"],
+  "Problem": ["问题"],
+  "Product Evidence": ["产品证据"],
+  "Promotion Notes": ["提升记录"],
+  "Purpose": ["用途"],
+  "Push state": ["推送状态"],
+  "Raw Outputs": ["原始输出"],
+  "Read / Inspected": ["已读取 / 已检查"],
+  "Rejected Paths": ["已排除路径"],
+  "Resume Instructions": ["恢复指令"],
+  "Risks": ["风险"],
+  "Runtime Constraints": ["运行约束"],
+  "Safety / Destructive Risks": ["安全 / 破坏性风险"],
+  "Spec Approval": ["规格审批"],
+  "Stack": ["技术栈"],
+  "Files included": ["已包含文件"],
+  "Files intentionally left uncommitted": ["有意保留未提交的文件"],
+  "Files left uncommitted": ["保留未提交的文件"],
+  "Deferred reason": ["暂缓原因"],
+  "Tasks": ["任务"],
+  "Technical Risks": ["技术风险"],
+  "Truth Hierarchy": ["事实优先级"],
+  "Unknowns": ["未知项"],
+  "User Decisions": ["用户决策"],
+  "Verification": ["验证"],
+  "Verification Evidence": ["验证证据"],
+  "Where To Change Things": ["修改位置指南"],
+  "Work Class / Risk Lane": ["工作类别 / 风险等级"]
+};
+
+export function headingAliases(heading) {
+  return [heading, ...(HEADING_ALIASES[heading] || [])];
+}
+
+export function headingLabel(heading) {
+  return headingAliases(heading).join(" or ");
+}
+
+function headingStartIndex(lines, heading) {
+  const headings = headingAliases(heading);
+  return lines.findIndex((line) => headings.some((candidate) => line.trim() === `## ${candidate}`));
+}
+
+export function hasHeading(markdown, heading) {
+  return headingStartIndex(String(markdown || "").split(/\r?\n/), heading) !== -1;
+}
+
+export function hasAnyHeading(markdown, headings) {
+  return headings.some((heading) => hasHeading(markdown, heading));
+}
+
 export function sectionContent(markdown, heading) {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  const start = headingStartIndex(lines, heading);
   if (start === -1) return "";
   const body = [];
   for (let i = start + 1; i < lines.length; i += 1) {
@@ -20,9 +127,11 @@ export function escapeRegex(value) {
 
 export function checkpointField(checkpoint, labels) {
   for (const label of labels) {
-    const pattern = new RegExp(`^\\s*(?:[-*]\\s*)?${escapeRegex(label)}\\s*:\\s*(.*)$`, "im");
-    const match = checkpoint.match(pattern);
-    if (match) return match[1].trim();
+    for (const candidate of headingAliases(label)) {
+      const pattern = new RegExp(`^\\s*(?:[-*]\\s*)?${escapeRegex(candidate)}\\s*:\\s*(.*)$`, "im");
+      const match = checkpoint.match(pattern);
+      if (match) return match[1].trim();
+    }
   }
   return "";
 }
@@ -51,6 +160,15 @@ export function validateGitCheckpointSection(checkpoint) {
 }
 
 export function meaningful(text) {
+  const compact = String(text || "")
+    .replace(/\[[^\]]+\]/g, "")
+    .replace(/^[-*]\s*/gm, "")
+    .replace(/[.。]/g, "")
+    .trim();
+  if (/^(None yet|None known|None|Unknown|No formal plan yet|暂无正式计划|暂无已知风险|尚未检测|待定|暂无|无|未知)$/i.test(compact)) {
+    return false;
+  }
+
   const stripped = text
     .replace(/\[[^\]]+\]/g, "")
     .replace(/None yet\.?/gi, "")
@@ -58,6 +176,12 @@ export function meaningful(text) {
     .replace(/None\.?/gi, "")
     .replace(/Unknown\.?/gi, "")
     .replace(/No formal plan yet\.?/gi, "")
+    .replace(/暂无正式计划/g, "")
+    .replace(/暂无已知风险/g, "")
+    .replace(/尚未检测/g, "")
+    .replace(/待定/g, "")
+    .replace(/暂无/g, "")
+    .replace(/未知/g, "")
     .replace(/-/g, "")
     .trim();
   return stripped.length > 0;

@@ -1,7 +1,7 @@
-# Decisions
+# 决策
 
-## Accepted
-- None yet.
+## 已接受
+- 暂无。
 
-## Rejected
-- None yet.
+## 已拒绝
+- 暂无。

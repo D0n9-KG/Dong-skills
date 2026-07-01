@@ -1,105 +1,93 @@
-# Handoff Summary
+# Handoff 摘要
 
-## Objective
-Add SkillOpt-Sleep as an offline, validation-gated self-evolution workflow for Dong Skills, with `codex-skill-evolution` available as a global maintenance entry.
+## 目标
+让 Dong Skills 中用户可能阅读或审批的状态文档默认使用中文，同时保持内部机器契约和旧英文项目兼容。
 
-## Latest User Instruction
-User asked to adjust relatively global maintenance functionality so it is globally visible instead of only project-scoped.
+## 最新用户指令
+“可以，那改吧，只要我可能会阅读和审批的文档都需要内容是中文的。”
 
-## Approved Scope / Spec
-- Implement a conservative SkillOpt-Sleep integration for Dong Skills itself.
-- Install `codex-skill-evolution` as a global entry skill as well as a project-level helper.
-- Make `skill-evolution` operate on the real Dong Skills source repo, not the current business project by default.
-- Keep existing memory modules; SkillOpt-Sleep augments skill evolution rather than replacing project memory.
-- Do not run SkillOpt-Sleep from hooks and do not auto-adopt proposals.
-- Keep runtime `.skillopt-sleep/` and raw task drafts ignored by default.
+## 已批准范围 / 规格
+- 中文化 `.codex-context/*.md` 新项目模板和 bootstrap 静态模板。
+- 保留文件名、命令名、workflow-state YAML key、枚举值、skill 名、hook 名和代码标识英文。
+- hooks/health/state-prune 必须同时接受中文标题和旧英文标题。
+- 核心 skill 说明必须引导 agent 以后生成中文 spec、plan、verification、handoff 等用户可读文档。
 
-## Plan Status
-- Execution mode: Traditional task-by-task execution.
-- Implementation status: complete.
-- Verification status: pass.
-- Review status: self-review complete.
-- Install sync status: pass.
-- Checkpoint status: pending.
+## 计划状态
+- 实施状态：完成。
+- 验证状态：通过。
+- Checkpoint 状态：本地提交已创建，等待推送确认。
 
-## Files Modified
-- `.agents/skills/codex-skill-evolution/SKILL.md`
-- `scripts/skill-evolution.mjs`
-- `.codex/hooks/project-ops.mjs`
+## 已修改文件
+- `.codex/scripts/lib/markdown.mjs`
+- `.codex/scripts/lib/templates.mjs`
 - `.codex/scripts/lib/events.mjs`
-- `dong-skills.manifest.json`
-- `scripts/install-windows.ps1`
+- `.codex/scripts/lib/assets.mjs`
 - `scripts/project-ops-health.mjs`
-- `scripts/release-check.mjs`
-- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/*`
+- `scripts/state-prune.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/**`
+- `.agents/skills/brainstorming/SKILL.md`
+- `.agents/skills/writing-plans/SKILL.md`
+- `.agents/skills/executing-plans/SKILL.md`
+- `.agents/skills/codex-git-checkpoint/SKILL.md`
+- `.agents/skills/codex-verification-loop/SKILL.md`
+- `.agents/skills/verification-before-completion/SKILL.md`
+- `.agents/skills/codex-project-governance/SKILL.md`
 - `AGENTS.md`
 - `AGENTS.project-ops.snippet.md`
-- `README.md`
-- `docs/improvements/evolution-log.md`
-- `licenses/SKILLOPT-LICENSE`
 - `tests/project-ops.test.mjs`
-- `.codex-context/*`
+- `.codex-context/current-state.md`
+- `.codex-context/artifact-index.md`
+- `.codex-context/verification.md`
+- `.codex-context/handoff-summary.md`
 
-## Files Read But Not Changed
-- Microsoft SkillOpt README, SkillOpt-Sleep README, Codex `skillopt-sleep` skill, and local SkillOpt-Sleep source files in a temporary inspection checkout.
-- Existing Dong Skills learning, solution memory, governance, installer, bootstrap, health-check, release-check, and test files.
+## 已读取但未修改文件
+- `.agents/skills/using-superpowers/SKILL.md`
+- `.codex/scripts/lib/workflow.mjs`
+- `.codex/scripts/lib/recovery.mjs`
+- `.codex/scripts/lib/git.mjs`
 
-## Decisions Made
-- SkillOpt-Sleep is an offline evolution layer for Dong Skills itself.
-- `codex-skill-evolution` is a global maintenance entry because it is about maintaining Dong Skills, not business project workflow.
-- Full workflow skills and all hooks remain project-level.
-- The source-repo resolver uses CLI/env/global marker/current-parent candidates and rejects installed skill copies as source repos.
-- `codex-learning-memory` and `codex-solution-memory` remain separate and are not replaced.
-- The new wrapper stages proposals and requires review; `run` refuses unreviewed task files and `adopt` requires `--confirm-reviewed`.
-- `.skillopt-sleep/` is treated as runtime/private by default.
+## 已做决策
+- 面向用户的 `.codex-context/*.md` 内容中文优先。
+- 内部契约保持英文，避免破坏 workflow-state、命令和脚本。
+- 用标题别名层兼容中文和英文，而不是要求文档保留隐藏英文锚点。
+- `state-prune` 新增归档段统一写中文标题 `已归档证据`。
 
-## Open Questions And Assumptions
-- No blocking open questions.
-- Assumption: real Codex backend SkillOpt-Sleep runs require explicit budget approval and a reviewed/sanitized task file.
+## 开放问题与假设
+- 无阻塞开放问题。
+- 假设：旧项目更新 Dong Skills 后可以继续保留原英文状态文档；新项目会生成中文模板。
 
-## Risks
-- Real SkillOpt-Sleep Codex-backend optimization has not been exercised; only status, candidate collection, and mock dry-run surfaces have been validated.
-- Generated task files may contain private material if created from transcripts; they require manual review before `"reviewed": true`.
+## 风险
+- 仍有少量 skill 正文保留英文流程术语，这是为了精确触发和避免破坏已有测试。
+- 旧项目已有英文状态文件不会被自动全文翻译，只会在后续更新/新增 section 时逐步中文化。
 
-## Verification Evidence
-- `node --check scripts\skill-evolution.mjs`: pass.
-- `node --check .codex\hooks\project-ops.mjs`: pass.
-- `node scripts\skill-evolution.mjs . status`: pass.
-- `node .codex\hooks\project-ops.mjs skill-evolution status`: pass; reports `SkillOpt-Sleep available: yes`.
-- `node --test tests\project-ops.test.mjs`: pass, 59/59 tests.
-- `node .codex\hooks\project-ops.mjs health-check`: pass.
-- `git diff --check`: pass.
-- `node scripts\release-check.mjs .`: pass after the global-entry adjustment.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1`: pass; global `codex-skill-evolution` installed with marker scope `global-entry`.
-- Final refresh after updating the global-entry marker wording in `scripts/install-windows.ps1`: health check, release check, and diff check passed.
-- `node --test tests\project-ops.test.mjs --test-name-pattern "Stop freshness|Stop requires structured|Stop explains stale"`: pass.
-- `node --check .codex\scripts\lib\events.mjs`, bootstrap mirror, and `tests\project-ops.test.mjs`: pass.
+## 验证证据
+- `node --test tests\project-ops.test.mjs`: pass，63/63。
+- `node scripts\release-check.mjs .`: pass。
+- `node .codex\hooks\project-ops.mjs health-check`: pass。
+- `git diff --check`: pass，只有 CRLF normalization warnings。
 
-## Git Checkpoint
-- Latest commit: not checked in this handoff.
-- Push state: SkillOpt-Sleep/global-entry integration is not committed or pushed yet.
-- Files included: pending.
-- Files intentionally left uncommitted: current SkillOpt-Sleep/global-entry integration source changes, state refresh files, and ignored private raw SkillOpt task draft.
-- Deferred reason: user asked for the implementation/design adjustment in this turn, not a commit; checkpoint should be created on explicit commit/push request.
-- Next checkpoint: commit subject `feat(skills): add SkillOpt sleep evolution workflow`.
+## Git 存档
+- 最新提交: 本次 checkpoint 提交，`feat(skills): localize project state documents`。
+- 推送状态: 本地提交阶段；最终远端状态以推送后 `git status -sb` 和远端分支确认结果为准。
+- 已包含文件: 本次中文状态文档默认模板、hook/health/state-prune 兼容解析、bootstrap 镜像、核心 workflow skill 文档和测试更新。
+- 有意保留未提交的文件: 无。
+- 暂缓原因: 无。
+- 下次存档: 后续 Dong Skills 优化进入新的独立 checkpoint。
 
-## Learned Instincts To Preserve
-- Skill evolution is distinct from project memory: use backlog/outbox as candidates, SkillOpt-Sleep as offline evaluator, and explicit adoption for source changes.
-- Hooks must remain deterministic and lightweight; no model-driven sleep cycle inside hooks.
-- Global visibility is acceptable for Dong Skills maintenance entries, but execution must be source-repo targeted.
-- Stop freshness should compare state files against non-governance project changes; checkpoint review can still inspect the full dirty worktree.
+## 需要保留的经验沉淀
+- 用户审批/阅读的状态文档语言应跟用户默认语言一致。
+- 文档显示语言和机器解析契约要分层处理：显示中文，内部 key/enum/命令保持稳定。
+- bootstrap 的静态 `.codex-context` 模板和 `.codex/scripts/lib/templates.mjs` 必须同步，否则新项目初始化会回退到旧模板。
 
-## Next Action
-Checkpoint this source change.
+## 下一步动作
+提交并推送当前 Dong Skills 改动；旧项目需要重新运行 Dong Skills bootstrap 才会拿到中文模板和解析兼容更新。
 
-## Files To Re-read First
+## 优先重读文件
 1. `.codex-context/handoff-summary.md`
 2. `.codex-context/current-state.md`
-3. `.codex-context/plan-progress.md`
-4. `.codex-context/artifact-index.md`
-5. `.codex-context/verification.md`
-6. `.agents/skills/codex-skill-evolution/SKILL.md`
-7. `scripts/skill-evolution.mjs`
-8. `.codex/hooks/project-ops.mjs`
-9. `tests/project-ops.test.mjs`
+3. `.codex-context/artifact-index.md`
+4. `.codex-context/verification.md`
+5. `.codex/scripts/lib/markdown.mjs`
+6. `.codex/scripts/lib/templates.mjs`
+7. `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex-context/spec.md`
+8. `tests/project-ops.test.mjs`

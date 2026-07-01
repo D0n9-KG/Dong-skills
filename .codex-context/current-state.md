@@ -1,38 +1,24 @@
-# Current State
+# 当前状态
 
-## Objective
-Add SkillOpt-Sleep as an offline, validation-gated self-evolution layer for Dong Skills, with `codex-skill-evolution` available as a global maintenance entry.
+## 目标
+让 Dong Skills 面向用户阅读和审批的 `.codex-context/*.md` 文档默认使用中文，同时保持 hooks、health check、state-prune 和旧英文项目兼容。
 
-## Latest User Instruction
-User asked to adjust the design so relatively global maintenance functionality is not only project-scoped.
+## 最新用户指令
+用户确认可以修改，并要求“只要我可能会阅读和审批的文档都需要内容是中文的”。
 
-## Current Phase
+## 当前阶段
 delivery
 
-## Active Assumptions
-- Dong Skills remains Codex-only.
-- SkillOpt-Sleep is an offline/manual maintenance workflow, not a hook runtime.
-- Existing `codex-learning-memory` and `codex-solution-memory` remain responsible for memory classification and project solution memory.
-- SkillOpt-Sleep should stage proposals and require explicit review/adoption; `--auto-adopt` stays disallowed.
-- Runtime `.skillopt-sleep/` artifacts and generated task drafts are private by default and must stay out of Git unless sanitized intentionally.
-- `codex-skill-evolution` can be globally visible, but it must locate and operate on the real Dong Skills source repo rather than the current business project.
+## 当前假设
+- 文件名、命令名、skill 名、hook 名、workflow-state YAML key、枚举值和代码标识仍保留英文。
+- `spec`、`handoff`、`checkpoint`、`Goal mode` 等常规精确术语可保留英文。
+- 旧项目中已有英文标题的状态文件仍必须兼容。
 
-## Blockers
-- None. `skillopt_sleep` is now available through a user-level `SKILLOPT_SLEEP_REPO` pointing to the local Microsoft SkillOpt checkout.
+## 阻塞项
+- 无。
 
-## Next Action
-Checkpoint this source change when requested.
+## 下一步动作
+提交并推送当前 Dong Skills 中文状态文档改动，然后给出旧项目更新提示词。
 
-## Final Verification Snapshot
-- Related tests passed: `node --test tests\project-ops.test.mjs --test-name-pattern "skill-evolution|Windows installer"` reports 59/59 pass.
-- Full suite passed: `node --test tests\project-ops.test.mjs` reports 59/59 pass.
-- `node .codex\hooks\project-ops.mjs health-check`: pass.
-- `node .codex\hooks\project-ops.mjs skill-evolution status`: pass and reports `SkillOpt-Sleep available: yes`.
-- `git diff --check`: pass with CRLF normalization warnings only.
-- `node scripts\release-check.mjs .`: pass after final state refresh.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1`: pass; global `codex-skill-evolution` is installed with marker scope `global-entry`.
-- Stop gate status refresh: artifact index, verification, and handoff were refreshed after the final installer wording change; Git checkpoint is deferred by explicit handoff reason.
-- Stop freshness fix: state freshness now compares against non-governance project changes while checkpoint review still sees the full dirty worktree; focused Stop regression tests and syntax checks passed.
-
-## Last Updated
-2026-06-30 22:14 +08:00
+## 最后更新
+2026-07-01 01:25 本地时间。

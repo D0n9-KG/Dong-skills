@@ -28,7 +28,7 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
 - Never rewrite history, force-push, delete branches, or reset work without explicit user approval.
 - Never remove host-managed worktrees such as Codex App `.codex/worktrees/...`; use `codex-worktree-governance` to confirm cleanup ownership first.
 - Do not push to a protected or shared branch when the safer path is a feature branch or draft PR.
-- If the work is not ready to commit, write the reason and next checkpoint in `handoff-summary.md` under `Git Checkpoint`.
+- If the work is not ready to commit, write the reason and next checkpoint in `handoff-summary.md` under `Git 存档` or `Git Checkpoint`.
 
 ## Workflow
 
@@ -54,7 +54,7 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
    - `verification.md`: fresh command evidence or explicit gap.
    - `worktree-state.md`: current workspace role, branch state, and cleanup owner when worktree state matters.
    - `workflow-state.yaml`: phase, next skill, and checkpoint status.
-   - `handoff-summary.md`: current state, next action, and `Git Checkpoint`.
+   - `handoff-summary.md`: current state, next action, and `Git 存档`.
 5. Stage intentionally:
    - Prefer `git add -- path1 path2 ...`.
    - Use `git add -A` only after verifying every changed file belongs in scope.
@@ -118,13 +118,13 @@ For multi-file, behavior-changing, risky, or public commits, include a body that
 Before compaction, long pauses, or final delivery, keep this section meaningful:
 
 ```markdown
-## Git Checkpoint
-- Latest commit:
-- Push state:
-- Files included:
-- Files intentionally left uncommitted:
-- Deferred reason:
-- Next checkpoint:
+## Git 存档
+- 最新提交:
+- 推送状态:
+- 已包含文件:
+- 有意保留未提交的文件:
+- 暂缓原因:
+- 下次存档:
 ```
 
 If work is ready and committed, record the commit and push state.

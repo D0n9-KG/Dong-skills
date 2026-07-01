@@ -1,10 +1,10 @@
-# Verification
+# 验证
 
-## Commands Run
-- None yet.
+## 已运行命令
+- 暂无。
 
-## Product Evidence
-- None yet.
+## 产品证据
+- 暂无。
 
-## Not Yet Verified
-- None yet.
+## 尚未验证
+- 暂无。

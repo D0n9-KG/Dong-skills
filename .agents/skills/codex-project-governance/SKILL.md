@@ -7,6 +7,12 @@ description: Full project lifecycle governance for Codex. Use when a task spans 
 
 Use this as the main loop for non-trivial Codex work.
 
+## State Language
+
+Write user-facing `.codex-context/*.md` content in Chinese by default, including section headings, summaries, decisions, open questions, specs, plans, verification notes, and handoff notes. Keep internal file names, command names, workflow-state YAML keys, enum values, skill names, hook names, and code identifiers in English.
+
+Common English terms such as `spec`, `handoff`, `checkpoint`, `Goal mode`, `workflow-state`, file paths, commands, and status enum values may remain English when translating them would reduce precision.
+
 ## First Principle
 
 Keep recoverable project truth outside chat:

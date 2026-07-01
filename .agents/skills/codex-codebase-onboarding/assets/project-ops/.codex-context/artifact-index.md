@@ -1,13 +1,13 @@
-# Artifact Index
+# 资产索引
 
-## Created
-- None yet.
+## 已创建
+- 暂无。
 
-## Modified
-- None yet.
+## 已修改
+- 暂无。
 
-## Read / Inspected
-- None yet.
+## 已读取 / 已检查
+- 暂无。
 
-## Raw Outputs
-- None yet.
+## 原始输出
+- 暂无。

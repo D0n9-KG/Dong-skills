@@ -12,7 +12,7 @@ Use this skill to turn intent into an approved spec through collaborative discus
 Do not implement, scaffold, edit code, change configuration, or invoke implementation skills until one of these is true:
 
 - The user explicitly approves the written spec in the current chat.
-- `.codex-context/spec.md` records `Approval Status: Approved by user` for the current task.
+- `.codex-context/spec.md` records `审批状态: Approved by user` or `Approval Status: Approved by user` for the current task.
 - The user explicitly says to skip brainstorming and proceed.
 - The task is a tiny mechanical edit with clear acceptance criteria and no design choice.
 
@@ -58,11 +58,11 @@ Use the lowest lane that still protects the user. The spec should lock the What:
 1. **Discover context.** Read `AGENTS.md`, `.codex-context/current-state.md`, `.codex-context/project-map.md`, `.codex-context/working-notes.md`, relevant docs/code, and recent changes. Do not read the whole repo.
 2. **Restate the objective.** One sentence, including the user-visible outcome.
 3. **Clarify.** Ask exactly one important question per assistant message when the answer changes scope, UX, architecture, data model, API, verification, or delivery. You may include 2-3 concrete choices for that one question, but do not bundle multiple questions.
-4. **Update the living spec, then continue.** As soon as the user confirms a decision, boundary, non-goal, acceptance criterion, or open question, update `.codex-context/spec.md` with `Approval Status: Living Draft / Not Approved`. Also refresh `.codex-context/decisions.md`, `.codex-context/open-questions.md`, `.codex-context/current-state.md`, and `.codex-context/handoff-summary.md` when the discussion is long enough that compaction would lose context. If your own discovery or analysis produced durable findings, rejected paths, current hypotheses, or next verification steps, update `.codex-context/working-notes.md` before ending the turn. Run `workflow-state transition spec-living` when the workflow state is available. After updating state, immediately continue the brainstorming loop in the same assistant response unless a tool failure or user instruction blocks you.
+4. **Update the living spec, then continue.** As soon as the user confirms a decision, boundary, non-goal, acceptance criterion, or open question, update `.codex-context/spec.md` with `审批状态: Living Draft / Not Approved`. User-facing state document headings and prose should be Chinese by default. Also refresh `.codex-context/decisions.md`, `.codex-context/open-questions.md`, `.codex-context/current-state.md`, and `.codex-context/handoff-summary.md` when the discussion is long enough that compaction would lose context. If your own discovery or analysis produced durable findings, rejected paths, current hypotheses, or next verification steps, update `.codex-context/working-notes.md` before ending the turn. Run `workflow-state transition spec-living` when the workflow state is available. After updating state, immediately continue the brainstorming loop in the same assistant response unless a tool failure or user instruction blocks you.
 5. **Explore options.** For direction-setting, architecture, product behavior, API, UX, data model, workflow, or other behavior-changing work, assume there is a real choice and compare 2-3 viable approaches before selecting one. Skip comparison only for tiny mechanical edits, an already-approved approach, or an explicit user request to skip. Include trade-offs and a recommendation, then ask one focused follow-up question. Compare How options without freezing How in the spec unless the user approves that constraint.
 6. **Present the design section by section.** Scale detail to complexity. Cover only relevant sections: behavior, boundaries, files/modules, data flow, UX/API, error handling, migration, verification, non-goals. For complex work, ask for confirmation after each section before moving to the next section.
 7. **Ask for final approval.** Ask the user to approve the complete design/spec or request changes. Do not treat silence, vague acknowledgement, or a question as approval.
-8. **Finalize the spec draft.** After final discussion approval, rewrite `.codex-context/spec.md` from `Living Draft / Not Approved` into a clean written spec with `Approval Status: Pending written-spec approval`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` when the spec is too large for the state file, then link it from `spec.md`. Run `workflow-state transition spec-ready`; this records `decision_required: written-spec-approval`.
+8. **Finalize the spec draft.** After final discussion approval, rewrite `.codex-context/spec.md` from `Living Draft / Not Approved` into a clean written spec with `审批状态: Pending written-spec approval`. Use `docs/codex/specs/YYYY-MM-DD-<topic>.md` when the spec is too large for the state file, then link it from `spec.md`. Run `workflow-state transition spec-ready`; this records `decision_required: written-spec-approval`.
 9. **Run the Final Spec Gate.** Self-review the written spec, fix issues inline, then ask the user to review the written spec. If the user requests changes, update the spec and rerun the gate.
 10. **Update state.** Update `.codex-context/current-state.md`, `.codex-context/decisions.md`, `.codex-context/open-questions.md`, and `.codex-context/handoff-summary.md`.
 11. **Transition only after written-spec approval.** For multi-step work, use `writing-plans` next. Do not jump from brainstorming directly to implementation unless the approved spec is tiny and mechanical.
@@ -95,63 +95,63 @@ Do not end a brainstorming turn by only saying that files were updated, tests pa
 
 Living Spec mode starts when brainstorming begins and ends only when the user approves the final design/spec or explicitly cancels the effort.
 
-- Store confirmed discussion state in `.codex-context/spec.md` before approval, marked `Approval Status: Living Draft / Not Approved`.
-- Clearly separate `Confirmed Decisions`, `Candidate Options`, `Open Questions`, and `Not Approved Yet`.
+- Store confirmed discussion state in `.codex-context/spec.md` before approval, marked `审批状态: Living Draft / Not Approved`.
+- Clearly separate `已确认决策`, `候选方案`, `开放问题`, and `尚未批准`.
 - Store agent-generated investigation state in `.codex-context/working-notes.md` when it would be expensive to rediscover after compaction: checked facts, rejected paths, current hypothesis/conclusion, open investigation questions, and next verification step. Do not store hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning.
 - Do not present living draft content as permission to implement.
 - Do not let living-spec maintenance interrupt the conversation. After writing the draft, continue to the next question or next phase.
 - If a discussion spans multiple turns, a likely compaction boundary, or a new session handoff, refresh `handoff-summary.md` with the current living draft status.
 - When final discussion approval arrives, rewrite the spec into the final written-spec shape and preserve the important confirmed decisions.
-- Final approval of the discussion is not enough to leave brainstorming. The written spec must pass the Final Spec Gate and be approved by the user as the written spec before `Approval Status` can become `Approved by user`.
+- Final approval of the discussion is not enough to leave brainstorming. The written spec must pass the Final Spec Gate and be approved by the user as the written spec before `审批状态` can become `Approved by user`.
 
 ## Spec Shape
 
 Use this structure unless the project already has a stronger one:
 
 ```markdown
-# Spec
+# 规格
 
-## Problem
-[What the user wants solved and why.]
+## 问题
+[用户想解决什么，以及为什么要解决。]
 
-## Goal
-- [Observable outcome.]
+## 目标
+- [可观察结果。]
 
-## Approval Status
+## 审批状态
 Living Draft / Not Approved, Pending written-spec approval, or Approved by user on [date/time].
 
-## Truth Hierarchy
-- Latest user instruction.
-- Verified behavior from code, tests, commands, product evidence, or live repo inspection.
-- Approved written spec and approved plan for this task.
-- Current state files and handoff.
-- Older chat, raw notes, stale specs, or unreviewed observations.
+## 事实优先级
+- 最新用户指令。
+- 代码、测试、命令、产品证据或实时仓库检查得到的已验证行为。
+- 当前任务已批准的书面规格和计划。
+- 当前状态文件和 handoff。
+- 更早的聊天、原始记录、过期规格或未审查观察。
 
-## Work Class / Risk Lane
-- Lane 0 / Lane 1 / Lane 2 / Lane 3, with reason.
+## 工作类别 / 风险等级
+- Lane 0 / Lane 1 / Lane 2 / Lane 3，并说明理由。
 
-## User Decisions
-- [Decision, trade-off, and source.]
+## 用户决策
+- [决策、权衡和来源。]
 
-## Candidate Options
-- [Options still under discussion, or "None."]
+## 候选方案
+- [仍在讨论的方案，或“无”。]
 
-## Non-Goals
-- [Explicitly out of scope.]
+## 非目标
+- [明确不做的事项。]
 
-## Approved Scope
-- [What will be changed.]
+## 已批准范围
+- [将改变什么。]
 
-## Design
-- [What changes: behavior, boundaries, invariants, UX/API contract, data flow constraints. Avoid locking How unless approved.]
+## 设计
+- [改变什么：行为、边界、不变量、UX/API 契约、数据流约束。除非已批准，否则不要锁定 How。]
 
-## Acceptance Criteria
-- [Executable or observable proof. Prefer WHEN [condition], THE SYSTEM SHALL [behavior] for behavioral criteria.]
+## 验收标准
+- [可执行或可观察证明。行为标准优先写成 WHEN [条件], THE SYSTEM SHALL [行为]。]
 
-## Open Questions
-- [Question or "None". Unresolved blockers must stop implementation.]
+## 开放问题
+- [问题或“无”。未解决阻塞项必须停止实现。]
 
-## Next Step
+## 下一步
 [writing-plans / executing-plans / direct tiny edit / pause]
 ```
 
@@ -159,7 +159,7 @@ Living Draft / Not Approved, Pending written-spec approval, or Approved by user 
 
 After the user approves the discussed design, but before `writing-plans`:
 
-1. Rewrite the living draft into the final written spec. Keep confirmed decisions, remove abandoned options, and make unresolved questions explicit. Mark it `Approval Status: Pending written-spec approval` until the user approves the written file.
+1. Rewrite the living draft into the final written spec. Keep confirmed decisions, remove abandoned options, and make unresolved questions explicit. Mark it `审批状态: Pending written-spec approval` until the user approves the written file.
 2. Run this self-review and fix issues inline:
    - no `TODO`, `TBD`, placeholder, or incomplete section remains
    - no section contradicts another section
@@ -173,7 +173,7 @@ After the user approves the discussed design, but before `writing-plans`:
    - a fresh session could write a plan from the spec file without relying on chat memory
 3. Ask the user to review the written spec file before planning.
 4. If the user requests changes, update the spec and rerun this gate.
-5. Only after the user approves the written spec, update `Approval Status` to `Approved by user on [date/time]`, run `workflow-state transition spec-approved`, and transition to `writing-plans`.
+5. Only after the user approves the written spec, update `审批状态` to `Approved by user on [date/time]`, run `workflow-state transition spec-approved`, and transition to `writing-plans`.
 
 Use this gate instead of relying on a vague "looks good" after a conversation. A section approval, approach choice, or casual acknowledgement is not written-spec approval.
 

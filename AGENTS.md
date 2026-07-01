@@ -4,6 +4,8 @@
 
 Use Chinese by default unless the user asks otherwise or the project requires another language.
 
+Write user-facing `.codex-context/*.md` state files in Chinese by default. Keep file names, commands, workflow-state YAML keys, enum values, skill names, hook names, code identifiers, and precise terms such as `spec`, `handoff`, `checkpoint`, and `Goal mode` in English when useful.
+
 ## Main Skill
 
 For non-trivial project work, use `codex-project-governance` first. It coordinates discovery, spec, plan, implementation, debugging, verification, review, delivery, learning, and handoff.
@@ -17,7 +19,7 @@ For non-trivial work, keep the phase boundary explicit:
 3. Use `writing-plans` before multi-step implementation.
 4. Do not execute the plan until the user approves the execution mode or explicitly requested plan-then-execute. Plan-then-execute defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
 
-Record spec approval in `.codex-context/spec.md`; record `Execution Mode`, `Goal Mode Objective` when applicable, and execution approval in `.codex-context/plan-progress.md`.
+Record spec approval in `.codex-context/spec.md`; record `执行模式`, `Goal 模式目标` when applicable, and execution approval in `.codex-context/plan-progress.md`.
 
 ## Truth Hierarchy And Work Lanes
 

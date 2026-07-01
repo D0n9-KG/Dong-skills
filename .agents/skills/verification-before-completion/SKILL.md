@@ -48,20 +48,20 @@ If fresh verification cannot be run, say it is unverified and record the blocker
 Append fresh entries to `.codex-context/verification.md`:
 
 ```markdown
-## Commands Run
+## 已运行命令
 - `[command]`
   - Result: pass | fail | blocked
-  - Evidence: [short output summary]
-  - Date: [YYYY-MM-DD HH:mm local]
+  - Evidence: [简短输出摘要]
+  - Date: [YYYY-MM-DD HH:mm 本地时间]
 
-## Product Evidence
+## 产品证据
 - `[action]`
   - Result: pass | fail | blocked
-  - Evidence: [path, output summary, or explicit reason not applicable]
-  - Date: [YYYY-MM-DD HH:mm local]
+  - Evidence: [路径、输出摘要，或明确说明不适用]
+  - Date: [YYYY-MM-DD HH:mm 本地时间]
 
-## Not Yet Verified
-- [gap and why]
+## 尚未验证
+- [验证缺口及原因]
 ```
 
 ## Completion Wording

@@ -1,35 +1,35 @@
-# Project Map
+# 项目地图
 
-## Purpose
-[What this project does, or "Unknown".]
+## 用途
+[这个项目做什么；未知则写“未知”。]
 
-## Stack
-- [Language/framework/package manager.]
+## 技术栈
+- [语言 / 框架 / 包管理器。]
 
-## Architecture
-- [Key components and how they connect.]
+## 架构
+- [关键组件及其连接方式。]
 
-## Important Paths
-- `path`: [purpose]
+## 重要路径
+- `path`: [用途]
 
-## Entry Points
-- `path`: [runtime or command entry point]
+## 入口点
+- `path`: [运行时或命令入口]
 
-## Commands
-- Dev: `[command or unknown]`
-- Build: `[command or unknown]`
-- Typecheck: `[command or unknown]`
-- Lint: `[command or unknown]`
-- Test: `[command or unknown]`
+## 命令
+- Dev: `[命令或未知]`
+- Build: `[命令或未知]`
+- Typecheck: `[命令或未知]`
+- Lint: `[命令或未知]`
+- Test: `[命令或未知]`
 
-## Conventions
-- [Evidence-backed convention.]
+## 约定
+- [有证据支持的项目约定。]
 
-## Where To Change Things
-- [Task type]: `path`
+## 修改位置指南
+- [任务类型]: `path`
 
-## Architecture Watchpoints
-- [Large files, flat directories, coupling, or unclear ownership to revisit.]
+## 架构关注点
+- [需要复查的大文件、平铺目录、耦合或所有权不清问题。]
 
-## Unknowns
-- [Unknown and how to verify.]
+## 未知项
+- [未知内容，以及如何验证。]
