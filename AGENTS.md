@@ -6,6 +6,8 @@ Use Chinese by default unless the user asks otherwise or the project requires an
 
 Write user-facing `.codex-context/*.md` state files in Chinese by default. Keep file names, commands, workflow-state YAML keys, enum values, skill names, hook names, code identifiers, and precise terms such as `spec`, `handoff`, `checkpoint`, and `Goal mode` in English when useful.
 
+On Windows, prefer PowerShell 7 / `pwsh` for shell work when available. Treat all Chinese and user-facing Markdown files as UTF-8. Do not rely on Windows PowerShell 5.1 `Get-Content` display output to decide whether a UTF-8 Chinese file is corrupt; verify with `pwsh`, Node `fs.readFileSync(file, "utf8")`, or another explicit UTF-8 reader. For manual edits, prefer `apply_patch`; avoid `>`, `Out-File`, or `Set-Content` without an explicit UTF-8 encoding for Chinese text.
+
 ## Main Skill
 
 For non-trivial project work, use `codex-project-governance` first. It coordinates discovery, spec, plan, implementation, debugging, verification, review, delivery, learning, and handoff.

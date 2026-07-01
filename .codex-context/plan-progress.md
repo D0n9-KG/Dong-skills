@@ -1,86 +1,66 @@
-# Plan Progress
+# 计划进度
 
-## Active Plan
-Introduce SkillOpt-Sleep as Dong Skills' offline skill self-evolution layer and expose `codex-skill-evolution` as a global maintenance entry.
+## 当前计划
+优化 Dong Skills Windows hook 启动策略：兼容旧 `powershell.exe` 外壳，优先委派 PowerShell 7 / `pwsh`，并补齐中文 UTF-8 文件处理纪律。
 
-## Spec Approval
-User approved the SkillOpt-Sleep integration after discussing that it should evolve Dong Skills itself, not replace project memory or hook runtime behavior.
+## 规格审批
+用户已明确要求继续优化 Dong Skills；本项是已讨论清楚的兼容性修补。
 
-## Execution Approval
-User approved implementation. Traditional task-by-task execution mode.
+## 执行审批
+用户要求“优化一下 Dong Skills”，按传统逐项执行模式推进。
 
-## Work Class / Risk Lane
-Lane 2: new workflow skill, CLI wrapper, manifest/install/bootstrap/health/release/docs/test updates, with no live auto-adoption.
+## 工作类别 / 风险等级
+Lane 1 / Lane 2：hook 配置、bootstrap 镜像、health check、测试和文档规则更新。
 
-## Execution Mode
-Traditional task-by-task execution.
+## 执行模式
+Traditional task-by-task execution。
 
-## Goal Mode Objective
-Not selected for this task.
+## Goal 模式目标
+未选择 Goal mode。
 
-## Runtime Constraints
-- Keep Dong Skills Codex-only.
-- Do not run SkillOpt-Sleep inside hooks.
-- Do not enable `--auto-adopt`.
-- Do not replace `codex-learning-memory` or `codex-solution-memory`.
-- Keep generated `.skillopt-sleep/` staging and raw task drafts out of Git by default.
-- Keep root files and onboarding bootstrap assets synchronized.
-- Missing `skillopt_sleep` should be reported as a setup/status issue, not a Dong Skills runtime failure.
-- Global `codex-skill-evolution` must locate the Dong Skills source repo and avoid writing SkillOpt staging into a business project by default.
+## 运行约束
+- 不硬依赖 `pwsh`。
+- 保持 `-EncodedCommand`。
+- 根目录 project-ops 资产和 onboarding bootstrap 镜像必须同步。
+- 中文用户可读 Markdown 按 UTF-8 处理。
+- 不修改非 Dong Skills 的本地 skills。
 
-## Checkpoint Cadence
-- Commit and push after tests, health check, release check, state refresh, and Stop hook pass.
+## 存档节奏
+完整验证通过后提交并推送。
 
-## Acceptance Mapping
-- `codex-skill-evolution` -> documents offline SkillOpt-Sleep workflow, safety boundaries, and adoption rules.
-- `skill-evolution.mjs` -> supports `status`, `collect-candidates`, `dry-run`, `run`, `inspect-stage`, and `adopt`.
-- Router -> `node .codex/hooks/project-ops.mjs skill-evolution ...` dispatches to the wrapper.
-- Installer/bootstrap -> project installs include the new skill and helper script.
-- Split install -> global install includes onboarding, router, and `codex-skill-evolution`; complete workflow skills and hooks remain project-level.
-- Source targeting -> `skill-evolution.mjs` resolves the Dong Skills source repo via CLI/env/global marker and can read a business project outbox without using the business project as the execution root.
-- Safety -> `run` refuses unreviewed task files; `adopt` requires `--confirm-reviewed`; `.skillopt-sleep/` is ignored.
-- Tests -> cover candidate collection, safety gates, router dispatch, and skill guidance.
+## 验收映射
+- `.codex/hooks.json`：Windows hook 外层兼容 `powershell.exe`，内部优先 `pwsh` 并保留 fallback。
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`：bootstrap 新项目拿到同样 hook。
+- `scripts/project-ops-health.mjs` 与 bootstrap 镜像：检查 `pwsh` 优先路径和 fallback。
+- `tests/project-ops.test.mjs`：覆盖 outer/inner encoded command。
+- `AGENTS.md`、`AGENTS.project-ops.snippet.md`、bootstrap snippet、`codex-tools.md`：写明 Windows / 中文 UTF-8 操作纪律。
 
-## Test Scenarios
-- `node --test tests\project-ops.test.mjs`.
-- `node .codex\hooks\project-ops.mjs health-check`.
-- `node scripts\release-check.mjs .`.
-- `git diff --check`.
+## 测试场景
+- `node --test tests\project-ops.test.mjs`
+- `node scripts\release-check.mjs .`
+- `node .codex\hooks\project-ops.mjs health-check`
+- `git diff --check`
 
-## Tasks
-- [x] Add `codex-skill-evolution` skill.
-- [x] Add `scripts/skill-evolution.mjs` wrapper.
-- [x] Wire project hook dispatcher and manifest.
-- [x] Wire installer/bootstrap/health/release/runtime ignore rules.
-- [x] Update AGENTS/README/governance/router docs.
-- [x] Add SkillOpt license attribution.
-- [x] Add regression tests.
-- [x] Run unit tests and health check.
-- [x] Rerun release check after state refresh.
-- [x] Install SkillOpt / SkillOpt-Sleep source and set `SKILLOPT_SLEEP_REPO`.
-- [x] Make `codex-skill-evolution` a global maintenance entry.
-- [x] Teach `skill-evolution.mjs` to target the real Dong Skills source repo from business projects.
-- [ ] Run full verification after the global-entry adjustment.
-- [ ] Sync local/project install if needed.
+## 任务
+- [x] 审查当前差异，确认没有把 hooks 硬切到 `pwsh`。
+- [x] 同步 root hook 配置和 bootstrap hook 配置。
+- [x] 增加 health check 约束。
+- [x] 增加测试覆盖。
+- [x] 增加 Windows / UTF-8 操作纪律。
+- [x] 刷新 `.codex-context` 主动状态文档。
+- [x] 运行完整验证。
+- [ ] 提交并推送。
 
-## Current Step
-Full verification after global-entry adjustment.
+## 当前步骤
+提交并推送。
 
-## Verification
-- `node --check scripts\skill-evolution.mjs`: pass.
-- `node --check .codex\hooks\project-ops.mjs`: pass.
-- `node scripts\skill-evolution.mjs . status`: pass; reports missing `skillopt_sleep` as setup diagnostic.
-- `node .codex\hooks\project-ops.mjs skill-evolution status`: pass; dispatcher works.
-- `node --test tests\project-ops.test.mjs`: pass, 58/58 tests.
-- `node .codex\hooks\project-ops.mjs health-check`: pass.
-- `git diff --check`: pass.
-- `node scripts\release-check.mjs .`: pass after state refresh.
-- `node --test tests\project-ops.test.mjs --test-name-pattern "skill-evolution|Windows installer"`: pass, 59/59 tests.
+## 验证
+- `node --test tests\project-ops.test.mjs`: pass，64/64 tests。
+- `node scripts\release-check.mjs .`: pass，包含 health-check、context budget、Node syntax checks、PowerShell parse checks、完整 Node tests、privacy scan、text readability scan、large file scan、runtime artifact scan。
+- `git diff --check`: pass，仅有 Git CRLF normalization warnings。
+- `node .codex\hooks\project-ops.mjs health-check`: pass，Issues none。
 
-## Out Of Scope
-- Cross-platform installer support.
-- Claude adapter support.
-- Vendoring Microsoft SkillOpt source code into Dong Skills.
-- Automatically scheduling nightly runs.
-- Auto-adopting SkillOpt proposals.
-- Using SkillOpt-Sleep for business project code or project memory.
+## 范围外
+- 不做 Claude Code 迁移。
+- 不改跨平台 installer。
+- 不碰用户本地非 Dong Skills 的 skills。

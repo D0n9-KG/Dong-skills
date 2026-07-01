@@ -600,6 +600,9 @@ test("published Windows hook commands are encoded project hook invocations", () 
           assert.ok(command, `${file} hook should define commandWindows`);
           assert.doesNotMatch(command, /\$root|2>\$null/);
           const decoded = decodePowerShellEncodedCommand(command);
+          assert.match(decoded, /Get-Command pwsh/);
+          assert.match(decoded, /-EncodedCommand/);
+          assert.match(decoded, /\}\s*else\s*\{/);
           assert.match(decoded, /git rev-parse --show-toplevel/);
           assert.match(decoded, /Join-Path/);
           assert.match(decoded, /\.codex\/hooks\/launch-project-ops\.mjs/);
@@ -730,6 +733,22 @@ test("Windows hook command survives outer PowerShell invocation", () => {
 
   const parsed = JSON.parse(out);
   assert.match(parsed.hookSpecificOutput.additionalContext, /Codex Project Ops hooks are active/);
+});
+
+test("published Windows hook prefers pwsh but keeps powershell fallback", () => {
+  const config = readJson(path.join(root, ".codex", "hooks.json"));
+  const command = config.hooks.SessionStart[0].hooks[0].commandWindows;
+  const outer = decodePowerShellEncodedCommand(command);
+  assert.match(outer, /Get-Command pwsh/);
+  assert.match(outer, /& \$pwsh\.Source -NoProfile -EncodedCommand/);
+  assert.match(outer, /\} else \{/);
+  assert.match(outer, /git rev-parse --show-toplevel/);
+
+  const innerMatch = outer.match(/-EncodedCommand\s+([A-Za-z0-9+/=]+)/);
+  assert.ok(innerMatch, "pwsh branch should pass an encoded inner command");
+  const inner = Buffer.from(innerMatch[1], "base64").toString("utf16le");
+  assert.match(inner, /git rev-parse --show-toplevel/);
+  assert.match(inner, /launch-project-ops\.mjs/);
 });
 
 test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {

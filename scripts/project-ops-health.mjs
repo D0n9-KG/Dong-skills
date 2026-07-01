@@ -346,6 +346,14 @@ function checkWindowsHookCommand(group, eventName, issues) {
       issues.push(`.codex/hooks.json ${eventName} commandWindows must use -EncodedCommand to avoid PowerShell variable expansion`);
     } else if (!/(?:project-ops|launch-project-ops)\.mjs/.test(decodePowerShellEncodedCommand(value))) {
       issues.push(`.codex/hooks.json ${eventName} commandWindows encoded command does not invoke Dong Skills hook launcher`);
+    } else {
+      const decoded = decodePowerShellEncodedCommand(value);
+      if (!decoded.includes("Get-Command pwsh")) {
+        issues.push(`.codex/hooks.json ${eventName} commandWindows should prefer pwsh when available before falling back to powershell.exe`);
+      }
+      if (!decoded.includes("} else {")) {
+        issues.push(`.codex/hooks.json ${eventName} commandWindows should keep a powershell.exe fallback for hosts without PowerShell 7`);
+      }
     }
     if (value.includes('-Command "$root') || value.includes("2>$null")) {
       issues.push(`.codex/hooks.json ${eventName} commandWindows contains unsafe inline PowerShell variable syntax`);
