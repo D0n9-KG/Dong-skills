@@ -4,47 +4,28 @@
 - 无。
 
 ## 已修改
-- `.codex/scripts/lib/events.mjs`: Stop hook 通过时输出空对象，阻断时输出 `{decision:"block", reason:"..."}`，不再为 Stop 输出旧的 `continue/stopReason/systemMessage/hookSpecificOutput`。
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`: 同步 bootstrap 发布资产中的 Stop hook 协议修复。
-- `tests/project-ops.test.mjs`: 更新 Stop hook 回归测试，断言阻断输出使用 `decision/reason`，通过输出为空对象；PreCompact 旧协议测试保持不变。
-- `.codex/hooks.json`: Windows hooks 改为外层兼容 `powershell.exe`，内部优先检测并委派 `pwsh`，保留无 PowerShell 7 环境的回退路径。
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`: 同步新项目 bootstrap 发布资产中的 Windows hook 命令。
-- `scripts/project-ops-health.mjs`: health check 增加 `commandWindows` 形状检查，要求优先 `pwsh` 且保留 `powershell.exe` fallback。
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`: 同步 bootstrap 发布资产中的 health check。
-- `tests/project-ops.test.mjs`: 增加 Windows hook 断言，覆盖外层 `pwsh` 检测、内层 `-EncodedCommand`、fallback 和 launcher 调用。
-- `AGENTS.md`: 增加 Windows shell 与中文 UTF-8 文件处理规则。
-- `AGENTS.project-ops.snippet.md`: 同步项目初始化写入的 AGENTS 片段。
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`: 同步 bootstrap 发布资产中的 AGENTS 片段。
-- `.agents/skills/using-superpowers/references/codex-tools.md`: Codex 工具映射中明确 Windows 优先 PowerShell 7 / `pwsh`，中文文件使用显式 UTF-8。
+- `scripts/release-check.mjs`: Windows `.ps1` parse check 新增 PowerShell host 探测，按 `pwsh`、`pwsh.exe`、`powershell.exe` 顺序选择；输出标签显示实际使用的 host。
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`: 同步 bootstrap 发布资产中的 release check 修复，避免旧项目更新后仍固定使用 `powershell.exe`。
+- `tests/project-ops.test.mjs`: 增加回归测试，要求 release check 具备 `findPowerShellHost()`，并优先候选 `pwsh`。
 - `.codex-context/current-state.md`: 刷新当前任务状态。
-- `.codex-context/spec.md`: 刷新当前任务 spec。
-- `.codex-context/plan-progress.md`: 刷新当前任务计划和验收项。
-- `.codex-context/workflow-state.yaml`: 刷新当前 workflow 阶段。
 - `.codex-context/artifact-index.md`: 刷新本索引。
-- `.codex-context/verification.md`: 记录本轮验证。
-- `.codex-context/handoff-summary.md`: 刷新压缩和接手摘要。
+- `.codex-context/verification.md`: 记录本轮验证结果。
+- `.codex-context/handoff-summary.md`: 刷新交接摘要和 Git 存档状态。
 
 ## 已读取 / 已检查
-- `.agents/skills/using-superpowers/SKILL.md`
-- `.agents/skills/codex-skill-evolution/SKILL.md`
-- `AGENTS.md`
-- `.codex-context/current-state.md`
-- `.codex-context/artifact-index.md`
-- `.codex-context/verification.md`
-- `.codex-context/handoff-summary.md`
-- `.codex-context/workflow-state.yaml`
-- `.codex-context/plan-progress.md`
-- `.codex-context/spec.md`
 - `.codex/hooks.json`
 - `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`
+- `.codex/hooks/launch-project-ops.mjs`
+- `scripts/install-windows.ps1`
+- `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`
 - `scripts/project-ops-health.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/project-ops-health.mjs`
-- `.codex/scripts/lib/events.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/events.mjs`
+- `scripts/release-check.mjs`
 - `tests/project-ops.test.mjs`
+- `AGENTS.md`
+- `.agents/skills/using-superpowers/references/codex-tools.md`
 
 ## 原始输出
 - 未新增 raw 输出。
 
 ## 最新刷新
-- 2026-07-01：记录 Stop hook 输出协议修复；完整验证已通过。
+- 2026-07-01 23:08 本地时间：记录 release check 优先 PowerShell 7 / `pwsh` 的修复及验证。

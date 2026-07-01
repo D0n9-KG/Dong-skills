@@ -9,7 +9,7 @@ execution_mode: traditional
 execution_approval: approved-traditional
 verify_result: pass
 review_status: skipped
-checkpoint_status: done
+checkpoint_status: pending
 handoff_hash: null
-updated_at: 2026-07-01T15:41:00+08:00
-note: Windows hooks now prefer pwsh when available while retaining powershell.exe fallback; verified, committed, and pushed.
+updated_at: 2026-07-01T23:08:38+08:00
+note: Release check now prefers pwsh for PowerShell parsing; verification passed; checkpoint pending.

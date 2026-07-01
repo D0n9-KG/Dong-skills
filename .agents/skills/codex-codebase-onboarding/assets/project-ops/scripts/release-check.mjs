@@ -126,8 +126,26 @@ function syntaxChecks(root) {
   return files.map((file) => runCommand(`node --check ${rel(root, file)}`, process.execPath, ["--check", file], { cwd: root }));
 }
 
+function canRunPowerShellHost(command) {
+  try {
+    execFileSync(command, ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function findPowerShellHost() {
+  const candidates = ["pwsh", "pwsh.exe", "powershell.exe"];
+  return candidates.find(canRunPowerShellHost) || "powershell.exe";
+}
+
 function powershellParseChecks(root) {
   if (process.platform !== "win32") return [];
+  const host = findPowerShellHost();
   const files = walk(root).filter((file) => file.endsWith(".ps1"));
   return files.map((file) => {
     const script = [
@@ -136,7 +154,7 @@ function powershellParseChecks(root) {
       `[System.Management.Automation.Language.Parser]::ParseFile('${file.replace(/'/g, "''")}', [ref]$tokens, [ref]$errors) > $null`,
       "if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }"
     ].join("; ");
-    return runCommand(`PowerShell parse ${rel(root, file)}`, "powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], { cwd: root });
+    return runCommand(`PowerShell parse ${rel(root, file)} via ${host}`, host, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], { cwd: root });
   });
 }
 

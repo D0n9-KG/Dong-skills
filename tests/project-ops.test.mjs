@@ -751,6 +751,13 @@ test("published Windows hook prefers pwsh but keeps powershell fallback", () => 
   assert.match(inner, /launch-project-ops\.mjs/);
 });
 
+test("release check prefers pwsh for PowerShell parsing when available", () => {
+  const source = fs.readFileSync(releaseCheck, "utf8");
+  assert.match(source, /function findPowerShellHost\(\)/);
+  assert.match(source, /const candidates = \["pwsh", "pwsh\.exe", "powershell\.exe"\]/);
+  assert.match(source, /PowerShell parse \$\{rel\(root, file\)\} via \$\{host\}/);
+});
+
 test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const project = tempProject();
   write(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md"), "---\nname: local-only-skill\n---\n");
