@@ -16,7 +16,7 @@
 ## 计划状态
 - 实施状态：代码和文档改动已完成。
 - 验证状态：通过。
-- Checkpoint 状态：待完整验证通过后提交并推送。
+- Checkpoint 状态：已提交并推送。
 
 ## 已修改文件
 - `.codex/hooks.json`
@@ -62,12 +62,12 @@
 - `node .codex\hooks\project-ops.mjs health-check`: pass，Issues none。
 
 ## Git 存档
-- 最新提交: `396dcc3 feat(skills): localize project state documents`。
-- 推送状态: 当前 `main...origin/main`，本轮改动尚未提交。
-- 已包含文件: 本轮改动尚未提交；验证通过后将包含 hook 配置、bootstrap 镜像、health check、测试、AGENTS 规则和 `.codex-context` 状态文件。
-- 有意保留未提交的文件: 当前无；等待提交推送。
-- 暂缓原因: 无，准备提交。
-- 下次存档: 本轮 `pwsh` hook 优化验证通过后。
+- 最新提交: `1a77fa9 fix(hooks): prefer pwsh for Windows project ops hooks`。
+- 推送状态: 已推送到 `origin/main`，远端 `refs/heads/main` 指向 `1a77fa980120f08a3c53c76425031d09743da305`。
+- 已包含文件: hook 配置、bootstrap 镜像、health check、测试、AGENTS 规则和 `.codex-context` 状态文件。
+- 有意保留未提交的文件: 无。
+- 暂缓原因: 无。
+- 下次存档: 下一轮 Dong Skills 优化形成独立 checkpoint。
 
 ## 需要保留的经验沉淀
 - Windows hook 兼容策略应优先“检测并委派”而不是硬切命令入口。
@@ -75,7 +75,7 @@
 - 对发布资产中的 encoded command，测试应解码检查语义，而不是只检查字符串存在。
 
 ## 下一步动作
-提交并推送，然后给用户旧项目更新提示词。
+给用户旧项目更新提示词。
 
 ## 优先重读文件
 1. `.codex-context/handoff-summary.md`

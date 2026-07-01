@@ -49,16 +49,17 @@ Traditional task-by-task execution。
 - [x] 增加 Windows / UTF-8 操作纪律。
 - [x] 刷新 `.codex-context` 主动状态文档。
 - [x] 运行完整验证。
-- [ ] 提交并推送。
+- [x] 提交并推送。
 
 ## 当前步骤
-提交并推送。
+交付结果和旧项目更新提示词。
 
 ## 验证
 - `node --test tests\project-ops.test.mjs`: pass，64/64 tests。
 - `node scripts\release-check.mjs .`: pass，包含 health-check、context budget、Node syntax checks、PowerShell parse checks、完整 Node tests、privacy scan、text readability scan、large file scan、runtime artifact scan。
 - `git diff --check`: pass，仅有 Git CRLF normalization warnings。
 - `node .codex\hooks\project-ops.mjs health-check`: pass，Issues none。
+- `git push origin main`: pass，远端 `main` 已更新到 `1a77fa9`。
 
 ## 范围外
 - 不做 Claude Code 迁移。
