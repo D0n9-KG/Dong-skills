@@ -20,6 +20,8 @@ Every durable asset needs a current reader, owner, reason, and maintenance trigg
 - `Delete`: no current reader, owner, reason, reference, or retention requirement.
 - `Stale`: cannot verify now; mark it stale and stop treating it as active truth.
 - `Raw-Prune`: runtime-only raw material exceeds retention.
+- `Safe-Auto`: generated emergency notices and retained raw snapshots that can be archived or pruned without changing project truth.
+- `Confirm-First`: tracked docs, source code, specs, decisions, solution memory, user-approved records, or any asset whose reader/owner/reason is unclear.
 
 Prefer deletion over archive folders for duplicate or obsolete durable docs; Git history is the archive. Use `.codex-context/archive/` only for evidence/history that must remain easy to find but should not load in active context.
 
@@ -55,12 +57,13 @@ node .codex/hooks/project-ops.mjs asset-governance --keep-verification 8 --keep-
 node .codex/hooks/project-ops.mjs asset-governance --apply
 ```
 
-Dry-run is the default. `--apply` only prunes generated `precompact-auto-*.md` raw snapshots that exceed retention. It must not delete `observations.jsonl`.
+Dry-run is the default. `--apply` only performs Safe-Auto cleanup: it prunes generated `precompact-auto-*.md` raw snapshots that exceed retention, and archives a temporary `PreCompact Emergency Notice` out of `handoff-summary.md` when a preserved normal handoff body exists below it. It must not delete `observations.jsonl`.
 
 ## Raw Lifecycle
 
 - `observations.jsonl`: learning-candidate input. Review with `codex-learning-memory`; do not prune with generic raw cleanup.
 - `precompact-auto-*.md`: backup/audit snapshot. Keep the newest few, and prune old ones by count or age.
+- `PreCompact Emergency Notice` in `handoff-summary.md`: temporary rescue content. After recovery, run `asset-governance --apply` to archive the notice if the normal handoff body was preserved below it, or refresh a clean handoff manually if no preserved body exists.
 - UI screenshots, logs, command dumps, and generated evidence: keep in `.codex-context/raw/` only while needed for verification or handoff; summarize durable facts into `verification.md`, `handoff-summary.md`, or `docs/solutions/`, then prune raw files.
 - `dong-debt:` markers: active code comments for accepted simplifications. They need a ceiling and a revisit trigger; markers without a trigger are lifecycle risk, not active memory.
 
@@ -68,6 +71,7 @@ Dry-run is the default. `--apply` only prunes generated `precompact-auto-*.md` r
 
 - State file stale or contradictory: update `.codex-context/current-state.md`, `spec.md`, `plan-progress.md`, `working-notes.md`, `decisions.md`, `risks.md`, or `handoff-summary.md` as appropriate.
 - Verification bloat: run `state-prune --verification --archive --keep-latest 8 --apply` after ensuring fresh evidence remains. This archives older command evidence, keeps recent proof active, and adds an archive pointer to `verification.md`.
+- PreCompact notice bloat: run `asset-governance --apply` after recovery. It archives the temporary notice to `.codex-context/archive/` and restores `handoff-summary.md` to the preserved normal body when safe.
 - Docs duplicate or conflict: use `codex-docs-stewardship`; consolidate into the canonical doc and delete the duplicate.
 - Solution docs duplicate/stale: use `codex-solution-memory` refresh mode.
 - Code concentration, flat directories, duplicate concepts, or orphan scripts: use `codex-architecture-governance` before restructuring.

@@ -1,42 +1,68 @@
 # Handoff 摘要
 
 ## 目标
-优化 Dong Skills 的 Windows PowerShell 7 / `pwsh` 使用策略，降低中文编码乱码风险，同时保留兼容 fallback。
+完成 Dong Skills 状态一致性、提前提醒、PreCompact handoff 清理、资产治理和 checkpoint 收尾优化。
 
 ## 最新用户指令
-用户要求更新 Dong Skills，让 hooks / 脚本更合理地使用 PowerShell 7。
+用户要求根据另一个项目推进结束后总结出的 Dong Skills 问题进行优化。
 
 ## 已批准范围 / 规格
-- 保留 Windows hook 外层 `powershell.exe` 兼容入口，因为 Codex host 或未安装 PowerShell 7 的机器仍需要 fallback。
-- hook 内部优先检测并委派 `pwsh`。
-- release check 的 `.ps1` parse 检查也优先使用 `pwsh`，找不到时才回退 `powershell.exe`。
-- 不把系统 Windows PowerShell 5.1 删除或替换掉。
+- 修复 workflow-state / spec / plan 多处状态不一致时仍继续推进的问题。
+- 让探索/分析过程更早提醒刷新 `working-notes.md`，降低压缩前丢失分析发现的概率。
+- 给自动 PreCompact emergency notice 明确生命周期，避免长期污染 active handoff。
+- 让 asset governance 区分可自动整理与必须确认的资产。
+- 避免 checkpoint 后记录 checkpoint 又导致无休止提交尾巴。
+- 增加 hook 摘要 readability 扫描，避免 ANSI / 控制字符噪声进入发布资产。
 
 ## 计划状态
-- 实施状态：代码和测试改动已完成。
+- 实施状态：代码、文档、测试、bootstrap 镜像均已更新。
 - 验证状态：通过。
 - Checkpoint 状态：等待提交/推送。
 
 ## 已修改文件
+- `.codex/scripts/lib/assets.mjs`
+- `.codex/scripts/lib/events.mjs`
+- `.codex/scripts/lib/git.mjs`
+- `.codex/scripts/lib/workflow.mjs`
+- `scripts/project-ops-health.mjs`
 - `scripts/release-check.mjs`
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`
 - `tests/project-ops.test.mjs`
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/...`
+- `.agents/skills/codex-asset-governance/SKILL.md`
+- `.agents/skills/codex-git-checkpoint/SKILL.md`
+- `AGENTS.md`
+- `AGENTS.project-ops.snippet.md`
+- `README.md`
+- `docs/improvements/backlog.md`
 - `.codex-context/current-state.md`
 - `.codex-context/artifact-index.md`
 - `.codex-context/verification.md`
 - `.codex-context/handoff-summary.md`
+- `.codex-context/workflow-state.yaml`
+
+## 已读取但未修改文件
+- 全局安装副本中的 `using-superpowers/SKILL.md`
+- 全局安装副本中的 `codex-skill-evolution/SKILL.md`
+- `.codex/scripts/lib/markdown.mjs`
+- `.codex/scripts/lib/templates.mjs`
 
 ## 已做决策
-- 不把所有入口硬切成 `pwsh`，因为这会破坏没有 PowerShell 7 的环境；采用“优先 `pwsh`，fallback `powershell.exe`”。
-- release check 属于 Dong Skills 自身质量门禁，应和 hooks 一样优先 `pwsh`，避免中文/UTF-8 相关验证在旧 PowerShell 行为下产生误导。
+- 保留自动 PreCompact 的“允许压缩并写 emergency notice”救场行为，但增加后续 `asset-governance --apply` 清理路径。
+- 对状态文档只做一致性审计，不让 hook 自动替用户改 spec/plan 审批结论。
+- 对 checkpoint-finalize tail 只在剩余改动全是 governance/context 且 `Git 存档` 结构完整时放行。
+- 模板里的审批示例和可选值不应被解析为真实审批状态。
+
+## 开放问题与假设
+- 无阻塞开放问题。
+- 旧项目需要重新 bootstrap / 更新 Dong Skills，才能拿到本轮 hook 和 runtime 修复。
 
 ## 风险
-- 旧项目需要重新运行 Dong Skills 更新/bootstrap 才能拿到 release check 资产更新。
-- 如果项目自己的脚本仍手动调用 `powershell.exe`、`Set-Content` 或 `Out-File` 且未指定 UTF-8，仍可能出现中文显示/写入问题；这属于项目脚本层面，不是 Dong Skills hook 层面。
+- 状态一致性检查会让旧项目中历史残留的 spec/plan/workflow 矛盾更早暴露；这属于预期行为，需要先修状态再继续实施。
+- `asset-governance --apply` 仍只处理 Safe-Auto 项，不会自动删除真实项目文档、代码或用户批准记录。
 
 ## 验证证据
-- `node --test tests\project-ops.test.mjs`: pass，65/65。
-- `node scripts\release-check.mjs .`: pass；PowerShell parse checks 显示 `via pwsh`。
+- `node --test tests\project-ops.test.mjs`: pass，69/69。
+- `node scripts\release-check.mjs .`: pass。
 - `git diff --check`: pass。
 
 ## Git 存档
@@ -44,15 +70,21 @@
 - 推送状态: 当前工作区有未提交修改。
 - 已包含文件: 无。
 - 有意保留未提交的文件: 本轮修改文件待提交。
-- 暂缓原因: 正在执行提交前状态刷新。
-- 下次存档: 提交并推送 `fix(release): prefer pwsh for PowerShell checks`。
+- 暂缓原因: 正在执行安装同步和提交前状态刷新。
+- 下次存档: 提交并推送本轮 Dong Skills governance 修复。
+
+## 需要保留的经验沉淀
+- 这类反馈属于 Dong Skills meta-learning，应进入 `docs/improvements/backlog.md` / 本仓实现，而不是业务项目 instinct。
+- 模板状态文本必须和解析器配套测试，否则容易把“可选值/示例”误判为真实审批。
 
 ## 下一步动作
-提交并推送；随后运行安装脚本同步本机全局 Dong Skills 副本。
+同步本机全局 Dong Skills 安装副本，然后提交并推送。
 
 ## 优先重读文件
 1. `.codex-context/handoff-summary.md`
 2. `.codex-context/current-state.md`
-3. `scripts/release-check.mjs`
-4. `.agents/skills/codex-codebase-onboarding/assets/project-ops/scripts/release-check.mjs`
-5. `tests/project-ops.test.mjs`
+3. `.codex/scripts/lib/workflow.mjs`
+4. `.codex/scripts/lib/events.mjs`
+5. `.codex/scripts/lib/assets.mjs`
+6. `scripts/project-ops-health.mjs`
+7. `tests/project-ops.test.mjs`

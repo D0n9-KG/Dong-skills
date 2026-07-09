@@ -92,7 +92,7 @@ Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions
 
 Use `.codex-context/worktree-state.md` to record whether the current workspace is the primary checkout, a Codex-managed worktree, a Dong-managed fallback worktree, a manual worktree, a submodule, or unknown. Refresh it before execution, checkpoint, branch completion, cleanup, or whenever hook UI source paths differ from the actual Git root.
 
-Use `.codex-context/workflow-state.yaml` as the script-readable phase state. Before routing non-trivial work, run `node .codex/hooks/project-ops.mjs workflow-state next` or read the file directly. If phase, next action, or compaction recovery is ambiguous, run `node .codex/hooks/project-ops.mjs workflow-state recover` before acting. Update state at phase boundaries with `workflow-state transition <event>` so compaction recovery can identify the current phase, blocking decision, and next skill.
+Use `.codex-context/workflow-state.yaml` as the script-readable phase state. Before routing non-trivial work, run `node .codex/hooks/project-ops.mjs workflow-state next` or read the file directly. If phase, next action, or compaction recovery is ambiguous, run `node .codex/hooks/project-ops.mjs workflow-state recover` before acting. Update state at phase boundaries with `workflow-state transition <event>` so compaction recovery can identify the current phase, blocking decision, and next skill. `workflow-state status`, hooks, and `health-check` also audit consistency between `workflow-state.yaml`, `spec.md`, and `plan-progress.md`; if they disagree, treat it as a blocking state repair before implementation.
 
 If present:
 
@@ -106,9 +106,9 @@ Before adding custom code, dependencies, abstractions, scripts, docs, or state a
 
 Use `codex-docs-stewardship` at milestones, before handoff, after API/architecture changes, or when README/AGENTS/docs/.codex-context may be stale. Delete, merge, or archive stale docs instead of keeping misleading notes.
 
-Use `codex-asset-governance` before milestone handoff, compaction, release, or when docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, or code assets may be stale, duplicated, orphaned, unsafe, or bloated. Classify assets as Keep, Update, Consolidate, Replace, Delete, Stale, or Raw-Prune.
+Use `codex-asset-governance` before milestone handoff, compaction, release, or when docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, or code assets may be stale, duplicated, orphaned, unsafe, or bloated. Classify assets as Keep, Update, Consolidate, Replace, Delete, Stale, Raw-Prune, Safe-Auto, or Confirm-First.
 
-Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle audit. Use `--apply` only for safe pruning of generated `precompact-auto-*.md` raw snapshots; do not prune `observations.jsonl` generically.
+Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle audit. Use `--apply` only for safe auto-cleanup: pruning generated `precompact-auto-*.md` raw snapshots and archiving temporary PreCompact notices when a preserved normal handoff body exists below the notice. Do not prune `observations.jsonl` generically.
 
 Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 
@@ -134,7 +134,7 @@ Use `codex-session-history` only when project files are insufficient or the user
 
 ## Compaction
 
-Write a fresh handoff at phase boundaries and before long pauses. During discussion, discovery, planning, debugging, or substantial exploration, keep `working-notes.md` fresh before stopping or compacting. The `UserPromptSubmit` hook may mark `.codex-context/discussion-state.json` dirty, and `Stop`/`PreCompact` can require refreshed spec/current/decisions/open-questions/working-notes/handoff files. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled.
+Write a fresh handoff at phase boundaries and before long pauses. During discussion, discovery, planning, debugging, or substantial exploration, keep `working-notes.md` fresh before stopping or compacting. The `UserPromptSubmit` hook may mark `.codex-context/discussion-state.json` dirty, and `PostToolUse` may immediately surface a reminder after exploration tools even before Stop. `Stop`/`PreCompact` can require refreshed spec/current/decisions/open-questions/working-notes/handoff files. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled. After recovery, treat the emergency notice as temporary: run `asset-governance --apply` or refresh a normal handoff so the notice is archived out of the active handoff.
 
 After compaction, recover in this order:
 

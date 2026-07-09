@@ -1,30 +1,24 @@
 # 验证
 
 ## 已运行命令
-- `$PSVersionTable.PSVersion.ToString()`
-  - Result: pass
-  - Evidence: 当前 shell 为 PowerShell 7.6.3。
-  - Date: 2026-07-01 23:08 本地时间
-- `pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString(); $PSHOME; [Console]::OutputEncoding.WebName'`
-  - Result: pass
-  - Evidence: `pwsh` 可用，版本 7.6.3，输出编码为 UTF-8。
-  - Date: 2026-07-01 23:08 本地时间
 - `node --test tests\project-ops.test.mjs`
   - Result: pass
-  - Evidence: 65/65 tests passed；新增 release check 优先 `pwsh` 回归测试通过，既有 Windows hook encoded command / fallback 测试继续通过。
-  - Date: 2026-07-01 23:08 本地时间
+  - Evidence: 69/69 tests passed；覆盖 workflow-state/doc mismatch、模板示例不误判为审批、PostToolUse 提前提醒、PreCompact notice 归档、checkpoint/asset 既有行为。
+  - Date: 2026-07-09 本地时间
 - `node scripts\release-check.mjs .`
   - Result: pass
-  - Evidence: health-check、context budget、Node syntax checks、PowerShell parse checks、完整 Node tests、privacy scan、text readability scan、large file scan、runtime artifact scan 均通过；PowerShell parse checks 显示 `via pwsh`。
-  - Date: 2026-07-01 23:08 本地时间
+  - Evidence: health-check、context budget、Node syntax checks、PowerShell parse checks、完整 Node tests、privacy scan、text readability scan、large file scan、runtime artifact scan 均通过。
+  - Date: 2026-07-09 本地时间
 - `git diff --check`
   - Result: pass
   - Evidence: 无 whitespace error；仅有 Git CRLF normalization warning。
-  - Date: 2026-07-01 23:08 本地时间
+  - Date: 2026-07-09 本地时间
 
 ## 产品证据
-- `.codex/hooks.json` 的 Windows hook 命令已经包含 `Get-Command pwsh`、`& $pwsh.Source -NoProfile -EncodedCommand` 和 `powershell.exe` fallback。
-- release check 不再固定用 `powershell.exe` parse `.ps1`，本机验证中实际使用 `pwsh`。
+- `workflow-state status` / hooks / `health-check` 会报告 `workflow-state.yaml`、`spec.md`、`plan-progress.md` 的状态矛盾。
+- `PostToolUse` 在探索类工具后能提前给出 `working-notes.md` 刷新提示，不再只等 Stop。
+- `asset-governance --apply` 能安全归档临时 PreCompact handoff notice。
+- release check 会扫描 ANSI escape 和异常控制字符，降低 hook 摘要显示噪声发布风险。
 
 ## 尚未验证
-- 尚未重新安装全局 Dong Skills 副本并比对全局资产；下一步执行安装同步。
+- 尚未重新运行安装脚本同步本机全局 Dong Skills 副本；下一步执行。

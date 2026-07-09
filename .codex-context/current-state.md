@@ -1,24 +1,24 @@
 # 当前状态
 
 ## 目标
-优化 Dong Skills 在 Windows 下的 PowerShell 7 / `pwsh` 使用策略，降低中文编码乱码风险，并让 release check 的 PowerShell 解析检查优先使用 `pwsh`。
+优化 Dong Skills 在长项目推进后的状态一致性、提前提醒、PreCompact handoff 清理、资产治理和 checkpoint 收尾纪律，降低压缩/收尾后状态混乱风险。
 
 ## 最新用户指令
-用户要求更新 Dong Skills，使 hooks / 脚本更合理地使用 PowerShell 7，避免旧版 Windows PowerShell 5.1 导致中文编码和显示问题。
+用户要求根据另一个项目阶段结束后的反馈，判断问题是否合理并优化 Dong Skills。
 
 ## 当前阶段
 delivery
 
 ## 当前假设
-- 本机已安装 PowerShell 7，`pwsh` 当前可用，版本为 7.6.3。
-- Codex 当前 shell 已是 PowerShell 7，但项目发布资产仍应保留 `powershell.exe` fallback，兼容未安装 PowerShell 7 的机器。
-- `.codex/hooks.json` 当前已经是外层兼容 `powershell.exe`、内部优先委派 `pwsh` 的结构；本轮主要遗漏是 release check 仍固定用 `powershell.exe` 做 `.ps1` parse check。
+- 真实 Dong Skills 源仓库是 `outputs/codex-project-ops-kit`，外层目录不是 Git 仓库。
+- 本轮变更应同步根运行时文件和 `codex-codebase-onboarding` bootstrap 镜像文件，避免旧项目更新后拿到旧逻辑。
+- `.codex-context` 曾被安装同步追加模板噪声；已恢复噪声，只保留本轮真实状态更新。
 
 ## 阻塞项
 - 无。
 
 ## 下一步动作
-提交并推送本轮 release check 优先 `pwsh` 的修复；随后同步本机全局 Dong Skills 安装副本。
+同步本机全局 Dong Skills 安装副本，然后提交并推送本轮修复。
 
 ## 最后更新
-2026-07-01 23:08 本地时间。
+2026-07-09 本地时间。

@@ -102,6 +102,8 @@ function textReadabilityPatterns() {
   ].map(fromCodePoints);
 
   return [
+    { name: "ANSI escape sequence", regex: /\u001b\[[0-?]*[ -/]*[@-~]/u },
+    { name: "unexpected control character", regex: /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u },
     { name: "Unicode replacement character", regex: /\uFFFD/u },
     { name: "private-use character often produced by mojibake", regex: /[\uE000-\uF8FF]/u },
     { name: "Latin UTF-8 mojibake", regex: latinMojibakePattern },

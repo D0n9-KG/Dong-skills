@@ -148,6 +148,51 @@ function rawPrecompactSnapshots(ctx) {
     .sort((a, b) => b.mtimeMs - a.mtimeMs);
 }
 
+function emergencyHandoffNotice(ctx) {
+  const file = path.join(ctx, "handoff-summary.md");
+  const markdown = readText(file);
+  const marker = "## PreCompact Emergency Notice";
+  const separator = "\n---\n\n";
+  const markerIndex = markdown.indexOf(marker);
+  const separatorIndex = markdown.indexOf(separator, markerIndex);
+  if (markerIndex === -1 || separatorIndex === -1) {
+    return { present: false, file, markdown, continuation: "", notice: "" };
+  }
+  const notice = markdown.slice(markerIndex, separatorIndex).trim();
+  const continuation = markdown.slice(separatorIndex + separator.length).trim();
+  return {
+    present: true,
+    file,
+    markdown,
+    notice,
+    continuation,
+    canArchive: continuation.length > 0
+  };
+}
+
+function archiveEmergencyHandoffNotice(ctx, noticeStatus, apply) {
+  if (!noticeStatus.present || !noticeStatus.canArchive) return null;
+  const archiveDir = path.join(ctx, "archive");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const archive = path.join(archiveDir, `precompact-emergency-notice-${stamp}.md`);
+  if (apply) {
+    fs.mkdirSync(archiveDir, { recursive: true });
+    fs.writeFileSync(archive, [
+      "# PreCompact Emergency Notice Archive",
+      "",
+      `Archived: ${new Date().toISOString()}`,
+      "",
+      noticeStatus.notice,
+      ""
+    ].join("\n"), "utf8");
+    fs.writeFileSync(noticeStatus.file, `# Handoff 摘要\n\n${noticeStatus.continuation}\n`, "utf8");
+  }
+  return {
+    file: archive,
+    rel: path.join(".codex-context", "archive", path.basename(archive)).replace(/\\/g, "/")
+  };
+}
+
 function prunableRawSnapshots(ctx, options) {
   const snapshots = rawPrecompactSnapshots(ctx);
   const keep = options.rawPrecompactKeep;
@@ -267,6 +312,12 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
     advisories.push(`${prunableRaw.length} precompact raw snapshot(s) exceed retention; run asset-governance --apply to prune them`);
   }
 
+  const emergencyNotice = emergencyHandoffNotice(ctx);
+  if (emergencyNotice.present) {
+    const level = emergencyNotice.canArchive ? "safe to archive with asset-governance --apply" : "refresh a normal handoff before archiving";
+    advisories.push(`handoff-summary.md still contains a temporary PreCompact Emergency Notice; ${level}`);
+  }
+
   const unsafeRaw = trackedRawFiles(root);
   if (unsafeRaw.length) {
     issues.push(`tracked raw runtime file(s): ${unsafeRaw.join(", ")}`);
@@ -313,6 +364,7 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
       largeActiveFiles,
       rawPrecompactSnapshots: rawPrecompactSnapshots(ctx),
       prunableRawSnapshots: prunableRaw,
+      emergencyHandoffNotice: emergencyNotice,
       staleReviewFiles: staleFiles,
       runtimeArtifacts,
       trackedRuntimeArtifacts: trackedArtifacts,
@@ -337,6 +389,7 @@ export function pruneRawSnapshots(items, apply) {
 export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
   const status = assetGovernanceStatus(root, ctx, options);
   const pruned = pruneRawSnapshots(status.metrics.prunableRawSnapshots, apply);
+  const archivedEmergencyNotice = archiveEmergencyHandoffNotice(ctx, status.metrics.emergencyHandoffNotice, apply);
   const lines = [
     `Dong Skills asset governance ${apply ? "apply" : "dry-run"}`,
     `Root: ${root}`,
@@ -346,6 +399,7 @@ export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
     `- Large active state files: ${status.metrics.largeActiveFiles.length}`,
     `- PreCompact raw snapshots: ${status.metrics.rawPrecompactSnapshots.length}`,
     `- Prunable raw snapshots: ${status.metrics.prunableRawSnapshots.length}`,
+    `- Temporary PreCompact handoff notice: ${status.metrics.emergencyHandoffNotice.present ? "present" : "none"}`,
     `- Stale review candidates: ${status.metrics.staleReviewFiles.length}`,
     `- Runtime artifacts outside raw/archive: ${status.metrics.runtimeArtifacts.length}`,
     `- Tracked raw/runtime artifacts: ${status.metrics.trackedRawFiles.length + status.metrics.trackedRuntimeArtifacts.length}`,
@@ -360,6 +414,8 @@ export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
     "- Delete: no current reader, owner, reason, or reference.",
     "- Stale: cannot verify now; mark and stop treating as active truth.",
     "- Raw-Prune: runtime-only raw material exceeds retention.",
+    "- Safe-Auto: generated emergency notices and retained raw snapshots that can be archived/pruned without changing project truth.",
+    "- Confirm-First: tracked docs, source code, specs, decisions, solution memory, and user-approved records.",
     ""
   ];
 
@@ -399,6 +455,22 @@ export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
     for (const item of status.metrics.prunableRawSnapshots.slice(0, 20)) lines.push(`- ${item.rel}`);
     if (!apply) lines.push("- Pass --apply to delete the listed precompact snapshots.");
     else lines.push(`- Deleted ${pruned.length} snapshot(s).`);
+    lines.push("");
+  }
+
+  if (status.metrics.emergencyHandoffNotice.present) {
+    lines.push(`PreCompact notice archive ${apply ? "applied" : "preview"}:`);
+    if (status.metrics.emergencyHandoffNotice.canArchive) {
+      if (apply && archivedEmergencyNotice) {
+        lines.push(`- Archived temporary notice to ${archivedEmergencyNotice.rel}`);
+        lines.push("- Restored handoff-summary.md to the preserved normal handoff body.");
+      } else {
+        lines.push("- Temporary notice can be archived because a preserved handoff body exists below it.");
+        lines.push("- Pass --apply to archive the notice and restore the normal handoff body.");
+      }
+    } else {
+      lines.push("- Notice exists, but no preserved handoff body was found; refresh handoff-summary.md manually first.");
+    }
     lines.push("");
   }
 

@@ -211,10 +211,25 @@ function markWorkingNotesDirty(input, root, ctx) {
 }
 
 export function postToolUse(input, root, ctx) {
-  markWorkingNotesDirty(input, root, ctx);
+  const marker = markWorkingNotesDirty(input, root, ctx);
 
   const changed = gitChangedFiles(root);
-  if (changed.length === 0) return;
+  if (changed.length === 0) {
+    if (marker) {
+      const message = [
+        "Codex Project Ops marked investigation notes dirty.",
+        "Before stopping or compacting, refresh working-notes.md with checked findings, rejected paths, current hypothesis/conclusion, and next verification step.",
+        `Required files: ${shortList(marker.required_files || [])}.`
+      ].join("\n");
+      writeJson({
+        hookSpecificOutput: {
+          hookEventName: "PostToolUse",
+          additionalContext: message
+        }
+      });
+    }
+    return;
+  }
 
   const latest = latestChangedMtime(root, changed);
   if (fileFresh(ctx, REQUIRED_FILES.artifacts, latest)) return;
@@ -288,12 +303,13 @@ function hookStatusText(root, ctx, latest = 0, files = [], options = {}) {
   const checkpoint = options.checkpoint === false ? null : (options.checkpoint || gitCheckpointStatus(root, ctx, latest));
   const discussion = options.discussion === false ? null : (options.discussion || discussionStateStatus(root, ctx, workflow));
   const state = workflow.state || {};
+  const consistencyIssues = workflow.consistency?.issues?.length || 0;
   const latestFile = latestFileByMtime(root, files.filter((file) => !isGovernancePath(file))) || latestFileByMtime(root, files);
   const lines = [
     "Hook status:",
     `- Event: ${options.eventName || "unknown"}`,
     `- Actual Git root: ${root}`,
-    `- Workflow: phase=${state.phase || "missing"} next_skill=${state.next_skill || "missing"} decision_required=${state.decision_required || "missing"} issues=${workflow.issues.length}`,
+    `- Workflow: phase=${state.phase || "missing"} next_skill=${state.next_skill || "missing"} decision_required=${state.decision_required || "missing"} issues=${workflow.issues.length} consistency_issues=${consistencyIssues}`,
     learning
       ? `- Learning: ${learning.ok ? "ok" : "pending-review"} issues=${learning.issues.length}`
       : "- Learning: not checked in this hook",
@@ -561,6 +577,7 @@ export function preCompact(input, root, ctx) {
       "Codex Project Ops allowed automatic compaction after preserving the existing handoff with an emergency notice.",
       hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion, eventName: "PreCompact" }),
       "Recovery file: .codex-context/handoff-summary.md.",
+      "Lifecycle note: this emergency notice is temporary; after recovery, run asset-governance --apply or refresh a normal handoff to archive the notice.",
       `Previous handoff snapshot: ${rawRel}.`,
       `Issues captured: ${issues.join("; ")}.`
     ].join("\n");

@@ -432,3 +432,20 @@ Add a fixed answer structure: target location, actual location, unfinished reaso
 
 Verification:
 Memory/deposition status answers clearly distinguish intended storage from actual storage.
+
+### 2026-07-09 - Tighten State Consistency And Cleanup Closure
+
+Status: done
+Priority: P0
+Affected area: workflow-state / hooks / asset governance / checkpoint / release hygiene
+Source: user feedback from downstream project usage after a long project phase
+Implemented: `workflow-state status`, hooks, and `health-check` now detect contradictions between `workflow-state.yaml`, `spec.md`, and `plan-progress.md`; `PostToolUse` surfaces exploration working-note reminders before Stop; `asset-governance --apply` can archive temporary PreCompact handoff notices while preserving the normal handoff; Git checkpoint status accepts a structured governance-only checkpoint-finalize tail; release check scans for ANSI/control-character readability issues.
+
+Signal:
+Long sessions could end with old and new state coexisting, Stop hooks catching issues late, automatic PreCompact notices staying at the top of handoff, asset governance reporting more than it safely cleaned, checkpoint finalization causing tiny context-file tails, and hook summaries occasionally showing display noise.
+
+Decision:
+Promote `workflow-state.yaml` from a routing file to a consistency-checked state index. Keep automatic PreCompact as a rescue path, but give its emergency notice a cleanup lifecycle. Separate Safe-Auto cleanup from Confirm-First assets. Avoid forcing an endless checkpoint loop when only fresh governance/context notes remain after a real checkpoint.
+
+Verification:
+`tests/project-ops.test.mjs` covers workflow-state/doc mismatch detection, PostToolUse early reminders, PreCompact notice archiving, and existing checkpoint/asset behavior. `release-check` now scans text files for ANSI escape and unexpected control characters.

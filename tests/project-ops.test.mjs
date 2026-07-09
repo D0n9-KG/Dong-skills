@@ -2200,7 +2200,8 @@ test("PostToolUse exploration requires working notes before stopping", () => {
     tool_name: "Read",
     tool_input: { path: "src/runtime.mjs" }
   });
-  assert.deepEqual(post, {});
+  assert.match(post.hookSpecificOutput.additionalContext, /marked investigation notes dirty/);
+  assert.match(post.hookSpecificOutput.additionalContext, /working-notes\.md/);
 
   const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
   assert.equal(marker.source, "PostToolUse");
@@ -2287,12 +2288,242 @@ test("PostToolUse shell exploration commands require working notes before stoppi
     tool_name: "functions.shell_command",
     tool_input: { command: "Get-ChildItem -Force" }
   });
-  assert.deepEqual(post, {});
+  assert.match(post.hookSpecificOutput.additionalContext, /marked investigation notes dirty/);
+  assert.match(post.hookSpecificOutput.additionalContext, /Required files: working-notes\.md, current-state\.md, handoff-summary\.md/);
 
   const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
   assert.equal(marker.source, "PostToolUse");
   assert.equal(marker.tool_name, "functions.shell_command");
   assert.ok(marker.required_files.includes("working-notes.md"));
+});
+
+test("workflow-state detects spec and plan approval mismatches", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: execution
+next_skill: executing-plans
+auto_next: true
+decision_required: none
+spec_status: pending-approval
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
+
+  let out = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [workflowState, project, "status"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+  }, (error) => {
+    out = String(error.stdout || "");
+    return /Workflow state needs review/.test(out);
+  });
+  assert.match(out, /state mismatch: phase=execution requires approved\/skipped\/mechanical spec_status/);
+});
+
+test("workflow-state detects plan document approval conflicts", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: execution
+next_skill: executing-plans
+auto_next: true
+decision_required: none
+spec_status: approved
+plan_status: approved
+execution_mode: traditional
+execution_approval: approved-traditional
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
+  write(path.join(project, ".codex-context", "plan-progress.md"), `# Plan Progress
+
+## Current Plan
+- Fixture plan.
+
+## Spec Approval
+Approved by user.
+
+## Execution Approval
+尚未批准。
+
+## Execution Mode
+Traditional task-by-task execution.
+`);
+
+  let out = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [workflowState, project, "status"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+  }, (error) => {
+    out = String(error.stdout || "");
+    return /Workflow state needs review/.test(out);
+  });
+  assert.match(out, /plan-progress\.md execution approval is pending/);
+});
+
+test("workflow-state ignores template examples when reading plan approval", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: planning
+next_skill: writing-plans
+auto_next: true
+decision_required: execution-approval
+spec_status: approved
+plan_status: drafted
+execution_mode: pending
+execution_approval: pending
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: fixture
+note: fixture
+`);
+  write(path.join(project, ".codex-context", "plan-progress.md"), `# 计划进度
+
+## 当前计划
+- Fixture plan.
+
+## 规格审批
+Approved by user.
+
+## 执行审批
+尚未批准。实现前记录 “Approved by user for Traditional task-by-task execution on [日期/时间]”、“Approved by user for Codex Goal mode on [日期/时间]”，或 “plan-then-execute requested; Traditional task-by-task execution”。
+
+## 执行模式
+等待用户选择。可选值：Traditional task-by-task execution；Codex Goal mode。不要从“继续”、“执行”或 plan-then-execute 推断为 Codex Goal mode。
+
+## 工作类别 / 风险等级
+Lane 1 fixture.
+
+## Goal 模式目标
+未选择。
+
+## 运行约束
+- Follow the fixture plan.
+
+## 存档节奏
+- Checkpoint after verified fixture work.
+
+## 任务
+- [ ] Fixture task.
+
+## 当前步骤
+None.
+
+## 验证
+- Fixture check.
+
+## 范围外
+- None.
+`);
+
+  const out = execFileSync(process.execPath, [workflowState, project, "status"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Workflow state ok/);
+
+  const healthOut = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.doesNotMatch(healthOut, /execution_approval=.*plan-progress\.md/);
+  assert.doesNotMatch(healthOut, /execution mode=.*plan-progress\.md/);
+});
+
+test("asset-governance archives temporary PreCompact notice and restores handoff", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const handoffFile = path.join(project, ".codex-context", "handoff-summary.md");
+  write(handoffFile, `# Handoff 摘要
+
+## PreCompact Emergency Notice
+- Created: fixture
+- Trigger: auto
+- Raw snapshot: \`.codex-context/raw/precompact-auto-fixture.md\`
+
+## PreCompact Issues
+- fixture issue
+
+---
+
+## Objective
+Preserved objective.
+
+## Latest User Instruction
+Continue.
+
+## Approved Scope / Spec
+Approved.
+
+## Plan Status
+Executing.
+
+## Files Modified
+- src/file.mjs
+
+## Decisions Made
+- Preserve normal handoff.
+
+## Verification Evidence
+- Fixture evidence.
+
+## Git Checkpoint
+- Latest commit: fixture
+- Push state: no remote
+- Files included: none
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+
+## Next Action
+Continue normally.
+
+## Files To Re-read First
+- src/file.mjs
+`);
+
+  const preview = execFileSync(process.execPath, [assetGovernance, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(preview, /Temporary PreCompact handoff notice: present/);
+  assert.match(preview, /Temporary notice can be archived/);
+
+  const applied = execFileSync(process.execPath, [assetGovernance, project, "--apply"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(applied, /Archived temporary notice/);
+  const handoff = fs.readFileSync(handoffFile, "utf8");
+  assert.doesNotMatch(handoff, /PreCompact Emergency Notice/);
+  assert.match(handoff, /## Objective\nPreserved objective\./);
+  const archiveFiles = fs.readdirSync(path.join(project, ".codex-context", "archive"));
+  assert.ok(archiveFiles.some((name) => /^precompact-emergency-notice-.*\.md$/.test(name)));
 });
 
 test("PreCompact blocks when handoff is missing or stale", () => {

@@ -11,5 +11,5 @@ verify_result: pass
 review_status: skipped
 checkpoint_status: pending
 handoff_hash: null
-updated_at: 2026-07-01T23:08:38+08:00
-note: Release check now prefers pwsh for PowerShell parsing; verification passed; checkpoint pending.
+updated_at: 2026-07-09T00:00:00+08:00
+note: State consistency, early reminders, PreCompact notice cleanup, asset governance, and checkpoint tail fixes verified; checkpoint pending.

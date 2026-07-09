@@ -89,7 +89,7 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 - `codex-git-checkpoint`：阶段性提交/推送纪律。
 - `codex-learning-memory`：短的项目 instincts；Dong Skills 优化候选进入 Dong Skills backlog 或项目 outbox。
 - `codex-solution-memory`：结构化、可复用的项目解决方案。
-- `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构。
+- `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构；`asset-governance --apply` 只做安全自动整理，例如清理过期 PreCompact raw snapshot、归档临时 PreCompact notice。
 - `codex-skill-evolution`：作为全局维护入口接入 SkillOpt-Sleep，离线把 Dong Skills backlog/outbox 中的反复失败转成可回放任务，生成 staged proposal，验证通过并经用户确认后才采纳；它操作真实 Dong Skills 源仓库，不优化业务项目代码。
 - `codex-review-panel` / `codex-simplicity-review`：交付前审查和反过度工程。
 
@@ -115,6 +115,8 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 
 `.codex-context/working-notes.md` 用于记录可外部化的探索状态：已检查事实、被排除路径、当前假设/结论、开放调查问题和下一步验证。不要把隐藏推理、完整聊天、原始日志、密钥或隐私内容写进去。
 
+`.codex-context/workflow-state.yaml` 是机器可读的阶段索引。`workflow-state status`、hooks 和 `health-check` 会检查它与 `spec.md`、`plan-progress.md` 是否矛盾；如果出现矛盾，先修状态，不要继续实现。
+
 ### 常用命令
 
 从目标项目运行：
@@ -122,9 +124,11 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 ```powershell
 node .codex/hooks/project-ops.mjs workflow-state next
 node .codex/hooks/project-ops.mjs workflow-state recover
+node .codex/hooks/project-ops.mjs workflow-state status
 node .codex/hooks/project-ops.mjs health-check
 node .codex/hooks/project-ops.mjs context-budget
 node .codex/hooks/project-ops.mjs asset-governance
+node .codex/hooks/project-ops.mjs asset-governance --apply
 node .codex/hooks/project-ops.mjs learning-status
 node .codex/hooks/project-ops.mjs skill-evolution status
 node .codex/hooks/project-ops.mjs skill-evolution collect-candidates --output .codex-context/raw/skill-evolution-tasks.json
@@ -236,12 +240,12 @@ node .codex/hooks/project-ops.mjs health-check
 - `spec.md` is a current-task intent and acceptance record, not a permanent system truth. Durable knowledge belongs in `CONCEPTS.md`, `STRATEGY.md`, `docs/solutions/`, or curated instincts.
 - `context-budget` reports hot recovery path, warm on-demand path, and cold runtime/bootstrap path separately. Use the hot path as the main budget signal; the total scanned number is for maintenance awareness.
 - Non-trivial work has explicit phase gates: brainstorming produces a written spec, planning produces a verifiable plan with an execution mode, and execution waits for approval.
-- `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash.
+- `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash. `workflow-state status`, hooks, and `health-check` audit it against `spec.md` and `plan-progress.md`.
 - `.codex-context/working-notes.md` stores compact externalized investigation state. It is not for hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning.
 - `.codex-context/discussion-state.json` is a runtime-only dirty marker and should stay ignored by Git.
 - Project hooks inject recovery context, check compaction readiness, track changed artifacts, mark discussion/exploration state dirty, and block final stopping when state is stale.
-- Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue.
-- `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets.
+- Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue. After recovery, `asset-governance --apply` can archive that temporary notice when the preserved handoff body is present.
+- `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It separates Safe-Auto cleanup from Confirm-First assets that require human judgment.
 - `codex-skill-evolution` is also installed as a global maintenance entry and integrates SkillOpt-Sleep as an offline evolution layer for Dong Skills itself. It uses backlog/outbox issues as candidates, creates reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. It is not a hook, not project memory, and not a business-code optimizer.
 
 ### Commands
@@ -251,9 +255,11 @@ From the target project:
 ```powershell
 node .codex/hooks/project-ops.mjs workflow-state next
 node .codex/hooks/project-ops.mjs workflow-state recover
+node .codex/hooks/project-ops.mjs workflow-state status
 node .codex/hooks/project-ops.mjs health-check
 node .codex/hooks/project-ops.mjs context-budget
 node .codex/hooks/project-ops.mjs asset-governance
+node .codex/hooks/project-ops.mjs asset-governance --apply
 node .codex/hooks/project-ops.mjs learning-status
 node .codex/hooks/project-ops.mjs skill-evolution status
 node .codex/hooks/project-ops.mjs skill-evolution collect-candidates --output .codex-context/raw/skill-evolution-tasks.json

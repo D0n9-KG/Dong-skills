@@ -55,6 +55,7 @@ Do not wait until the entire project is finished if a coherent verified checkpoi
    - `worktree-state.md`: current workspace role, branch state, and cleanup owner when worktree state matters.
    - `workflow-state.yaml`: phase, next skill, and checkpoint status.
    - `handoff-summary.md`: current state, next action, and `Git 存档`.
+   - Before staging, run `workflow-state status` or `health-check` if state changed; repair contradictions between `workflow-state.yaml`, `spec.md`, and `plan-progress.md`.
 5. Stage intentionally:
    - Prefer `git add -- path1 path2 ...`.
    - Use `git add -A` only after verifying every changed file belongs in scope.
@@ -131,6 +132,18 @@ If work is ready and committed, record the commit and push state.
 If work is not ready to commit, record the reason instead of pretending the archive is clean.
 
 When workflow state is available, run `workflow-state transition checkpoint-done` after a successful checkpoint, or `workflow-state transition checkpoint-deferred` after recording a deferred reason.
+
+## Checkpoint Finalize Tail
+
+After a real commit, do not create an endless "commit changed handoff, then handoff changed because commit changed" loop.
+
+Use this rule:
+
+- First refresh active state files, verification, artifact index, workflow state, and handoff.
+- Then commit the coherent checkpoint.
+- After the commit, update `handoff-summary.md -> Git 存档` with the commit/push state if needed.
+- If the only remaining dirty files are governance/context files and `Git 存档` is fresh and structured, this is an accepted checkpoint-finalize tail. Do not force another commit solely to archive that final note unless the user requests a perfectly clean worktree.
+- If any source, docs, tests, generated evidence, or non-context files changed after the checkpoint, make a new scoped checkpoint or record a deferred reason.
 
 ## GitHub Publish Boundary
 

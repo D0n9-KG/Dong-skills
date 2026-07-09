@@ -155,20 +155,24 @@ export function gitCheckpointStatus(root, ctx, latest) {
   if (needsCheckpoint && onlyGovernanceChanges) {
     checkpointDetails.push("Only governance/context files changed; a structured deferred reason is acceptable when no code checkpoint is needed.");
   }
+  const checkpointTailAccepted = needsCheckpoint && onlyGovernanceChanges && checkpointRecorded;
 
   const detailText = checkpointDetails.length ? ` Details: ${checkpointDetails.join(" ")}` : "";
 
   return {
     ok: !needsCheckpoint || checkpointRecorded,
     needsCheckpoint,
+    checkpointTailAccepted,
     checkpointRecorded,
     checkpointValidation,
     checkpointFresh,
     checkpointDetails,
     statusFiles,
     issues,
-    summary: needsCheckpoint
-      ? `Git checkpoint needs review: ${issues.join("; ")}.${detailText} Use codex-git-checkpoint to commit/push or record the deferred reason in handoff-summary.md -> Git Checkpoint.`
+    summary: needsCheckpoint && checkpointRecorded
+      ? `Git checkpoint ok: handoff-summary.md has a fresh structured Git Checkpoint.${checkpointTailAccepted ? " Checkpoint finalize tail accepted for governance/context-only changes." : ""}${detailText}`
+      : needsCheckpoint
+        ? `Git checkpoint needs review: ${issues.join("; ")}.${detailText} Use codex-git-checkpoint to commit/push or record the deferred reason in handoff-summary.md -> Git Checkpoint.`
       : "Git checkpoint ok: worktree has no uncommitted files and no unpushed commits."
   };
 }

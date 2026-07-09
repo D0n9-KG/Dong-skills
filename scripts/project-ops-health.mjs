@@ -313,6 +313,114 @@ function requireWorkflowValue(state, field, allowed, issues) {
   }
 }
 
+const EXECUTION_OR_LATER_PHASES = new Set([
+  "execution",
+  "debugging",
+  "verification",
+  "review",
+  "delivery",
+  "handoff",
+  "complete"
+]);
+
+function lower(text) {
+  return String(text || "").toLowerCase();
+}
+
+function meaningful(text) {
+  const compact = String(text || "")
+    .replace(/\[[^\]]+\]/g, "")
+    .replace(/^[-*]\s*/gm, "")
+    .replace(/[.。]/g, "")
+    .trim();
+  if (/^(None yet|None known|None|Unknown|No formal plan yet|暂无正式计划|暂无已知风险|尚未检测|待定|暂无|无|未知)$/i.test(compact)) {
+    return false;
+  }
+  return compact.length > 0;
+}
+
+function nonTemplateStatusText(text) {
+  const value = lower(text);
+  if (!meaningful(value)) return "";
+  if (/可选值|example|examples|例如|do not infer|不要.*推断|等待用户选择|未选择|not selected/.test(value)) {
+    return "";
+  }
+  return value;
+}
+
+function specApprovalFromMarkdown(markdown) {
+  const approval = nonTemplateStatusText(sectionContent(markdown, ["Approval Status", "审批状态"]));
+  if (!approval) return "unknown";
+  if (/living draft|not approved|未批准|草稿/.test(approval)) return "living-draft";
+  if (/pending written-spec approval|pending approval|待.*审批|等待.*审批/.test(approval)) return "pending-approval";
+  if (/skipped|跳过/.test(approval)) return "skipped";
+  if (/mechanical exception|机械例外/.test(approval)) return "mechanical-exception";
+  if (/approved|用户.*批准|已批准/.test(approval)) return "approved";
+  return "unknown";
+}
+
+function planApprovalFromMarkdown(markdown) {
+  const approval = nonTemplateStatusText(sectionContent(markdown, ["Execution Approval", "执行审批"]));
+  if (!approval) return "unknown";
+  if (/pending|not approved|尚未批准|未批准|待.*批准|等待.*批准/.test(approval)) return "pending";
+  if (/approved by user.*codex goal|approved.*goal|approved-goal|codex goal.*批准/.test(approval)) return "approved-goal";
+  if (/approved by user.*traditional|approved.*traditional|approved-traditional|traditional.*批准|逐项执行.*批准/.test(approval)) return "approved-traditional";
+  if (/plan-then-execute|先计划.*执行|计划后执行/.test(approval)) return "plan-then-execute-traditional";
+  return "unknown";
+}
+
+function planModeFromMarkdown(markdown) {
+  const mode = nonTemplateStatusText(sectionContent(markdown, ["Execution Mode", "执行模式"]));
+  if (!mode) return "unknown";
+  if (/pending|待定|未定|尚未/.test(mode)) return "pending";
+  if (/codex goal|goal mode/.test(mode)) return "codex-goal";
+  if (/traditional|task-by-task|逐项|传统/.test(mode)) return "traditional";
+  return "unknown";
+}
+
+function phaseAtOrAfterExecution(phase) {
+  return EXECUTION_OR_LATER_PHASES.has(phase);
+}
+
+function checkWorkflowConsistency(workflow, spec, plan, issues) {
+  const specDoc = specApprovalFromMarkdown(spec);
+  const planApproval = planApprovalFromMarkdown(plan);
+  const planMode = planModeFromMarkdown(plan);
+
+  if (specDoc === "approved" && ["not-started", "living-draft", "pending-approval"].includes(workflow.spec_status)) {
+    issues.push(`workflow-state.yaml/spec.md mismatch: spec.md says approved, but spec_status=${workflow.spec_status}`);
+  }
+  if (["living-draft", "pending-approval"].includes(specDoc) && workflow.spec_status === "approved") {
+    issues.push(`workflow-state.yaml/spec.md mismatch: workflow spec_status=approved, but spec.md approval status is ${specDoc}`);
+  }
+  if (phaseAtOrAfterExecution(workflow.phase) && !["approved", "skipped", "mechanical-exception"].includes(workflow.spec_status)) {
+    issues.push(`workflow-state.yaml mismatch: phase=${workflow.phase} requires approved/skipped/mechanical spec_status, got ${workflow.spec_status}`);
+  }
+
+  if (planApproval === "pending" && ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(workflow.execution_approval)) {
+    issues.push(`workflow-state.yaml/plan-progress.md mismatch: execution_approval=${workflow.execution_approval}, but plan-progress.md execution approval is pending`);
+  }
+  if (["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(planApproval) && workflow.execution_approval === "pending") {
+    issues.push("workflow-state.yaml/plan-progress.md mismatch: plan-progress.md has execution approval, but execution_approval=pending");
+  }
+  if (phaseAtOrAfterExecution(workflow.phase) && !["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(workflow.execution_approval)) {
+    issues.push(`workflow-state.yaml mismatch: phase=${workflow.phase} requires execution approval, got ${workflow.execution_approval}`);
+  }
+  if (workflow.plan_status === "approved" && planApproval === "pending") {
+    issues.push("workflow-state.yaml/plan-progress.md mismatch: plan_status=approved, but plan-progress.md says execution is not approved");
+  }
+  if (["traditional", "codex-goal"].includes(planMode) && workflow.execution_mode !== "pending" && planMode !== workflow.execution_mode) {
+    issues.push(`workflow-state.yaml/plan-progress.md mismatch: execution mode=${workflow.execution_mode}, but plan-progress.md says ${planMode}`);
+  }
+
+  if (workflow.phase === "complete" && workflow.next_skill !== "none") {
+    issues.push(`workflow-state.yaml mismatch: phase=complete requires next_skill=none, got ${workflow.next_skill}`);
+  }
+  if (["delivery", "handoff", "complete"].includes(workflow.phase) && !["pass", "gap-recorded"].includes(workflow.verify_result)) {
+    issues.push(`workflow-state.yaml mismatch: phase=${workflow.phase} requires verify_result pass or gap-recorded, got ${workflow.verify_result}`);
+  }
+}
+
 function decodePowerShellEncodedCommand(value) {
   const match = String(value).match(/(?:^|\s)-EncodedCommand\s+([A-Za-z0-9+/=]+)/i);
   if (!match) return "";
@@ -486,6 +594,7 @@ function checkContext(root, issues) {
   for (const [field, allowed] of Object.entries(WORKFLOW_ALLOWED)) {
     requireWorkflowValue(workflow, field, allowed, issues);
   }
+  checkWorkflowConsistency(workflow, spec, plan, issues);
 }
 
 function readJsonFile(file, issues, label) {
