@@ -566,6 +566,84 @@ process.stdout.write(JSON.stringify({ output: outputs[input.case_id] || "" }));
   }, /Command failed/);
 });
 
+test("skill forward eval times out a stalled case and continues with later cases", () => {
+  const project = tempProject();
+  const scenarioFile = path.join(project, "timeout-scenario.json");
+  const backendFile = path.join(project, "timeout-backend.mjs");
+  const outputDir = path.join(project, "timeout-outputs");
+  write(scenarioFile, JSON.stringify({
+    schema: "dong-skills.forward-eval.v1",
+    name: "timeout-forward-eval",
+    reviewed: true,
+    cases: [
+      {
+        id: "slow-train",
+        split: "train",
+        skills: ["using-superpowers"],
+        prompt: "Stall this case.",
+        expected: { required_all: ["never reached"] }
+      },
+      {
+        id: "quick-held-out",
+        split: "held-out",
+        skills: ["using-superpowers"],
+        prompt: "Complete this case.",
+        expected: { required_all: ["quick result"] }
+      }
+    ]
+  }, null, 2));
+  write(backendFile, `import fs from "node:fs";
+const input = JSON.parse(fs.readFileSync(0, "utf8"));
+if (input.case_id === "slow-train") {
+  setTimeout(() => process.stdout.write(JSON.stringify({ output: "never reached" })), 5000);
+} else {
+  process.stdout.write(JSON.stringify({ output: "quick result" }));
+}
+`);
+
+  assert.throws(() => {
+    execFileSync(process.execPath, [
+      skillForwardEval,
+      scenarioFile,
+      "--root", root,
+      "--backend", process.execPath,
+      "--backend-arg", backendFile,
+      "--timeout-ms", "1.5",
+      "--output-dir", outputDir
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+
+  const startedAt = Date.now();
+  assert.throws(() => {
+    execFileSync(process.execPath, [
+      skillForwardEval,
+      scenarioFile,
+      "--root", root,
+      "--backend", process.execPath,
+      "--backend-arg", backendFile,
+      "--timeout-ms", "150",
+      "--output-dir", outputDir
+    ], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+  assert.ok(Date.now() - startedAt < 3000, "forward eval should stop the stalled case promptly");
+
+  const summary = readJson(path.join(outputDir, "summary.json"));
+  const slow = summary.results.find((result) => result.id === "slow-train");
+  const quick = summary.results.find((result) => result.id === "quick-held-out");
+  assert.equal(slow.execution_status, "timeout");
+  assert.match(slow.issues.join("\n"), /timed out after 150ms/);
+  assert.equal(quick.execution_status, "pass");
+  assert.equal(quick.ok, true);
+});
+
 test("bundled forward eval accepts equivalent planning language without weakening execution gates", () => {
   const project = tempProject();
   const outputDir = path.join(project, "outputs");

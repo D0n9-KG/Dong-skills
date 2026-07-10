@@ -90,6 +90,8 @@ export function activeWayfinderSummary(root, ctx, max = 1500) {
 
 export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) {
   const workflow = workflowStatus(root, ctx);
+  const state = workflow.state || {};
+  const complete = state.phase === "complete";
   const handoff = readText(path.join(ctx, REQUIRED_FILES.handoff));
   const current = readText(path.join(ctx, REQUIRED_FILES.current));
   const artifactIndex = readText(path.join(ctx, REQUIRED_FILES.artifacts));
@@ -103,10 +105,28 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
     {
       id: "workflow-state",
       ok: workflow.ok &&
-        meaningful(workflow.state?.task_id) &&
-        meaningful(workflow.state?.phase) &&
-        meaningful(workflow.state?.next_skill),
-      detail: workflow.ok ? `phase=${workflow.state.phase}; next=${workflow.state.next_skill}` : workflow.issues.join("; ")
+        meaningful(state.task_id) &&
+        meaningful(state.phase) &&
+        (complete ? state.next_skill === "none" : meaningful(state.next_skill) && state.next_skill !== "none"),
+      detail: workflow.ok ? `phase=${state.phase}; next=${state.next_skill}` : workflow.issues.join("; ")
+    },
+    {
+      id: "context-freshness",
+      ok: complete
+        ? workflow.ok
+        : workflow.ok &&
+          !!state.handoff_hash &&
+          state.handoff_hash !== "null" &&
+          state.handoff_task_id === state.task_id &&
+          String(state.handoff_task_generation) === String(state.task_generation),
+      detail: complete
+        ? "workflow complete; active handoff hash not required"
+        : (!state.handoff_hash || state.handoff_hash === "null"
+            ? "active workflow requires a refreshed handoff hash"
+            : (state.handoff_task_id !== state.task_id ||
+                String(state.handoff_task_generation) !== String(state.task_generation)
+                ? "saved handoff hash task identity does not match current workflow task identity"
+                : (workflow.ok ? "handoff hash and task identity match" : workflow.issues.join("; "))))
     },
     {
       id: "file-pointers",
@@ -126,9 +146,10 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
     },
     {
       id: "next-action",
-      ok: meaningful(firstMeaningfulSection(current, ["Next Action"])) ||
+      ok: complete ||
+        meaningful(firstMeaningfulSection(current, ["Next Action"])) ||
         meaningful(firstMeaningfulSection(handoff, ["Next Action"])),
-      detail: "current-state.md or handoff-summary.md"
+      detail: complete ? "workflow complete" : "current-state.md or handoff-summary.md"
     },
     {
       id: "verification-evidence",
@@ -145,6 +166,7 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
   return {
     ok: probes.every((probe) => probe.ok),
     root,
+    mode: complete ? "complete" : "active",
     probes,
     activeWayfinder: wayfinder.active ? {
       reference: wayfinder.reference,

@@ -1,16 +1,58 @@
 # 验证
 
+## 本轮可靠性补强
+- `node scripts/run-domain-tests.mjs`
+  - Result: pass
+  - Evidence: 114/114 tests across 10 domains; concurrency 4; 91.7 seconds elapsed.
+  - Date: 2026-07-10 16:36 +08:00.
+- `node scripts/project-ops-health.mjs .`
+  - Result: pass
+  - Evidence: source checkout、workflow/schema、runtime parity 和 worktree diagnostics 无问题。
+  - Date: 2026-07-10 16:38 +08:00.
+- `node --test tests/domains/bootstrap-recovery.test.mjs`
+  - Result: pass
+  - Evidence: 7/7；覆盖 active rollback、closed cleanup 强杀、closed cleanup 普通异常、损坏 journal、并发锁和 locked raw。
+- `node --test tests/domains/memory-evolution.test.mjs`
+  - Result: pass
+  - Evidence: 16/16；超时分类、后续 case 继续和严格正整数 timeout 校验通过。
+- 真实临时 bootstrap 与安装副本 bootstrap
+  - Result: pass
+  - Evidence: source bootstrap health 与已安装 onboarding bootstrap health 均通过；临时目录已清理。
+
+## 本轮 Review
+- P1 closed cleanup 强杀窗口：先删 backup 后删 journal 会永久阻断恢复；已用 `status: closed` 和幂等 cleanup 修复。
+- P1 closed cleanup 异常回滚：外层 catch 会恢复已提交旧集合；已限定只有 active 事务可 rollback。
+- P2 非 Dong 技能误判：无 previous/staging 时 repair 提前返回，原有预检保护恢复。
+- P3 timeout 参数截断：改用严格 `Number` + safe integer 校验。
+- Simplicity: 无新增依赖；复用现有 lock、entry snapshot、SHA256/path guard 和 domain runner。
+
+## 最终发布证据
+- `node scripts/release-check.mjs .`
+  - Result: pass
+  - Evidence: health、context budget、Node/PowerShell syntax、114 domain tests、privacy、readability、large-file 和 runtime-artifact 全部通过。
+  - Date: 2026-07-10 16:51 +08:00.
+- 最终全局同步与 installed health
+  - Result: pass
+  - Evidence: 最终源码重同步到 `%USERPROFILE%\.agents\skills`；安装副本 bootstrap 临时项目 health 通过。
+  - Date: 2026-07-10 16:54 +08:00.
+- 残留扫描
+  - Result: pass
+  - Evidence: 无 install journal、backup、`.previous-*`、`.staging-*` 或最终临时项目残留。
+- workflow completion
+  - Result: pass
+  - Evidence: `execution-complete`、`verification-pass`、`review-complete`、`checkpoint-deferred`、`delivery-complete` 均成功；phase=`complete`，next_skill=`none`。
+
 ## 已运行命令
 - `node scripts/run-domain-tests.mjs`
   - Result: pass
-  - Evidence: 106/106 tests across 8 domains; concurrency 4; 67.1 seconds elapsed.
+  - Evidence: 114/114 tests across 10 domains; concurrency 4; 91.7 seconds elapsed.
   - Date: 2026-07-10.
 - `node --test tests/domains/memory-evolution.test.mjs`
   - Result: pass
-  - Evidence: 15/15；新增 bundled scenario 语义等价表达回归，并确认 `直接开始实现` 仍失败。
+  - Evidence: 16/16；包含 forward timeout、严格 timeout 参数和后续 case 继续执行。
 - `node --test tests/domains/core.test.mjs tests/domains/workflow-hooks.test.mjs`
   - Result: pass
-  - Evidence: 39/39；覆盖 negated readiness、negated loop review、空 Wayfinder、恢复摘要和 workflow gates。
+  - Evidence: 41/41；包含 handoff hash/task identity 和 complete recovery 回归。
 - `node scripts/skill-forward-eval.mjs evals/skill-forward/complex-project-gates.json --root . --read-output-dir .codex-context/raw/skill-forward-eval/independent-agent-2026-07-10`
   - Result: pass
   - Evidence: 4/4，2 train + 2 held-out；独立 agent 未读取 expected 条件。
@@ -25,10 +67,10 @@
   - Evidence: source receipt v2、manifest SHA256、三个全局入口完整文件集/哈希、全局 onboarding 临时 bootstrap、installed health、workflow/recovery runtime hash 全部通过。
 - `node scripts/release-check.mjs .`
   - Result: pass
-  - Evidence: health、context budget、Node/PowerShell syntax、106 domain tests、privacy、readability、large-file 和 runtime-artifact 全部通过；78.6 秒。
+  - Evidence: health、context budget、Node/PowerShell syntax、114 domain tests、privacy、readability、large-file 和 runtime-artifact 全部通过；100.2 秒。
 - workflow completion
   - Result: pass
-  - Evidence: `execution-complete`、`verification-pass`、`review-complete`、`checkpoint-deferred`、`delivery-complete` 均成功；`workflow-state next` 返回 `NEXT: done`。
+  - Evidence: `execution-complete`、`verification-pass`、`review-complete`、`checkpoint-deferred`、`delivery-complete` 均成功；phase=`complete`，next_skill=`none`。
 
 ## Review
 - 独立 reviewer 首轮发现 3 个 P1：否定 Artifact Readiness 误判、否定 Loop Review 误判、空 Wayfinder 误通过。
@@ -47,3 +89,13 @@
 ## 尚未验证
 - 未模拟断电恰好发生在 rollback 恢复过程中。
 - 未做超大 `.codex-context` 临时磁盘压力测试。
+
+## 已运行命令
+- `node .codex/hooks/project-ops.mjs workflow-state hash --write`
+  - Result: pass
+  - Evidence: 重新计算六个受管上下文文件并更新 workflow handoff hash。
+  - Date: 2026-07-10 16:58 +08:00.
+- `node scripts/release-check.mjs .`
+  - Result: pass
+  - Evidence: health、context budget、Node/PowerShell syntax、domain-sharded tests、privacy、readability、large-file 和 runtime-artifact 全部通过；退出码 0，耗时 99.8 秒。
+  - Date: 2026-07-10 16:58 +08:00.

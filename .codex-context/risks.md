@@ -27,6 +27,7 @@
 ## Technical Risks
 - Installer/bootstrap now use collection-level snapshots and bounded locks. Residual risk: snapshotting `.codex` and `.codex-context` can use noticeable temporary disk space in unusually large projects.
 - Process termination and ordinary late failures release file locks and are covered by rollback tests; forced power loss during the restore operation itself is not simulated.
+- Forward-eval timeout terminates the direct backend process; a backend that spawns detached descendants is not stress-tested and may require backend-specific process-tree cleanup.
 - Cross-volume temporary backup copy behavior is not stress-tested. Managed skill staging remains inside its destination root, while collection backups use the system temp directory.
 - `project-ops-health.mjs` loads the workflow runtime parser/schema dynamically. Future runtime relocation must preserve one of the documented source/installed resolution paths.
 - Domain sharding reduces the full suite from roughly 125 seconds to about 61 seconds on this machine. The bootstrap-runtime shard remains the longest path and should be split only when tests gain clearer independent fixtures.

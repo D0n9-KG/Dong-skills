@@ -45,6 +45,7 @@ node scripts/skill-forward-eval.mjs evals/skill-forward/complex-project-gates.js
   --root . `
   --backend <executable> `
   --backend-arg <arg> `
+  --timeout-ms 120000 `
   --output-dir .codex-context/raw/skill-forward-eval/run-name
 ```
 
@@ -75,6 +76,8 @@ The backend may return plain text or:
 ```
 
 Each raw response is written to `<output-dir>/<case-id>.txt` before local judging. `summary.json` records case results without embedding the raw responses.
+
+Each backend case has a timeout. The default is 120 seconds and can be overridden with `--timeout-ms <positive-integer>`. A timed-out case fails closed with `execution_status: "timeout"` in `summary.json`; later cases still run. Recorded-output mode does not invoke a backend and ignores the timeout.
 
 ## Recorded Outputs
 

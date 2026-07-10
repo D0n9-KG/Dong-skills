@@ -1,25 +1,31 @@
 # 当前状态
 
 ## 目标
-完成 Artifact Readiness 机器门禁、恢复 evaluator、Goal loop review 和真实 skill forward-eval 四项复杂项目能力补强。
+修复 recovery 新鲜度与完成态语义、forward backend 超时、installer 崩溃恢复与精确备份，并进一步拆分 bootstrap 测试域。
 
 ## 最新用户指令
-完成这四项优化并验证 Dong Skills 在复杂项目中的实际衔接。
+按提交后独立审查结论完整修复六项问题。
 
 ## 当前阶段
 complete
 
 ## 当前假设
-- 采用 Traditional task-by-task execution。
-- 本机 `codex` CLI 已恢复到 `0.144.1`；FlClash 启用后，真实 `codex.exe` backend 已直接完成 4/4 forward-eval。
-- forward-eval 场景必须断言可观察行为并提供语义等价 alternatives，不能把正确行为绑定到单一精确词面。
-- 用户已授权创建本地 checkpoint commit；不推送远端。
+- 用户已批准 plan-then-execute，采用 Traditional task-by-task execution。
+- 使用现有 workflow hash、Node timeout、PowerShell lock/transaction 模式完成，不增加依赖。
+- substring judge 与网络前置条件保持不动。
 
-## 阻塞项
-无。
+## 当前结果
+- recovery 以 handoff hash + task identity 保护活跃恢复，complete + `next_skill: none` 合法。
+- forward backend 具备严格正整数 timeout、独立 timeout 分类和后续 case 继续执行。
+- installer 使用持久 journal、active/closed 状态、目标锁和精确文件快照；closed cleanup 不再错误 rollback。
+- bootstrap 测试拆为 install、integrity、recovery 三个 domain。
+- 完整领域测试 114/114，source health 通过。
 
 ## 下一步动作
-创建本地 checkpoint commit；提交后刷新 Git 存档尾注，不推送远端。
+等待用户审阅本轮未提交改动，并决定是否提交；不要自动 push。
 
 ## 最后更新
-2026-07-10。
+2026-07-10 16:55 +08:00。
+
+## 阻塞项
+- 无。

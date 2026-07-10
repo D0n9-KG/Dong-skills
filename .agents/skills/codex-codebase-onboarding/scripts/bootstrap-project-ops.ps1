@@ -135,6 +135,31 @@ function Assert-PathInside {
   }
 }
 
+function Test-PathInsideAny {
+  param(
+    [string[]]$Parents,
+    [string]$Child
+  )
+
+  $childFull = [System.IO.Path]::GetFullPath($Child)
+  foreach ($parent in $Parents) {
+    $parentFull = ([System.IO.Path]::GetFullPath($parent)).TrimEnd($trimChars)
+    if ($childFull.StartsWith($parentFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
+        [System.String]::Equals($childFull.TrimEnd($trimChars), $parentFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Get-NormalizedInstallResourcePaths {
+  param([string[]]$ResourcePaths)
+
+  return @($ResourcePaths | ForEach-Object {
+    ([System.IO.Path]::GetFullPath($_)).TrimEnd($trimChars).Replace('\', '/').ToLowerInvariant()
+  } | Sort-Object -Unique)
+}
+
 function Get-InstallLockPath {
   param([string]$ResourcePath)
 
@@ -146,6 +171,20 @@ function Get-InstallLockPath {
     $sha.Dispose()
   }
   return Join-Path ([System.IO.Path]::GetTempPath()) "dong-skills-install-locks\$digest.lock"
+}
+
+function Get-InstallTransactionJournalPath {
+  param([string[]]$ResourcePaths)
+
+  $normalized = Get-NormalizedInstallResourcePaths -ResourcePaths $ResourcePaths
+  $payload = $normalized -join "`n"
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $digest = (($sha.ComputeHash($utf8NoBom.GetBytes($payload)) | ForEach-Object { $_.ToString("x2") }) -join "")
+  } finally {
+    $sha.Dispose()
+  }
+  return Join-Path ([System.IO.Path]::GetTempPath()) "dong-skills-install-transactions\$digest.json"
 }
 
 function Enter-InstallLock {
@@ -190,13 +229,46 @@ function Exit-InstallLock {
   }
 }
 
+function Write-InstallTransactionJournal {
+  param([object]$Transaction)
+
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Transaction.JournalFile) | Out-Null
+  $payload = [ordered]@{
+    schema = "dong-skills.install-transaction.v1"
+    status = if ($Transaction.Status) { $Transaction.Status } else { "active" }
+    backup_root = $Transaction.BackupRoot
+    resource_paths = @($Transaction.ResourcePaths)
+    entries = @($Transaction.Entries | ForEach-Object {
+      [ordered]@{
+        path = $_.Path
+        existed = [bool]$_.Existed
+        kind = $_.Kind
+        backup = $_.Backup
+      }
+    })
+  }
+  Write-Utf8Text -File $Transaction.JournalFile -Content (($payload | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
+}
+
 function New-InstallTransaction {
-  $backupRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("dong-skills-install-transaction-" + [guid]::NewGuid().ToString("N"))
+  param([string[]]$ResourcePaths)
+
+  $journalFile = Get-InstallTransactionJournalPath -ResourcePaths $ResourcePaths
+  if (Test-Path -LiteralPath $journalFile) {
+    throw "A pending Dong Skills install transaction must be recovered first: $journalFile"
+  }
+  $transactionRoot = Split-Path -Parent $journalFile
+  $backupRoot = Join-Path $transactionRoot ("backup-" + [guid]::NewGuid().ToString("N"))
   New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
-  return [pscustomobject]@{
+  $transaction = [pscustomobject]@{
+    Status = "active"
     BackupRoot = $backupRoot
+    JournalFile = $journalFile
+    ResourcePaths = Get-NormalizedInstallResourcePaths -ResourcePaths $ResourcePaths
     Entries = New-Object "System.Collections.Generic.List[object]"
   }
+  Write-InstallTransactionJournal -Transaction $transaction
+  return $transaction
 }
 
 function Add-InstallTransactionPath {
@@ -213,15 +285,69 @@ function Add-InstallTransactionPath {
   }
 
   $exists = Test-Path -LiteralPath $fullPath
+  $kind = "missing"
   $backup = Join-Path $Transaction.BackupRoot ([string]$Transaction.Entries.Count)
   if ($exists) {
+    $item = Get-Item -LiteralPath $fullPath -Force
+    $kind = if ($item.PSIsContainer) { "directory" } else { "file" }
     Copy-Item -LiteralPath $fullPath -Destination $backup -Recurse -Force
   }
   $Transaction.Entries.Add([pscustomobject]@{
     Path = $fullPath
     Existed = $exists
+    Kind = $kind
     Backup = $backup
   })
+  Write-InstallTransactionJournal -Transaction $Transaction
+}
+
+function Read-InstallTransactionJournal {
+  param([string[]]$ResourcePaths)
+
+  $journalFile = Get-InstallTransactionJournalPath -ResourcePaths $ResourcePaths
+  if (!(Test-Path -LiteralPath $journalFile)) {
+    return $null
+  }
+  try {
+    $data = Read-Utf8Text -File $journalFile | ConvertFrom-Json
+  } catch {
+    throw "Pending Dong Skills install journal is unreadable; preserve it for manual recovery: $journalFile"
+  }
+  if ($data.schema -ne "dong-skills.install-transaction.v1") {
+    throw "Pending Dong Skills install journal has an unsupported schema: $journalFile"
+  }
+  $status = if ($data.PSObject.Properties.Name -contains "status") { [string]$data.status } else { "active" }
+  if ($status -notin @("active", "closed")) {
+    throw "Pending Dong Skills install journal has an unsupported status: $journalFile"
+  }
+  $expectedResources = Get-NormalizedInstallResourcePaths -ResourcePaths $ResourcePaths
+  $journalResources = Get-NormalizedInstallResourcePaths -ResourcePaths @($data.resource_paths)
+  if (($expectedResources -join "`n") -ne ($journalResources -join "`n")) {
+    throw "Pending Dong Skills install journal targets different resources: $journalFile"
+  }
+  $backupRoot = [System.IO.Path]::GetFullPath([string]$data.backup_root)
+  $transactionRoot = Split-Path -Parent $journalFile
+  Assert-PathInside -Parent $transactionRoot -Child $backupRoot
+  if ($status -eq "active" -and !(Test-Path -LiteralPath $backupRoot)) {
+    throw "Pending Dong Skills install backup is missing: $backupRoot"
+  }
+  $entries = @($data.entries)
+  foreach ($entry in $entries) {
+    if (!(Test-PathInsideAny -Parents $expectedResources -Child ([string]$entry.path))) {
+      throw "Pending Dong Skills install journal contains a target outside managed resources: $($entry.path)"
+    }
+    Assert-PathInside -Parent $backupRoot -Child ([string]$entry.backup)
+    if ($status -eq "active" -and [bool]$entry.existed -and !(Test-Path -LiteralPath ([string]$entry.backup))) {
+      throw "Pending Dong Skills install backup entry is missing: $($entry.backup)"
+    }
+  }
+  return [pscustomobject]@{
+    Status = $status
+    BackupRoot = $backupRoot
+    JournalFile = $journalFile
+    ResourcePaths = $expectedResources
+    Entries = $entries
+  }
 }
 
 function Restore-InstallTransaction {
@@ -245,8 +371,75 @@ function Restore-InstallTransaction {
 function Close-InstallTransaction {
   param([object]$Transaction)
 
-  if ($Transaction -and (Test-Path -LiteralPath $Transaction.BackupRoot)) {
+  if (-not $Transaction) {
+    return
+  }
+  if ($Transaction.Status -ne "closed") {
+    $Transaction.Status = "closed"
+    Write-InstallTransactionJournal -Transaction $Transaction
+  }
+  if (Test-Path -LiteralPath $Transaction.BackupRoot) {
     Remove-Item -LiteralPath $Transaction.BackupRoot -Recurse -Force
+  }
+  if ($Transaction.JournalFile -and (Test-Path -LiteralPath $Transaction.JournalFile)) {
+    Remove-Item -LiteralPath $Transaction.JournalFile -Force
+  }
+}
+
+function Recover-PendingInstallTransaction {
+  param([string[]]$ResourcePaths)
+
+  $transaction = Read-InstallTransactionJournal -ResourcePaths $ResourcePaths
+  if (-not $transaction) {
+    return
+  }
+  if ($transaction.Status -eq "closed") {
+    Write-Host "Completing interrupted Dong Skills install cleanup: $($transaction.JournalFile)"
+    Close-InstallTransaction -Transaction $transaction
+    return
+  }
+  Write-Host "Recovering interrupted Dong Skills install transaction: $($transaction.JournalFile)"
+  Restore-InstallTransaction -Transaction $transaction
+  Close-InstallTransaction -Transaction $transaction
+}
+
+function Repair-InterruptedSkillDirectory {
+  param(
+    [string]$DestinationRoot,
+    [string]$Name
+  )
+
+  if (!(Test-Path -LiteralPath $DestinationRoot)) {
+    return
+  }
+  $target = Join-Path $DestinationRoot $Name
+  $backups = @(Get-ChildItem -LiteralPath $DestinationRoot -Force -Directory | Where-Object {
+    $_.Name -like ".$Name.previous-*"
+  })
+  $staging = @(Get-ChildItem -LiteralPath $DestinationRoot -Force -Directory | Where-Object {
+    $_.Name -like ".$Name.staging-*"
+  })
+  if ($backups.Count -eq 0 -and $staging.Count -eq 0) {
+    return
+  }
+  if ((Test-Path -LiteralPath $target) -and -not (Test-DongSkillDirectory -SkillDirectory $target -ExpectedName $Name)) {
+    throw "Refusing to repair interrupted install over non-Dong skill directory: $target"
+  }
+  if (!(Test-Path -LiteralPath $target) -and $backups.Count -gt 1) {
+    throw "Multiple interrupted Dong Skills backups require manual review for $Name in $DestinationRoot"
+  }
+  if (!(Test-Path -LiteralPath $target) -and $backups.Count -eq 1) {
+    if (-not (Test-DongSkillDirectory -SkillDirectory $backups[0].FullName -ExpectedName $Name)) {
+      throw "Interrupted Dong Skills backup is not recognized: $($backups[0].FullName)"
+    }
+    Move-Item -LiteralPath $backups[0].FullName -Destination $target
+    $backups = @()
+  }
+  foreach ($artifact in @($backups + $staging)) {
+    if (-not (Test-DongSkillDirectory -SkillDirectory $artifact.FullName -ExpectedName $Name)) {
+      throw "Interrupted Dong Skills install artifact is not recognized: $($artifact.FullName)"
+    }
+    Remove-Item -LiteralPath $artifact.FullName -Recurse -Force
   }
 }
 
@@ -489,6 +682,14 @@ function Get-ManagedRuntimeRelativeFiles {
     $files += ".codex/scripts/$($_.Name)"
   }
   return @($files | Sort-Object -Unique)
+}
+
+function Get-ManagedContextRelativeFiles {
+  $contextRoot = ([System.IO.Path]::GetFullPath($sourceContext)).TrimEnd($trimChars)
+  return @(Get-ChildItem -LiteralPath $contextRoot -Recurse -File | ForEach-Object {
+    $relative = $_.FullName.Substring($contextRoot.Length).TrimStart($trimChars).Replace('\', '/')
+    ".codex-context/$relative"
+  } | Sort-Object -Unique)
 }
 
 function Complete-ProjectInstallReceipt {
@@ -775,9 +976,11 @@ if ($Preview) {
 
 $installLock = $null
 $transaction = $null
+$resourcePaths = @($resolvedTargetProjectRoot)
 try {
   $installLock = Enter-InstallLock -ResourcePath $resolvedTargetProjectRoot -TimeoutSeconds $LockTimeoutSeconds
-  $transaction = New-InstallTransaction
+  Recover-PendingInstallTransaction -ResourcePaths $resourcePaths
+  New-Item -ItemType Directory -Force -Path $targetProjectSkillsRoot | Out-Null
 
   $previousNames = @()
   $previousMarker = Join-Path $targetProjectSkillsRoot ".dong-skills-project.json"
@@ -790,11 +993,20 @@ try {
     } catch {}
   }
   foreach ($name in @(@($manifest.project_skills) + $previousNames | Sort-Object -Unique)) {
+    Repair-InterruptedSkillDirectory -DestinationRoot $targetProjectSkillsRoot -Name $name
+  }
+  $transaction = New-InstallTransaction -ResourcePaths $resourcePaths
+  foreach ($name in @(@($manifest.project_skills) + $previousNames | Sort-Object -Unique)) {
     Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $targetProjectSkillsRoot $name)
   }
   Add-InstallTransactionPath -Transaction $transaction -Path $previousMarker
-  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".codex-context")
-  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".codex")
+  foreach ($relative in Get-ManagedContextRelativeFiles) {
+    Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ($relative.Replace('/', '\')))
+  }
+  foreach ($relative in Get-ManagedRuntimeRelativeFiles) {
+    Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ($relative.Replace('/', '\')))
+  }
+  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".codex\hooks.json")
   Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".gitignore")
   Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot "AGENTS.md")
   Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot "AGENTS.md.codex-project-ops.bak")
@@ -856,6 +1068,9 @@ if ($agentsContent -like "*$markerStart*" -and $agentsContent -like "*$markerEnd
   Write-Utf8Text -File $agentsFile -Content ($agentsContent + "`n" + $snippetBlock + "`n")
 }
 
+Close-InstallTransaction -Transaction $transaction
+$transaction = $null
+
 Write-Host "Bootstrapped Dong Skills project context to $targetContext"
 Write-Host "Installed project-level Dong Skills to $(Join-Path $TargetProjectRoot ".agents\skills")"
 Write-Host "Installed project-level Dong Skills hooks to $targetCodex"
@@ -866,13 +1081,16 @@ Write-Host "Restart Codex or start a new thread from this project. Open /hooks a
   $installError = $_
   if ($transaction) {
     try {
-      Restore-InstallTransaction -Transaction $transaction
+      if ($transaction.Status -ne "closed") {
+        Restore-InstallTransaction -Transaction $transaction
+      }
+      Close-InstallTransaction -Transaction $transaction
+      $transaction = $null
     } catch {
       throw "Dong Skills bootstrap failed and rollback also failed. Install error: $installError Rollback error: $_"
     }
   }
   throw $installError
 } finally {
-  Close-InstallTransaction -Transaction $transaction
   Exit-InstallLock -Lock $installLock
 }

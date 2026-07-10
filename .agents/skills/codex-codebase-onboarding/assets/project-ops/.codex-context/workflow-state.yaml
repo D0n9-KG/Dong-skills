@@ -16,5 +16,7 @@ checkpoint_status: pending
 resume_phase: none
 resume_skill: none
 handoff_hash: null
+handoff_task_id: none
+handoff_task_generation: none
 updated_at: not-started
 note: initialized

@@ -26,6 +26,8 @@ const FIELD_ORDER = [
   "resume_phase",
   "resume_skill",
   "handoff_hash",
+  "handoff_task_id",
+  "handoff_task_generation",
   "updated_at",
   "note"
 ];
@@ -128,6 +130,8 @@ export function defaultWorkflowState() {
     resume_phase: "none",
     resume_skill: "none",
     handoff_hash: "null",
+    handoff_task_id: "none",
+    handoff_task_generation: "none",
     updated_at: new Date().toISOString(),
     note: "initialized"
   };
@@ -237,7 +241,7 @@ export function validateWorkflowState(input) {
   const state = normalizeWorkflowState(input);
   const issues = [];
   for (const field of FIELD_ORDER) {
-    if (field === "updated_at" || field === "note" || field === "handoff_hash") continue;
+    if (["updated_at", "note", "handoff_hash", "handoff_task_id", "handoff_task_generation"].includes(field)) continue;
     validateEnum(state, issues, field);
   }
   if (state.phase === "execution" && state.execution_mode === "pending") {
@@ -403,9 +407,14 @@ export function workflowConsistencyStatus(root, ctx, state = null) {
     issues.push(`state mismatch: phase=${current.phase} requires verify_result pass or gap-recorded, got ${current.verify_result}`);
   }
   if (current.handoff_hash && current.handoff_hash !== "null") {
-    const currentHash = workflowContextHash(root, contextDir, false).combined;
-    if (currentHash !== current.handoff_hash) {
-      issues.push("state mismatch: saved handoff_hash does not match current workflow context");
+    if (current.handoff_task_id !== current.task_id ||
+        String(current.handoff_task_generation) !== String(current.task_generation)) {
+      issues.push("state mismatch: saved handoff hash task identity does not match current workflow task identity");
+    } else {
+      const currentHash = workflowContextHash(root, contextDir, false).combined;
+      if (currentHash !== current.handoff_hash) {
+        issues.push("state mismatch: saved handoff_hash does not match current workflow context");
+      }
     }
   }
 
@@ -520,7 +529,9 @@ export function transitionWorkflowState(root, ctx, event) {
         checkpoint_status: "pending",
         resume_phase: "none",
         resume_skill: "none",
-        handoff_hash: "null"
+        handoff_hash: "null",
+        handoff_task_id: "none",
+        handoff_task_generation: "none"
       }, "New task started");
       break;
     }
@@ -885,7 +896,13 @@ export function workflowContextHash(root, ctx, write = false) {
 
   if (write) {
     const state = loadWorkflowState(root, contextDir);
-    saveWorkflowState(root, contextDir, { ...state, handoff_hash: combined, note: "Context hash refreshed" });
+    saveWorkflowState(root, contextDir, {
+      ...state,
+      handoff_hash: combined,
+      handoff_task_id: state.task_id,
+      handoff_task_generation: state.task_generation,
+      note: "Context hash refreshed"
+    });
   }
 
   return { combined, entries };

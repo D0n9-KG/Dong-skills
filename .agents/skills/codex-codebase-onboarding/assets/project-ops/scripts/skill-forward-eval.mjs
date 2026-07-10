@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 
 const SCENARIO_SCHEMA = "dong-skills.forward-eval.v1";
 const REQUEST_SCHEMA = "dong-skills.forward-eval.request.v1";
+const DEFAULT_TIMEOUT_MS = 120_000;
 
 function usage() {
   return [
@@ -18,6 +19,7 @@ function usage() {
     "  --read-output-dir <path>  Judge existing <case-id>.txt files without invoking a backend.",
     "  --backend <executable>    External evaluator command. Scenario expectations are not sent to it.",
     "  --backend-arg <arg>       Repeatable backend argument.",
+    `  --timeout-ms <number>     Per-case backend timeout in milliseconds (default ${DEFAULT_TIMEOUT_MS}).`,
     "  --json                    Print the result summary as JSON."
   ].join("\n");
 }
@@ -27,6 +29,7 @@ function parseArgs(argv) {
     backendArgs: [],
     root: process.cwd(),
     json: false,
+    timeoutMs: DEFAULT_TIMEOUT_MS,
     rootExplicit: false
   };
   const positionals = [];
@@ -37,7 +40,7 @@ function parseArgs(argv) {
       options.json = true;
       continue;
     }
-    if (["--backend", "--backend-arg", "--root", "--output-dir", "--read-output-dir"].includes(arg)) {
+    if (["--backend", "--backend-arg", "--root", "--output-dir", "--read-output-dir", "--timeout-ms"].includes(arg)) {
       const value = argv[i + 1];
       if (!value) throw new Error(`${arg} requires a value`);
       i += 1;
@@ -72,6 +75,10 @@ function parseArgs(argv) {
   }
   if (!options.backend && !options.readOutputDir) {
     throw new Error("No forward-eval backend is available; pass --backend or --read-output-dir");
+  }
+  options.timeoutMs = Number(options.timeoutMs);
+  if (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0) {
+    throw new Error("--timeout-ms must be a positive integer");
   }
   return options;
 }
@@ -217,9 +224,16 @@ function invokeBackend(options, payload) {
     encoding: "utf8",
     windowsHide: true,
     maxBuffer: 10 * 1024 * 1024,
+    timeout: options.timeoutMs,
+    killSignal: "SIGTERM",
     stdio: ["pipe", "pipe", "pipe"]
   });
   if (result.error) {
+    if (result.error.code === "ETIMEDOUT") {
+      const error = new Error(`Forward-eval backend timed out after ${options.timeoutMs}ms`);
+      error.code = "FORWARD_EVAL_TIMEOUT";
+      throw error;
+    }
     throw new Error(`Forward-eval backend unavailable: ${result.error.message}`);
   }
   if (result.status !== 0) {
@@ -268,7 +282,7 @@ function formatSummary(summary) {
     ""
   ];
   for (const result of summary.results) {
-    lines.push(`${result.id} [${result.split}]: ${result.ok ? "pass" : "fail"}`);
+    lines.push(`${result.id} [${result.split}]: ${result.ok ? "pass" : "fail"} (execution=${result.execution_status})`);
     for (const issue of result.issues) lines.push(`- ${issue}`);
   }
   lines.push("", summary.ok ? "Result: pass" : "Result: fail");
@@ -287,6 +301,7 @@ function run(options) {
     const outputFile = path.join(outputDirectory, `${entry.id}.txt`);
     let output = "";
     let executionIssue = "";
+    let executionStatus = options.readOutputDir ? "recorded" : "pass";
     try {
       if (options.readOutputDir) {
         if (!fs.existsSync(outputFile)) {
@@ -307,6 +322,7 @@ function run(options) {
       }
     } catch (error) {
       executionIssue = error.message;
+      executionStatus = error.code === "FORWARD_EVAL_TIMEOUT" ? "timeout" : "backend-error";
     }
 
     const judged = executionIssue
@@ -316,6 +332,7 @@ function run(options) {
       id: entry.id,
       split: entry.split,
       ok: judged.ok,
+      execution_status: executionStatus,
       issues: judged.issues,
       output_file: outputFile
     });
@@ -327,6 +344,7 @@ function run(options) {
     scenario_file: scenario.source,
     output_directory: outputDirectory,
     backend: options.readOutputDir ? "recorded-output-dir" : path.basename(options.backend),
+    timeout_ms: options.readOutputDir ? null : options.timeoutMs,
     case_count: results.length,
     train_count: results.filter((result) => result.split === "train").length,
     held_out_count: results.filter((result) => result.split === "held-out").length,

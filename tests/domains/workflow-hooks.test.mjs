@@ -560,6 +560,98 @@ note: fixture
   assert.match(context, /Worktree state excerpt:/);
 });
 
+test("context recovery requires a fresh hash bound to the active task identity", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const recoveryEval = path.join(root, "scripts", "context-recovery-eval.mjs");
+  const ctx = path.join(project, ".codex-context");
+  write(path.join(ctx, "decisions.md"), "# Decisions\n\n## Accepted\n- Use the fixture plan.\n");
+  write(path.join(ctx, "risks.md"), "# Risks\n\n## Technical Risks\n- Fixture risk.\n");
+  write(path.join(ctx, "verification.md"), "# Verification\n\n## Commands Run\n- Fixture command passed.\n");
+
+  let missingHashOutput = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [recoveryEval, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    missingHashOutput = String(error.stdout || "");
+    return /Result: fail/.test(missingHashOutput);
+  });
+  assert.match(missingHashOutput, /context-freshness: fail/i);
+  assert.match(missingHashOutput, /handoff hash/i);
+
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const valid = execFileSync(process.execPath, [recoveryEval, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(valid, /context-freshness: pass/i);
+
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  let state = fs.readFileSync(stateFile, "utf8");
+  if (/^handoff_task_id:/m.test(state)) {
+    state = state.replace(/^handoff_task_id:.*$/m, "handoff_task_id: stale-task");
+  } else {
+    state += "handoff_task_id: stale-task\n";
+  }
+  if (/^handoff_task_generation:/m.test(state)) {
+    state = state.replace(/^handoff_task_generation:.*$/m, "handoff_task_generation: 999");
+  } else {
+    state += "handoff_task_generation: 999\n";
+  }
+  write(stateFile, state);
+
+  let staleIdentityOutput = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [recoveryEval, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    staleIdentityOutput = String(error.stdout || "");
+    return /Result: fail/.test(staleIdentityOutput);
+  });
+  assert.match(staleIdentityOutput, /task identity/i);
+});
+
+test("context recovery accepts a completed workflow with next_skill none", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const recoveryEval = path.join(root, "scripts", "context-recovery-eval.mjs");
+  const ctx = path.join(project, ".codex-context");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: complete")
+      .replace(/^next_skill:.*$/m, "next_skill: none")
+      .replace(/^verify_result:.*$/m, "verify_result: pass")
+      .replace(/^review_status:.*$/m, "review_status: done")
+      .replace(/^checkpoint_status:.*$/m, "checkpoint_status: done")
+  );
+  write(path.join(ctx, "decisions.md"), "# Decisions\n\n## Accepted\n- Completed fixture.\n");
+  write(path.join(ctx, "risks.md"), "# Risks\n\n## Technical Risks\n- None.\n");
+  write(path.join(ctx, "verification.md"), "# Verification\n\n## Commands Run\n- Fixture passed.\n");
+
+  const out = execFileSync(process.execPath, [recoveryEval, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /workflow-state: pass - phase=complete; next=none/i);
+  assert.match(out, /context-freshness: pass/i);
+  assert.match(out, /Result: pass/);
+});
+
 test("context recovery evaluator validates probes and injects active Wayfinder summary", () => {
   const project = tempProject();
   readyHealthFixture(project);
@@ -594,6 +686,11 @@ WAYFINDER-RECOVERY-PROBE
     path.join(project, ".codex-context", "verification.md"),
     "# Verification\n\n## Commands Run\n- `node --test`: pass.\n"
   );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
 
   const out = execFileSync(process.execPath, [recoveryEval, project], {
     cwd: root,

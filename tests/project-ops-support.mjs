@@ -43,10 +43,42 @@ function sleep(milliseconds) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
+function stopProcessTree(pid) {
+  try {
+    execFileSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
+      stdio: ["ignore", "ignore", "ignore"]
+    });
+  } catch {}
+}
+
+function readFileAfterUnlock(filePath, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError;
+  while (Date.now() < deadline) {
+    try {
+      return fs.readFileSync(filePath, "utf8");
+    } catch (error) {
+      if (error.code !== "EBUSY" && error.code !== "EPERM") throw error;
+      lastError = error;
+      sleep(25);
+    }
+  }
+  throw lastError;
+}
+
 function installLockPath(resourcePath) {
   const normalized = path.resolve(resourcePath).replace(/\\/g, "/").toLowerCase();
   const digest = createHash("sha256").update(normalized, "utf8").digest("hex");
   return path.join(os.tmpdir(), "dong-skills-install-locks", `${digest}.lock`);
+}
+
+function installTransactionJournalPath(resourcePaths) {
+  const normalized = resourcePaths
+    .map((resourcePath) => path.resolve(resourcePath).replace(/\\/g, "/").toLowerCase())
+    .sort()
+    .join("\n");
+  const digest = createHash("sha256").update(normalized, "utf8").digest("hex");
+  return path.join(os.tmpdir(), "dong-skills-install-transactions", `${digest}.json`);
 }
 
 function runHook(projectRoot, input) {
@@ -489,12 +521,14 @@ export {
   health,
   hook,
   installLockPath,
+  installTransactionJournalPath,
   installWindows,
   os,
   path,
   readJson,
   readyHealthFixture,
   readyState,
+  readFileAfterUnlock,
   releaseCheck,
   root,
   runHook,
@@ -505,6 +539,7 @@ export {
   solutions,
   spawn,
   statePrune,
+  stopProcessTree,
   tempProject,
   test,
   workflowState,
