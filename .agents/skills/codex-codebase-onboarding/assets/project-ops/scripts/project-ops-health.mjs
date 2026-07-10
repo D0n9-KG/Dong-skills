@@ -3,6 +3,29 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+
+async function loadWorkflowRuntime() {
+  const candidates = [
+    path.join(scriptDirectory, "lib", "workflow.mjs"),
+    path.join(scriptDirectory, "..", ".codex", "scripts", "lib", "workflow.mjs")
+  ];
+  const runtime = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!runtime) {
+    throw new Error(`Dong Skills workflow runtime is missing. Checked: ${candidates.join(", ")}`);
+  }
+  return import(pathToFileURL(runtime).href);
+}
+
+const {
+  normalizeWorkflowState,
+  planArtifactReadinessFromMarkdown,
+  planLoopReviewFromMarkdown,
+  parseWorkflowYaml,
+  validateWorkflowState
+} = await loadWorkflowRuntime();
 
 const REQUIRED_CONTEXT_FILES = [
   "current-state.md",
@@ -81,76 +104,6 @@ const REQUIRED_CHECKPOINT_FIELDS = [
   ["Next checkpoint", "下次存档"]
 ];
 
-const WORKFLOW_ALLOWED = {
-  workflow: ["standard", "hotfix", "tweak"],
-  phase: [
-    "discovery",
-    "brainstorming",
-    "spec",
-    "planning",
-    "execution",
-    "debugging",
-    "verification",
-    "review",
-    "delivery",
-    "handoff",
-    "blocked",
-    "complete"
-  ],
-  next_skill: [
-    "using-superpowers",
-    "codex-codebase-onboarding",
-    "brainstorming",
-    "writing-plans",
-    "executing-plans",
-    "codex-worktree-governance",
-    "systematic-debugging",
-    "codex-architecture-governance",
-    "codex-verification-loop",
-    "codex-evidence-capture",
-    "verification-before-completion",
-    "requesting-code-review",
-    "receiving-code-review",
-    "codex-simplicity-review",
-    "codex-review-panel",
-    "codex-git-checkpoint",
-    "codex-learning-memory",
-    "codex-solution-memory",
-    "codex-session-history",
-    "codex-strategy-anchor",
-    "codex-docs-stewardship",
-    "codex-context-budget",
-    "codex-asset-governance",
-    "codex-skill-evolution",
-    "none"
-  ],
-  auto_next: ["true", "false"],
-  decision_required: [
-    "none",
-    "clarify-scope",
-    "written-spec-approval",
-    "execution-approval",
-    "verification-failure-choice",
-    "branch-handling-choice",
-    "archive-confirmation",
-    "user-choice"
-  ],
-  spec_status: [
-    "not-started",
-    "living-draft",
-    "pending-approval",
-    "approved",
-    "skipped",
-    "mechanical-exception"
-  ],
-  plan_status: ["not-started", "drafting", "drafted", "approved"],
-  execution_mode: ["pending", "traditional", "codex-goal"],
-  execution_approval: ["pending", "approved-traditional", "approved-goal", "plan-then-execute-traditional"],
-  verify_result: ["pending", "pass", "fail", "gap-recorded"],
-  review_status: ["pending", "done", "skipped"],
-  checkpoint_status: ["pending", "done", "deferred"]
-};
-
 function gitRoot(cwd) {
   try {
     return execFileSync("git", ["rev-parse", "--show-toplevel"], {
@@ -218,9 +171,6 @@ function detectWorktree(cwd) {
   } else if (pathContainsSegment(root, ["/.codex/worktrees/"])) {
     role = "codex-managed-worktree";
     cleanupOwner = "host";
-  } else if (pathContainsSegment(root, ["/.worktrees/", "/worktrees/"])) {
-    role = "dong-managed-worktree";
-    cleanupOwner = "dong-skills";
   } else {
     role = "manual-worktree";
     cleanupOwner = "user";
@@ -262,7 +212,7 @@ function readText(file) {
 }
 
 function sha256(file) {
-  return createHash("sha256").update(readText(file), "utf8").digest("hex");
+  return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
 function walkFiles(dir, out = []) {
@@ -273,6 +223,14 @@ function walkFiles(dir, out = []) {
     else out.push(full);
   }
   return out;
+}
+
+function treeSha256(dir) {
+  const entries = walkFiles(dir)
+    .map((file) => `${path.relative(dir, file).replace(/\\/g, "/")}\t${sha256(file)}`)
+    .sort();
+  const payload = entries.length ? `${entries.join("\n")}\n` : "";
+  return createHash("sha256").update(payload, "utf8").digest("hex");
 }
 
 function sectionContent(markdown, headingOrHeadings) {
@@ -289,7 +247,8 @@ function sectionContent(markdown, headingOrHeadings) {
 }
 
 function hasAnyHeading(markdown, headings) {
-  return headings.some((heading) => markdown.includes(`## ${heading}`));
+  const lines = String(markdown || "").split(/\r?\n/);
+  return headings.some((heading) => lines.some((line) => line.trim() === `## ${heading}`));
 }
 
 function headingLabel(headings) {
@@ -386,6 +345,8 @@ function checkWorkflowConsistency(workflow, spec, plan, issues) {
   const specDoc = specApprovalFromMarkdown(spec);
   const planApproval = planApprovalFromMarkdown(plan);
   const planMode = planModeFromMarkdown(plan);
+  const planReadiness = planArtifactReadinessFromMarkdown(plan);
+  const planLoopReview = planLoopReviewFromMarkdown(plan);
 
   if (specDoc === "approved" && ["not-started", "living-draft", "pending-approval"].includes(workflow.spec_status)) {
     issues.push(`workflow-state.yaml/spec.md mismatch: spec.md says approved, but spec_status=${workflow.spec_status}`);
@@ -411,6 +372,21 @@ function checkWorkflowConsistency(workflow, spec, plan, issues) {
   }
   if (["traditional", "codex-goal"].includes(planMode) && workflow.execution_mode !== "pending" && planMode !== workflow.execution_mode) {
     issues.push(`workflow-state.yaml/plan-progress.md mismatch: execution mode=${workflow.execution_mode}, but plan-progress.md says ${planMode}`);
+  }
+  if (phaseAtOrAfterExecution(workflow.phase) &&
+      workflow.spec_status !== "mechanical-exception" &&
+      planReadiness !== "implementation-ready") {
+    issues.push(`workflow-state.yaml mismatch: phase=${workflow.phase} requires Artifact Readiness implementation-ready, got ${planReadiness}`);
+  }
+  if (phaseAtOrAfterExecution(workflow.phase) &&
+      (workflow.execution_mode === "codex-goal" || workflow.execution_approval === "approved-goal") &&
+      workflow.loop_review_status !== "approved") {
+    issues.push(`workflow-state.yaml mismatch: Codex Goal mode requires loop_review_status approved, got ${workflow.loop_review_status || "missing"}`);
+  }
+  if (phaseAtOrAfterExecution(workflow.phase) &&
+      (workflow.execution_mode === "codex-goal" || workflow.execution_approval === "approved-goal") &&
+      planLoopReview !== "approved") {
+    issues.push(`workflow-state.yaml mismatch: Codex Goal mode requires plan Loop Review approved, got ${planLoopReview}`);
   }
 
   if (workflow.phase === "complete" && workflow.next_skill !== "none") {
@@ -590,9 +566,15 @@ function checkContext(root, issues) {
     }
   }
 
-  const workflow = parseFlatYaml(readText(path.join(ctx, "workflow-state.yaml")));
-  for (const [field, allowed] of Object.entries(WORKFLOW_ALLOWED)) {
-    requireWorkflowValue(workflow, field, allowed, issues);
+  const workflow = normalizeWorkflowState(
+    parseWorkflowYaml(readText(path.join(ctx, "workflow-state.yaml")))
+  );
+  issues.push(...validateWorkflowState(workflow).issues);
+  if (workflow.task_id !== undefined && !/^task-\S+/.test(workflow.task_id || "")) {
+    issues.push("workflow-state.yaml task_id must identify the current task");
+  }
+  if (workflow.task_generation !== undefined && !/^[1-9]\d*$/.test(workflow.task_generation || "")) {
+    issues.push("workflow-state.yaml task_generation must be a positive integer");
   }
   checkWorkflowConsistency(workflow, spec, plan, issues);
 }
@@ -622,7 +604,8 @@ function projectSkillNames(root, issues) {
   }
 
   const sourceManifest = path.join(root, "dong-skills.manifest.json");
-  if (fs.existsSync(sourceManifest)) {
+  const sourceAssets = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops");
+  if (fs.existsSync(sourceManifest) && fs.existsSync(sourceAssets)) {
     const manifest = readJsonFile(sourceManifest, issues, "dong-skills.manifest.json");
     if (!manifest) return [];
     if (!Array.isArray(manifest.project_skills) || manifest.project_skills.length === 0) {
@@ -656,6 +639,124 @@ function checkProjectSkills(root, issues) {
   }
 }
 
+function checkSourceManifestCoverage(root, issues) {
+  const manifestFile = path.join(root, "dong-skills.manifest.json");
+  const assetRoot = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops");
+  if (!fs.existsSync(manifestFile) || !fs.existsSync(assetRoot)) return;
+
+  const manifest = readJsonFile(manifestFile, issues, "dong-skills.manifest.json");
+  if (!manifest) return;
+  const globalSkills = Array.isArray(manifest.global_skills) ? manifest.global_skills : [];
+  const projectSkills = Array.isArray(manifest.project_skills) ? manifest.project_skills : [];
+  if (new Set(globalSkills).size !== globalSkills.length) {
+    issues.push("dong-skills.manifest.json contains duplicate global skill names");
+  }
+  if (new Set(projectSkills).size !== projectSkills.length) {
+    issues.push("dong-skills.manifest.json contains duplicate project skill names");
+  }
+  const expected = new Set([...globalSkills, ...projectSkills]);
+
+  const skillsRoot = path.join(root, ".agents", "skills");
+  const actual = fs.readdirSync(skillsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .filter((entry) => fs.existsSync(path.join(skillsRoot, entry.name, "SKILL.md")))
+    .map((entry) => entry.name);
+
+  for (const name of expected) {
+    if (!actual.includes(name)) {
+      issues.push(`Dong Skills manifest declares a missing source skill: .agents/skills/${name}/SKILL.md`);
+    }
+  }
+  for (const name of actual) {
+    if (!expected.has(name)) {
+      issues.push(`Dong Skills source skill is omitted from the manifest: .agents/skills/${name}`);
+    }
+  }
+}
+
+function checkInstallReceipt(root, issues) {
+  const markerFile = path.join(root, ".agents", "skills", ".dong-skills-project.json");
+  if (!fs.existsSync(markerFile)) return;
+  const marker = readJsonFile(markerFile, issues, ".agents/skills/.dong-skills-project.json");
+  if (!marker) return;
+  if (marker.schema !== "dong-skills.project-install.v2") {
+    if (marker.runtime_contract === "project-ops-v2") {
+      issues.push("Dong Skills project marker predates the v2 content receipt; rerun project bootstrap");
+    }
+    return;
+  }
+
+  const receipt = marker.content_receipt;
+  if (!receipt || receipt.algorithm !== "sha256-tree-v1" ||
+      !receipt.skill_trees || typeof receipt.skill_trees !== "object" ||
+      Array.isArray(receipt.skill_trees)) {
+    issues.push(".agents/skills/.dong-skills-project.json has no valid content_receipt");
+    return;
+  }
+  if (typeof marker.source_manifest_sha256 !== "string" ||
+      !/^[a-f0-9]{64}$/.test(marker.source_manifest_sha256)) {
+    issues.push(".agents/skills/.dong-skills-project.json has no valid source_manifest_sha256");
+  }
+
+  for (const name of marker.installed_skills || []) {
+    const expected = receipt.skill_trees[name];
+    if (typeof expected !== "string" || !/^[a-f0-9]{64}$/.test(expected)) {
+      issues.push(`Dong Skills content receipt is missing a valid skill hash: ${name}`);
+      continue;
+    }
+    const skillDir = path.join(root, ".agents", "skills", name);
+    if (!fs.existsSync(skillDir)) continue;
+    if (treeSha256(skillDir) !== expected) {
+      issues.push(`Managed Dong Skill content differs from install receipt: .agents/skills/${name}`);
+    }
+  }
+
+  if (!receipt.runtime_files || typeof receipt.runtime_files !== "object" ||
+      Array.isArray(receipt.runtime_files) || Object.keys(receipt.runtime_files).length === 0) {
+    issues.push("Dong Skills content receipt has no managed runtime files");
+    return;
+  }
+  for (const [relative, expected] of Object.entries(receipt.runtime_files)) {
+    const normalized = String(relative).replace(/\\/g, "/");
+    const resolved = path.resolve(root, normalized);
+    const rootPrefix = `${path.resolve(root)}${path.sep}`;
+    if (!normalized.startsWith(".codex/") ||
+        !resolved.startsWith(rootPrefix) ||
+        typeof expected !== "string" ||
+        !/^[a-f0-9]{64}$/.test(expected)) {
+      issues.push(`Dong Skills content receipt has an invalid runtime entry: ${relative}`);
+      continue;
+    }
+    if (!fs.existsSync(resolved)) {
+      issues.push(`Managed Dong Skills runtime file is missing: ${normalized}`);
+      continue;
+    }
+    if (sha256(resolved) !== expected) {
+      issues.push(`Managed Dong Skills runtime content differs from install receipt: ${normalized}`);
+    }
+  }
+}
+
+function checkRuntimeContract(root, issues) {
+  const markerFile = path.join(root, ".agents", "skills", ".dong-skills-project.json");
+  if (!fs.existsSync(markerFile)) return;
+  const marker = readJsonFile(markerFile, issues, ".agents/skills/.dong-skills-project.json");
+  if (!marker || marker.runtime_contract !== "project-ops-v2") return;
+  const hook = path.join(root, ".codex", "hooks", "project-ops.mjs");
+  try {
+    const output = execFileSync(process.execPath, [hook, "context-budget", root], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    if (!/Hot budget status:\s*(ok|warn|fail)\b/i.test(output)) {
+      issues.push("Dong Skills runtime contract smoke returned an unrecognized context-budget result");
+    }
+  } catch (error) {
+    issues.push(`Dong Skills runtime contract smoke failed: ${String(error.stderr || error.message).trim()}`);
+  }
+}
+
 function checkAssetParity(root, issues) {
   const assetRoot = path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops");
   if (!fs.existsSync(assetRoot)) return;
@@ -686,12 +787,20 @@ function checkAssetParity(root, issues) {
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "asset-governance.mjs")
     ],
     [
+      path.join(root, "scripts", "context-recovery-eval.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "context-recovery-eval.mjs")
+    ],
+    [
       path.join(root, "scripts", "project-ops-health.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "project-ops-health.mjs")
     ],
     [
       path.join(root, "scripts", "release-check.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "release-check.mjs")
+    ],
+    [
+      path.join(root, "scripts", "skill-forward-eval.mjs"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "scripts", "skill-forward-eval.mjs")
     ],
     [
       path.join(root, "scripts", "state-prune.mjs"),
@@ -716,7 +825,11 @@ function checkAssetParity(root, issues) {
   ];
 
   for (const [rootFile, assetFile] of pairs) {
-    if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) continue;
+    if (!fs.existsSync(rootFile) || !fs.existsSync(assetFile)) {
+      const missing = fs.existsSync(rootFile) ? assetFile : rootFile;
+      issues.push(`Bootstrap asset file mismatch: ${path.relative(root, missing).replace(/\\/g, "/")}`);
+      continue;
+    }
     if (sha256(rootFile) !== sha256(assetFile)) {
       issues.push(`Bootstrap asset differs from root file: ${path.relative(root, assetFile).replace(/\\/g, "/")}`);
     }
@@ -763,7 +876,7 @@ function run(root) {
   if (!fs.existsSync(path.join(root, ".codex", "scripts", "lib", "core.mjs"))) {
     issues.push("Missing .codex/scripts/lib/core.mjs required by split project hook");
   }
-  for (const scriptName of ["asset-governance.mjs", "project-ops-health.mjs", "release-check.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs", "skill-evolution.mjs"]) {
+  for (const scriptName of ["asset-governance.mjs", "context-recovery-eval.mjs", "project-ops-health.mjs", "release-check.mjs", "skill-forward-eval.mjs", "state-prune.mjs", "workflow-state.mjs", "solutions.mjs", "session-history.mjs", "skill-evolution.mjs"]) {
     if (!fs.existsSync(path.join(root, ".codex", "scripts", scriptName)) &&
         !fs.existsSync(path.join(root, "scripts", scriptName))) {
       issues.push(`Missing project ops helper script: ${scriptName}`);
@@ -775,6 +888,9 @@ function run(root) {
   checkTrackedRaw(root, issues);
   checkContext(root, issues);
   checkProjectSkills(root, issues);
+  checkSourceManifestCoverage(root, issues);
+  checkInstallReceipt(root, issues);
+  checkRuntimeContract(root, issues);
   checkAssetParity(root, issues);
 
   const lines = [

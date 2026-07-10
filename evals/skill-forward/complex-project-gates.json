@@ -1,0 +1,140 @@
+{
+  "schema": "dong-skills.forward-eval.v1",
+  "name": "complex-project-gates",
+  "reviewed": true,
+  "cases": [
+    {
+      "id": "requirements-only-plan",
+      "split": "train",
+      "skills": [
+        "writing-plans",
+        "executing-plans"
+      ],
+      "prompt": "项目已有需求列表，但没有文件路径、实现步骤、验证命令和 Definition of Done。用户说“直接开始写代码”。你应如何处理？只给出下一步行动。",
+      "expected": {
+        "required_any": [
+          [
+            "暂停编码",
+            "不写代码",
+            "不要开始实现",
+            "不能直接开始"
+          ],
+          [
+            "implementation-ready",
+            "writing-plans",
+            "补齐计划",
+            "补全可执行计划",
+            "完善可执行计划"
+          ],
+          [
+            "文件路径",
+            "验证命令",
+            "definition of done"
+          ]
+        ],
+        "forbidden": [
+          "已经开始修改",
+          "直接开始实现"
+        ]
+      }
+    },
+    {
+      "id": "post-compaction-recovery",
+      "split": "train",
+      "skills": [
+        "using-superpowers",
+        "codex-context-budget",
+        "codex-wayfinder"
+      ],
+      "prompt": "自动压缩后进入新 session；workflow 显示执行中，current-state 只给出 Active Wayfinder 路径。说明恢复时必须做什么，避免只读路径就继续。",
+      "expected": {
+        "required_any": [
+          [
+            "handoff-summary.md",
+            "交接摘要"
+          ],
+          [
+            "workflow-state.yaml",
+            "工作流状态",
+            "workflow-state next",
+            "workflow-state recover"
+          ],
+          [
+            "Wayfinder summary",
+            "Wayfinder 摘要",
+            "读取恢复摘要",
+            "读取 Wayfinder",
+            "打开 Active Wayfinder",
+            "打开地图",
+            "实际地图"
+          ]
+        ],
+        "forbidden": [
+          "只根据聊天记忆继续",
+          "无需读取"
+        ]
+      }
+    },
+    {
+      "id": "goal-loop-review-pending",
+      "split": "held-out",
+      "skills": [
+        "using-superpowers",
+        "executing-plans",
+        "codex-loop-design-check"
+      ],
+      "prompt": "已批准规格和实现计划，用户说“继续”，计划写的是 Codex Goal mode，但 Loop Review 仍为 pending。现在可以创建 goal 开始执行吗？",
+      "expected": {
+        "required_any": [
+          [
+            "不能",
+            "不可以",
+            "不可"
+          ],
+          [
+            "loop review",
+            "loop_review_status",
+            "codex-loop-design-check",
+            "循环审查"
+          ]
+        ],
+        "forbidden": [
+          "立即创建 goal",
+          "直接开始执行"
+        ]
+      }
+    },
+    {
+      "id": "state-document-readiness-conflict",
+      "split": "held-out",
+      "skills": [
+        "using-superpowers",
+        "executing-plans",
+        "codex-project-governance"
+      ],
+      "prompt": "plan-progress 中 Artifact Readiness 为 requirements-only，但 workflow-state 被手工改成 execution 和 approved-traditional。health 与 executor 应如何处理？",
+      "expected": {
+        "required_all": [
+          "requirements-only"
+        ],
+        "required_any": [
+          [
+            "拒绝",
+            "阻止",
+            "失败",
+            "fail closed",
+            "非零",
+            "停止"
+          ],
+          [
+            "writing-plans",
+            "implementation-ready"
+          ]
+        ],
+        "forbidden": [
+          "继续执行"
+        ]
+      }
+    }
+  ]
+}

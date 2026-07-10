@@ -1,5 +1,8 @@
 param(
-  [string]$TargetProjectRoot = (Get-Location).Path
+  [string]$TargetProjectRoot = (Get-Location).Path,
+  [switch]$Preview,
+  [ValidateRange(0, 300)]
+  [int]$LockTimeoutSeconds = 30
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,7 +11,8 @@ $skillRoot = Split-Path -Parent $PSScriptRoot
 $assetsRoot = Join-Path $skillRoot "assets\project-ops"
 $manifestFile = Join-Path $assetsRoot "dong-skills.manifest.json"
 $siblingSkillsRoot = Split-Path -Parent $skillRoot
-$userDongSkillsSourceMarker = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".agents\skills\.dong-skills-source.json"
+$installedDongSkillsSourceMarker = Join-Path $siblingSkillsRoot ".dong-skills-source.json"
+$defaultDongSkillsSourceMarker = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".agents\skills\.dong-skills-source.json"
 $sourceContext = Join-Path $assetsRoot ".codex-context"
 $sourceCodex = Join-Path $assetsRoot ".codex"
 $sourceCodexScripts = Join-Path $sourceCodex "scripts"
@@ -23,6 +27,77 @@ function Read-Utf8Text {
   )
 
   return [System.IO.File]::ReadAllText($File, $utf8Strict)
+}
+
+function Get-Sha256 {
+  param([string]$File)
+  $stream = [System.IO.File]::OpenRead($File)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return (($sha.ComputeHash($stream) | ForEach-Object { $_.ToString("x2") }) -join "")
+  } finally {
+    $sha.Dispose()
+    $stream.Dispose()
+  }
+}
+
+function Get-TreeSha256 {
+  param([string]$Directory)
+
+  $root = ([System.IO.Path]::GetFullPath($Directory)).TrimEnd($trimChars)
+  $entries = New-Object "System.Collections.Generic.List[string]"
+  Get-ChildItem -LiteralPath $root -Recurse -File | ForEach-Object {
+    $relative = $_.FullName.Substring($root.Length).TrimStart($trimChars).Replace('\', '/')
+    $entries.Add("$relative`t$(Get-Sha256 -File $_.FullName)")
+  }
+
+  $sorted = $entries.ToArray()
+  [Array]::Sort($sorted, [System.StringComparer]::Ordinal)
+  $payload = if ($sorted.Count -gt 0) { ($sorted -join "`n") + "`n" } else { "" }
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return (($sha.ComputeHash($utf8NoBom.GetBytes($payload)) | ForEach-Object { $_.ToString("x2") }) -join "")
+  } finally {
+    $sha.Dispose()
+  }
+}
+
+function Assert-SourceMarkerReceipt {
+  param(
+    [object]$Marker,
+    [string]$MarkerFile
+  )
+
+  if ($Marker.schema -ne "dong-skills.source-install.v2") {
+    return
+  }
+  if ($Marker.managed_by -ne "Dong Skills" -or !$Marker.source_repo) {
+    throw "Dong Skills source marker is invalid: $MarkerFile"
+  }
+
+  $sourceManifest = Join-Path ([string]$Marker.source_repo) "dong-skills.manifest.json"
+  if (!(Test-Path -LiteralPath $sourceManifest) -or
+      $Marker.source_manifest_sha256 -ne (Get-Sha256 -File $sourceManifest)) {
+    throw "Dong Skills source marker manifest fingerprint is stale: $MarkerFile"
+  }
+
+  $markerRoot = ([System.IO.Path]::GetFullPath((Split-Path -Parent $MarkerFile))).TrimEnd($trimChars)
+  $currentSkillsRoot = ([System.IO.Path]::GetFullPath($siblingSkillsRoot)).TrimEnd($trimChars)
+  if (![System.String]::Equals($markerRoot, $currentSkillsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+    return
+  }
+  if (!$Marker.global_skill_trees) {
+    throw "Dong Skills source marker has no global skill receipt: $MarkerFile"
+  }
+
+  foreach ($name in @($Marker.global_skills)) {
+    $property = $Marker.global_skill_trees.PSObject.Properties[$name]
+    $skillDirectory = Join-Path $siblingSkillsRoot $name
+    if (!$property -or !(Test-Path -LiteralPath $skillDirectory) -or
+        $property.Value -ne (Get-TreeSha256 -Directory $skillDirectory)) {
+      throw "Dong Skills global entry skill differs from install receipt: $name"
+    }
+  }
 }
 
 function Write-Utf8Text {
@@ -57,6 +132,121 @@ function Assert-PathInside {
   if (-not ($childFull.StartsWith($parentFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase) -or
       [System.String]::Equals($childFull.TrimEnd($trimChars), $parentFull, [System.StringComparison]::OrdinalIgnoreCase))) {
     throw "Refusing to modify path outside target root. Parent: $Parent Child: $Child"
+  }
+}
+
+function Get-InstallLockPath {
+  param([string]$ResourcePath)
+
+  $normalized = ([System.IO.Path]::GetFullPath($ResourcePath)).TrimEnd($trimChars).Replace('\', '/').ToLowerInvariant()
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $digest = (($sha.ComputeHash($utf8NoBom.GetBytes($normalized)) | ForEach-Object { $_.ToString("x2") }) -join "")
+  } finally {
+    $sha.Dispose()
+  }
+  return Join-Path ([System.IO.Path]::GetTempPath()) "dong-skills-install-locks\$digest.lock"
+}
+
+function Enter-InstallLock {
+  param(
+    [string]$ResourcePath,
+    [int]$TimeoutSeconds
+  )
+
+  $lockPath = Get-InstallLockPath -ResourcePath $ResourcePath
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $lockPath) | Out-Null
+  $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+  while ($true) {
+    try {
+      $stream = [System.IO.File]::Open(
+        $lockPath,
+        [System.IO.FileMode]::OpenOrCreate,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None
+      )
+      return [pscustomobject]@{ Path = $lockPath; Stream = $stream }
+    } catch [System.IO.IOException] {
+      if ([DateTime]::UtcNow -ge $deadline) {
+        throw "Another Dong Skills install is already modifying this target. Lock: $lockPath"
+      }
+      Start-Sleep -Milliseconds 100
+    }
+  }
+}
+
+function Exit-InstallLock {
+  param([object]$Lock)
+
+  if (-not $Lock) {
+    return
+  }
+  try {
+    $Lock.Stream.Dispose()
+  } finally {
+    try {
+      Remove-Item -LiteralPath $Lock.Path -Force -ErrorAction SilentlyContinue
+    } catch {}
+  }
+}
+
+function New-InstallTransaction {
+  $backupRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("dong-skills-install-transaction-" + [guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
+  return [pscustomobject]@{
+    BackupRoot = $backupRoot
+    Entries = New-Object "System.Collections.Generic.List[object]"
+  }
+}
+
+function Add-InstallTransactionPath {
+  param(
+    [object]$Transaction,
+    [string]$Path
+  )
+
+  $fullPath = [System.IO.Path]::GetFullPath($Path)
+  foreach ($entry in $Transaction.Entries) {
+    if ([System.String]::Equals($entry.Path, $fullPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+      return
+    }
+  }
+
+  $exists = Test-Path -LiteralPath $fullPath
+  $backup = Join-Path $Transaction.BackupRoot ([string]$Transaction.Entries.Count)
+  if ($exists) {
+    Copy-Item -LiteralPath $fullPath -Destination $backup -Recurse -Force
+  }
+  $Transaction.Entries.Add([pscustomobject]@{
+    Path = $fullPath
+    Existed = $exists
+    Backup = $backup
+  })
+}
+
+function Restore-InstallTransaction {
+  param([object]$Transaction)
+
+  for ($index = $Transaction.Entries.Count - 1; $index -ge 0; $index--) {
+    $entry = $Transaction.Entries[$index]
+    if (Test-Path -LiteralPath $entry.Path) {
+      Remove-Item -LiteralPath $entry.Path -Recurse -Force
+    }
+    if ($entry.Existed) {
+      $parent = Split-Path -Parent $entry.Path
+      if ($parent) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+      }
+      Copy-Item -LiteralPath $entry.Backup -Destination $entry.Path -Recurse -Force
+    }
+  }
+}
+
+function Close-InstallTransaction {
+  param([object]$Transaction)
+
+  if ($Transaction -and (Test-Path -LiteralPath $Transaction.BackupRoot)) {
+    Remove-Item -LiteralPath $Transaction.BackupRoot -Recurse -Force
   }
 }
 
@@ -98,14 +288,7 @@ function Test-DongSkillDirectory {
       return $false
     }
   }
-
-  $skillFile = Join-Path $SkillDirectory "SKILL.md"
-  if (!(Test-Path -LiteralPath $skillFile)) {
-    return $false
-  }
-
-  $text = Read-Utf8Text -File $skillFile
-  return (($text -match "Dong Skills") -or ($text -match "Codex Project Ops"))
+  return $false
 }
 
 function Write-SkillMarker {
@@ -180,19 +363,23 @@ function Resolve-ProjectSkillsSourceRoot {
     [object]$Manifest
   )
 
-  $sourceRepoSkillsRoot = $null
-  if (Test-Path -LiteralPath $userDongSkillsSourceMarker) {
+  $sourceRepoSkillsRoots = @()
+  foreach ($sourceMarkerFile in @($installedDongSkillsSourceMarker, $defaultDongSkillsSourceMarker) | Select-Object -Unique) {
+    if (!(Test-Path -LiteralPath $sourceMarkerFile)) {
+      continue
+    }
     try {
-      $sourceMarker = Read-Utf8Text -File $userDongSkillsSourceMarker | ConvertFrom-Json
-      if ($sourceMarker.source_repo) {
-        $sourceRepoSkillsRoot = Join-Path ([string]$sourceMarker.source_repo) ".agents\skills"
-      }
+      $sourceMarker = Read-Utf8Text -File $sourceMarkerFile | ConvertFrom-Json
     } catch {
-      $sourceRepoSkillsRoot = $null
+      continue
+    }
+    Assert-SourceMarkerReceipt -Marker $sourceMarker -MarkerFile $sourceMarkerFile
+    if ($sourceMarker.source_repo) {
+      $sourceRepoSkillsRoots += Join-Path ([string]$sourceMarker.source_repo) ".agents\skills"
     }
   }
 
-  $candidates = @($sourceRepoSkillsRoot, $siblingSkillsRoot) | Where-Object { $_ }
+  $candidates = @($sourceRepoSkillsRoots + @($siblingSkillsRoot)) | Where-Object { $_ } | Select-Object -Unique
   foreach ($candidate in $candidates) {
     if (!(Test-Path -LiteralPath $candidate)) {
       continue
@@ -206,6 +393,12 @@ function Resolve-ProjectSkillsSourceRoot {
       }
     }
     if ($allPresent) {
+      $sourceRepoRoot = Split-Path -Parent (Split-Path -Parent $candidate)
+      $sourceManifest = Join-Path $sourceRepoRoot "dong-skills.manifest.json"
+      if ((Test-Path -LiteralPath $sourceManifest) -and
+          ((Get-Sha256 -File $sourceManifest) -ne (Get-Sha256 -File $manifestFile))) {
+        throw "Dong Skills global onboarding manifest is out of sync with the source repo. Re-run install-windows.ps1 before bootstrapping projects."
+      }
       return $candidate
     }
   }
@@ -223,7 +416,30 @@ function Install-ProjectDongSkills {
   $targetProjectSkillsRoot = Join-Path $ProjectRoot ".agents\skills"
   New-Item -ItemType Directory -Force -Path $targetProjectSkillsRoot | Out-Null
 
+  $previousNames = @()
+  $previousMarker = Join-Path $targetProjectSkillsRoot ".dong-skills-project.json"
+  if (Test-Path -LiteralPath $previousMarker) {
+    try {
+      $previous = Read-Utf8Text -File $previousMarker | ConvertFrom-Json
+      if ($previous.managed_by -eq "Dong Skills") {
+        $previousNames = @($previous.installed_skills)
+      }
+    } catch {}
+  }
+
+  foreach ($name in @($Manifest.project_skills)) {
+    $source = Join-Path $SourceRoot $name
+    $target = Join-Path $targetProjectSkillsRoot $name
+    if (!(Test-Path -LiteralPath $source)) {
+      throw "Missing Dong Skills project skill source: $source"
+    }
+    if ((Test-Path -LiteralPath $target) -and -not (Test-DongSkillDirectory -SkillDirectory $target -ExpectedName $name)) {
+      throw "Refusing to overwrite non-Dong project skill directory: $target"
+    }
+  }
+
   $installedNames = @()
+  $skillHashes = [ordered]@{}
   foreach ($name in @($Manifest.project_skills)) {
     $source = Join-Path $SourceRoot $name
     if (!(Test-Path -LiteralPath $source)) {
@@ -231,18 +447,81 @@ function Install-ProjectDongSkills {
     }
     Install-ManagedSkillDirectory -Source $source -DestinationRoot $targetProjectSkillsRoot -Scope "project"
     $installedNames += $name
+    $skillHashes[$name] = Get-TreeSha256 -Directory (Join-Path $targetProjectSkillsRoot $name)
+  }
+
+  foreach ($oldName in $previousNames) {
+    if ($oldName -in @($Manifest.project_skills)) { continue }
+    $oldDir = Join-Path $targetProjectSkillsRoot $oldName
+    if (Test-DongSkillDirectory -SkillDirectory $oldDir -ExpectedName $oldName) {
+      Remove-Item -LiteralPath $oldDir -Recurse -Force
+    }
   }
 
   $projectMarker = [pscustomobject]@{
-    schema = "dong-skills.project-install.v1"
+    schema = "dong-skills.project-install.v2"
     managed_by = "Dong Skills"
     installed_at = (Get-Date).ToUniversalTime().ToString("o")
     installed_skills = $installedNames
     global_entry_skills_required = @($Manifest.global_skills)
     global_bootstrap_skills_required = @($Manifest.global_bootstrap_skills)
+    runtime_contract = "project-ops-v2"
+    content_receipt = [ordered]@{
+      algorithm = "sha256-tree-v1"
+      skill_trees = $skillHashes
+    }
     note = "Only installed_skills are managed by Dong Skills in this project. Other .agents/skills directories are preserved."
   }
   Write-Utf8Text -File (Join-Path $targetProjectSkillsRoot ".dong-skills-project.json") -Content (($projectMarker | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
+}
+
+function Get-ManagedRuntimeRelativeFiles {
+  $files = @(
+    ".codex/hooks/project-ops.mjs",
+    ".codex/hooks/launch-project-ops.mjs"
+  )
+  $codexScriptsRoot = ([System.IO.Path]::GetFullPath($sourceCodexScripts)).TrimEnd($trimChars)
+  Get-ChildItem -LiteralPath $codexScriptsRoot -Recurse -File | ForEach-Object {
+    $relative = $_.FullName.Substring($codexScriptsRoot.Length).TrimStart($trimChars).Replace('\', '/')
+    $files += ".codex/scripts/$relative"
+  }
+  Get-ChildItem -LiteralPath $sourceScripts -File | ForEach-Object {
+    $files += ".codex/scripts/$($_.Name)"
+  }
+  return @($files | Sort-Object -Unique)
+}
+
+function Complete-ProjectInstallReceipt {
+  param(
+    [string]$ProjectRoot
+  )
+
+  $markerFile = Join-Path $ProjectRoot ".agents\skills\.dong-skills-project.json"
+  $marker = Read-Utf8Text -File $markerFile | ConvertFrom-Json
+  if ($marker.managed_by -ne "Dong Skills" -or $marker.schema -ne "dong-skills.project-install.v2") {
+    throw "Cannot complete Dong Skills receipt from an unrecognized project marker: $markerFile"
+  }
+
+  $runtimeHashes = [ordered]@{}
+  foreach ($relative in Get-ManagedRuntimeRelativeFiles) {
+    $target = Join-Path $ProjectRoot ($relative.Replace('/', '\'))
+    if (!(Test-Path -LiteralPath $target)) {
+      throw "Cannot complete Dong Skills receipt; runtime file is missing: $relative"
+    }
+    $runtimeHashes[$relative] = Get-Sha256 -File $target
+  }
+
+  if ($marker.PSObject.Properties.Name -contains "source_manifest_sha256") {
+    $marker.source_manifest_sha256 = Get-Sha256 -File $manifestFile
+  } else {
+    $marker | Add-Member -MemberType NoteProperty -Name "source_manifest_sha256" -Value (Get-Sha256 -File $manifestFile)
+  }
+  if ($marker.content_receipt.PSObject.Properties.Name -contains "runtime_files") {
+    $marker.content_receipt.runtime_files = $runtimeHashes
+  } else {
+    $marker.content_receipt | Add-Member -MemberType NoteProperty -Name "runtime_files" -Value $runtimeHashes
+  }
+  Write-Utf8Text -File $markerFile -Content (($marker | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
 }
 
 function Copy-MissingTreeFiles {
@@ -429,15 +708,16 @@ function Merge-HooksJson {
 
   Ensure-JsonProperty -Object $targetConfig -Name "hooks" -Value ([pscustomobject]@{})
 
+  foreach ($eventProperty in @($targetConfig.hooks.PSObject.Properties)) {
+    $eventProperty.Value = @($eventProperty.Value | Where-Object {
+      -not (Test-DongSkillsHookGroup -Group $_)
+    })
+  }
+
   foreach ($event in $sourceConfig.hooks.PSObject.Properties.Name) {
     Ensure-JsonProperty -Object $targetConfig.hooks -Name $event -Value @()
 
     $existing = @($targetConfig.hooks.$event)
-    $sourceHasDongSkills = @($sourceConfig.hooks.$event) | Where-Object { Test-DongSkillsHookGroup -Group $_ }
-    if ($sourceHasDongSkills) {
-      $existing = @($existing | Where-Object { -not (Test-DongSkillsHookGroup -Group $_) })
-    }
-
     foreach ($group in @($sourceConfig.hooks.$event)) {
       $groupJson = $group | ConvertTo-Json -Depth 30 -Compress
       $alreadyPresent = $false
@@ -464,6 +744,61 @@ function Merge-HooksJson {
 
 $manifest = Read-DongSkillsManifest -File $manifestFile
 $projectSkillsSourceRoot = Resolve-ProjectSkillsSourceRoot -Manifest $manifest
+
+$resolvedTargetProjectRoot = ([System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $TargetProjectRoot).Path)).TrimEnd($trimChars)
+$targetProjectSkillsRoot = Join-Path $resolvedTargetProjectRoot ".agents\skills"
+foreach ($name in @($manifest.project_skills)) {
+  $source = Join-Path $projectSkillsSourceRoot $name
+  $target = Join-Path $targetProjectSkillsRoot $name
+  if (!(Test-Path -LiteralPath $source)) {
+    throw "Missing Dong Skills project skill source: $source"
+  }
+  if ((Test-Path -LiteralPath $target) -and -not (Test-DongSkillDirectory -SkillDirectory $target -ExpectedName $name)) {
+    throw "Refusing to overwrite non-Dong project skill directory: $target"
+  }
+}
+
+if ($Preview) {
+  Write-Host "Dong Skills bootstrap preview"
+  Write-Host "Project: $resolvedTargetProjectRoot"
+  foreach ($name in @($manifest.project_skills)) {
+    $target = Join-Path $targetProjectSkillsRoot $name
+    $action = if (Test-Path -LiteralPath $target) { "replace managed" } else { "add" }
+    Write-Host "PROJECT $action`: $name"
+  }
+  Write-Host "RUNTIME update: .codex hooks, scripts, hooks.json"
+  Write-Host "STATE merge: .codex-context, .gitignore, AGENTS.md"
+  Write-Host "RECEIPT update: project install marker"
+  Write-Host "No files were written."
+  return
+}
+
+$installLock = $null
+$transaction = $null
+try {
+  $installLock = Enter-InstallLock -ResourcePath $resolvedTargetProjectRoot -TimeoutSeconds $LockTimeoutSeconds
+  $transaction = New-InstallTransaction
+
+  $previousNames = @()
+  $previousMarker = Join-Path $targetProjectSkillsRoot ".dong-skills-project.json"
+  if (Test-Path -LiteralPath $previousMarker) {
+    try {
+      $previous = Read-Utf8Text -File $previousMarker | ConvertFrom-Json
+      if ($previous.managed_by -eq "Dong Skills") {
+        $previousNames = @($previous.installed_skills)
+      }
+    } catch {}
+  }
+  foreach ($name in @(@($manifest.project_skills) + $previousNames | Sort-Object -Unique)) {
+    Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $targetProjectSkillsRoot $name)
+  }
+  Add-InstallTransactionPath -Transaction $transaction -Path $previousMarker
+  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".codex-context")
+  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".codex")
+  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot ".gitignore")
+  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot "AGENTS.md")
+  Add-InstallTransactionPath -Transaction $transaction -Path (Join-Path $resolvedTargetProjectRoot "AGENTS.md.codex-project-ops.bak")
+
 Install-ProjectDongSkills -SourceRoot $projectSkillsSourceRoot -ProjectRoot $TargetProjectRoot -Manifest $manifest
 
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
@@ -483,14 +818,17 @@ Get-ChildItem -LiteralPath $sourceCodexScripts -Force | ForEach-Object {
 }
 Copy-Item -LiteralPath (Join-Path $sourceScripts "instincts.mjs") -Destination (Join-Path $targetScriptDir "instincts.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "asset-governance.mjs") -Destination (Join-Path $targetScriptDir "asset-governance.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "context-recovery-eval.mjs") -Destination (Join-Path $targetScriptDir "context-recovery-eval.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "project-ops-health.mjs") -Destination (Join-Path $targetScriptDir "project-ops-health.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "release-check.mjs") -Destination (Join-Path $targetScriptDir "release-check.mjs") -Force
+Copy-Item -LiteralPath (Join-Path $sourceScripts "skill-forward-eval.mjs") -Destination (Join-Path $targetScriptDir "skill-forward-eval.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "state-prune.mjs") -Destination (Join-Path $targetScriptDir "state-prune.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "workflow-state.mjs") -Destination (Join-Path $targetScriptDir "workflow-state.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "solutions.mjs") -Destination (Join-Path $targetScriptDir "solutions.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "session-history.mjs") -Destination (Join-Path $targetScriptDir "session-history.mjs") -Force
 Copy-Item -LiteralPath (Join-Path $sourceScripts "skill-evolution.mjs") -Destination (Join-Path $targetScriptDir "skill-evolution.mjs") -Force
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
+Complete-ProjectInstallReceipt -ProjectRoot $TargetProjectRoot
 
 $agentsFile = Join-Path $TargetProjectRoot "AGENTS.md"
 $markerStart = "<!-- codex-project-ops:start -->"
@@ -524,3 +862,17 @@ Write-Host "Installed project-level Dong Skills hooks to $targetCodex"
 Write-Host "Ensured .gitignore protects .codex-context/raw runtime data"
 Write-Host "Merged AGENTS.md project ops snippet into $agentsFile"
 Write-Host "Restart Codex or start a new thread from this project. Open /hooks and trust project hooks if prompted."
+} catch {
+  $installError = $_
+  if ($transaction) {
+    try {
+      Restore-InstallTransaction -Transaction $transaction
+    } catch {
+      throw "Dong Skills bootstrap failed and rollback also failed. Install error: $installError Rollback error: $_"
+    }
+  }
+  throw $installError
+} finally {
+  Close-InstallTransaction -Transaction $transaction
+  Exit-InstallLock -Lock $installLock
+}

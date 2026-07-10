@@ -23,14 +23,16 @@ It complements `codex-review-panel`. It does not replace correctness, security, 
 Before writing findings, check these rungs in order:
 
 1. **Avoid building:** can the approved outcome be achieved by deleting, configuring, documenting, narrowing scope, or doing nothing?
-2. **Standard library:** does the language/runtime standard library already provide the behavior?
-3. **Native platform:** does the browser, OS, database, framework, shell, or built-in service already provide the behavior?
+2. **Already in the codebase:** is there an existing helper, type, workflow, validator, or established pattern that should be reused instead of recreated?
+3. **Standard library:** does the language/runtime standard library already provide the behavior?
+4. **Native platform:** does the browser, OS, database, framework, shell, or built-in service already provide the behavior?
 
 Do not make one-line/minimum-implementation checks mandatory Dong Skills rungs. If they are useful, mention them as advisory `shrink` findings only.
 
 ## Finding Tags
 
 - `delete`: dead code, duplicate docs, speculative feature, or unused flexibility. Replacement: nothing.
+- `reuse`: parallel behavior that should call an existing project helper, type, workflow, validator, or established pattern.
 - `stdlib`: hand-rolled behavior already available in the standard library. Name the API.
 - `native`: dependency or code doing what the platform already does. Name the feature.
 - `yagni`: abstraction, option, config, hook, state file, or extension point with no current caller/reader/owner/reason.

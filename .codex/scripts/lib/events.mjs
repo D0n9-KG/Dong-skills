@@ -507,7 +507,14 @@ function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues
   ];
   const uniqueReread = [...new Set(reread)].filter(Boolean);
   const rawRel = path.relative(root, rawFile).replace(/\\/g, "/");
-  const preservedHandoff = stripHandoffTitle(previousHandoff);
+  let preservedHandoff = stripHandoffTitle(previousHandoff);
+  const noticeMarker = "## PreCompact Emergency Notice";
+  const noticeSeparator = "\n---\n\n";
+  while (preservedHandoff.startsWith(noticeMarker)) {
+    const separatorIndex = preservedHandoff.indexOf(noticeSeparator);
+    if (separatorIndex === -1) break;
+    preservedHandoff = preservedHandoff.slice(separatorIndex + noticeSeparator.length).trim();
+  }
   const continuation = hasMeaningfulHandoff(previousHandoff)
     ? preservedHandoff
     : emergencyFallbackSections(statusFiles);

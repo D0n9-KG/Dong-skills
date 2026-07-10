@@ -89,8 +89,10 @@ if (cliMode === "session-history") {
 
 const projectOpsScripts = {
   "asset-governance": "asset-governance.mjs",
+  "context-recovery-eval": "context-recovery-eval.mjs",
   "health-check": "project-ops-health.mjs",
   "release-check": "release-check.mjs",
+  "skill-forward-eval": "skill-forward-eval.mjs",
   "skill-evolution": "skill-evolution.mjs",
   "state-prune": "state-prune.mjs",
   "workflow-state": "workflow-state.mjs"

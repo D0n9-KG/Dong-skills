@@ -95,3 +95,15 @@
 - Running full asset-governance inside every PostToolUse hook just to enrich status output.
 - Model-in-hook summarization for PreCompact or UserPromptSubmit.
 - Storing hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning in `working-notes.md`.
+
+## 已接受
+- 采用轻量本地 Markdown `codex-wayfinder`，一次 session 只解决一个 frontier ticket；不引入 issue-tracker runtime。
+- `codex-review-panel` 保留 persona lenses，但 Standards 与 Spec 作为独立 verdict，禁止跨轴合并重排。
+- installer 与 bootstrap 共用集合级回滚语义和基于目标路径的有界文件锁；Preview 不写目标。
+- health 动态加载 workflow runtime parser/schema，避免枚举复制漂移。
+- 测试物理拆为 8 个领域文件，由 `scripts/run-domain-tests.mjs` 校验唯一归属并以并发 4 执行。
+- SkillOpt 真实 run 必须有 train 与 held-out/val 任务、非空受支持 judge，并在调用后端前 fail closed。
+
+
+## 已拒绝
+- 暂无。

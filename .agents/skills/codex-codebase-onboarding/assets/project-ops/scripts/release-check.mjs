@@ -40,6 +40,7 @@ function walk(root, relDir = "", out = []) {
   const dir = path.join(root, relDir);
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) continue;
     if (entry.isDirectory() && EXCLUDED_DIRS.has(entry.name)) continue;
     const rel = path.join(relDir, entry.name);
     const full = path.join(root, rel);
@@ -171,7 +172,25 @@ function privacyScan(root) {
     { name: "GitLab token", regex: /\bglpat-[A-Za-z0-9_-]{20,}\b/ },
     { name: "npm token", regex: /\bnpm_[A-Za-z0-9-]{36,}\b/ },
     { name: "Bearer token", regex: /\bbearer\s+[A-Za-z0-9._~+/-]{20,}/i },
-    { name: "key/value secret", regex: /\b(?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b\s*[:=]\s*\S{8,}/i },
+    {
+      name: "key/value secret",
+      regex: /["']?\b(?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b["']?\s*[:=]\s*\S+/i,
+      validate: (_value, line, relative) => {
+        const assignment = line.match(
+          /["']?\b(?:api[_-]?key|secret|password|passwd|token|cookie|session|authorization)\b["']?\s*[:=]\s*(.+)$/i
+        );
+        if (!assignment) return false;
+        const raw = assignment[1].trim();
+        const quote = raw[0];
+        if (quote === "\"" || quote === "'" || quote === "`") {
+          const closing = raw.indexOf(quote, 1);
+          return closing >= 9;
+        }
+        if (/\.(?:[cm]?js|jsx|ts|tsx)$/i.test(relative)) return false;
+        const token = raw.match(/^[^\s,;#]+/);
+        return Boolean(token && token[0].length >= 8);
+      }
+    },
     {
       name: "email address",
       regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
@@ -197,7 +216,7 @@ function privacyScan(root) {
       if (line.includes("codex-release-check: allow-secret-fixture")) continue;
       for (const pattern of patterns) {
         const match = line.match(pattern.regex);
-        if (match && (!pattern.validate || pattern.validate(match[0], line))) {
+        if (match && (!pattern.validate || pattern.validate(match[0], line, relative))) {
           issues.push(`${relative}:${index + 1}: ${pattern.name}`);
         }
       }
@@ -257,9 +276,36 @@ function runtimeArtifactScan(root) {
 
 function runTests(root) {
   const testsDir = path.join(root, "tests");
-  if (!fs.existsSync(testsDir)) return [];
+  const domainRunner = path.join(root, "scripts", "run-domain-tests.mjs");
+  const sourceRelease = fs.existsSync(path.join(root, "dong-skills.manifest.json")) &&
+    fs.existsSync(path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops"));
+  if (!fs.existsSync(testsDir)) {
+    return sourceRelease
+      ? [{ ok: false, label: "test suite presence", details: "Dong Skills source release requires tests/domains and scripts/run-domain-tests.mjs." }]
+      : [];
+  }
+  if (sourceRelease && !fs.existsSync(domainRunner)) {
+    return [{ ok: false, label: "test suite presence", details: "Dong Skills source release requires scripts/run-domain-tests.mjs." }];
+  }
   const files = walk(root, "tests").filter((file) => /\.test\.mjs$/i.test(file));
-  if (!files.length) return [];
+  if (!files.length) {
+    return sourceRelease
+      ? [{ ok: false, label: "test suite presence", details: "Dong Skills source release contains no .test.mjs files." }]
+      : [];
+  }
+  if (sourceRelease && process.env.DONG_DOMAIN_TEST_ACTIVE === "1") {
+    return [{
+      ok: true,
+      label: "domain-sharded tests",
+      details: "Covered by the active outer domain test runner; nested execution skipped."
+    }];
+  }
+  if (sourceRelease) {
+    return [runCommand("domain-sharded tests", process.execPath, [domainRunner], {
+      cwd: root,
+      env: { ...process.env, TMPDIR: os.tmpdir() }
+    })];
+  }
   return [runCommand("node --test tests", process.execPath, ["--test", ...files], {
     cwd: root,
     env: { ...process.env, TMPDIR: os.tmpdir() }
@@ -286,7 +332,7 @@ function contextBudgetScan(root) {
     const details = [output.trim(), warning].filter(Boolean).join("\n");
 
     return {
-      ok: status !== "fail",
+      ok: status === "ok" || status === "warn",
       label: "context budget scan",
       details
     };

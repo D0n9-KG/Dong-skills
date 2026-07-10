@@ -7,6 +7,14 @@ import { spawnSync, execFileSync } from "node:child_process";
 const TASK_FORMAT = "skillopt_sleep.tasks.v1";
 const LOG_FILE = path.join("docs", "improvements", "evolution-log.md");
 const DEFAULT_TASKS_FILE = path.join(".codex-context", "raw", "skill-evolution-tasks.json");
+const SUPPORTED_RULE_JUDGE_OPS = new Set([
+  "section_present",
+  "regex",
+  "max_chars",
+  "min_chars",
+  "contains",
+  "tool_called"
+]);
 
 function gitRoot(cwd) {
   try {
@@ -342,6 +350,22 @@ function truncate(value, limit) {
   return text.length <= limit ? text : `${text.slice(0, limit - 20)}\n[truncated]`;
 }
 
+function redactPersistentText(value) {
+  return String(value || "")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]")
+    .replace(/((?:[A-Z0-9_]*(?:API_KEY|TOKEN|SECRET|PASSWORD|AUTHORIZATION))\s*[:=]\s*)([^\s"'`]+)/gi, "$1[REDACTED]")
+    .replace(/\b(?:sk|rk|pk)-[A-Za-z0-9][A-Za-z0-9_-]{10,}\b/g, "[REDACTED]");
+}
+
+function sanitizeForPersistence(value) {
+  if (typeof value === "string") return redactPersistentText(value);
+  if (Array.isArray(value)) return value.map(sanitizeForPersistence);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeForPersistence(item)]));
+  }
+  return value;
+}
+
 function collectCandidates(root, options) {
   const output = resolveProjectPath(root, options.output, DEFAULT_TASKS_FILE);
   const outboxRoots = [root];
@@ -363,7 +387,7 @@ function collectCandidates(root, options) {
     reviewed: false,
     tasks
   };
-  writeText(output, `${JSON.stringify(payload, null, 2)}\n`);
+  writeText(output, `${JSON.stringify(sanitizeForPersistence(payload), null, 2)}\n`);
   return [
     "Dong Skills skill evolution candidates",
     `Dong Skills repo: ${root}`,
@@ -422,16 +446,83 @@ function readTasksInfo(file) {
   }
 }
 
-function assertReviewedTasks(root, options) {
+function readTasksPayload(file) {
+  let payload;
+  try {
+    payload = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    throw new Error(`Tasks file is not valid JSON: ${error.message}`);
+  }
+  if (payload.format !== TASK_FORMAT) {
+    throw new Error(`Tasks file has unsupported format: ${payload.format || "missing"}`);
+  }
+  if (!Array.isArray(payload.tasks) || payload.tasks.length === 0) {
+    throw new Error("Tasks file must contain at least one evaluation task.");
+  }
+  return payload;
+}
+
+function validateTaskJudges(payload, { requireHeldOut = false } = {}) {
+  const issues = [];
+  const ids = new Set();
+  let trainCount = 0;
+  let heldOutCount = 0;
+
+  for (const [index, task] of payload.tasks.entries()) {
+    const label = task.id || `task[${index}]`;
+    if (!task.id) issues.push(`${label}: missing id`);
+    else if (ids.has(task.id)) issues.push(`${label}: duplicate id`);
+    else ids.add(task.id);
+
+    const split = String(task.split || "").toLowerCase();
+    if (split === "train") trainCount += 1;
+    else if (["val", "validation", "held-out", "heldout", "test"].includes(split)) heldOutCount += 1;
+    else issues.push(`${label}: split must be train or held-out/val`);
+
+    if (task.judge?.kind !== "rule") {
+      issues.push(`${label}: judge.kind must be rule`);
+      continue;
+    }
+    const checks = task.judge.checks;
+    if (!Array.isArray(checks) || checks.length === 0) {
+      issues.push(`${label}: rule judge must contain checks`);
+      continue;
+    }
+    for (const check of checks) {
+      if (!SUPPORTED_RULE_JUDGE_OPS.has(check?.op)) {
+        issues.push(`${label}: unsupported judge op ${check?.op || "missing"}`);
+      }
+    }
+  }
+
+  if (trainCount === 0) issues.push("tasks file requires at least one train task");
+  if (requireHeldOut && heldOutCount === 0) {
+    issues.push("real SkillOpt-Sleep run requires held-out evaluation tasks (split=val or held-out)");
+  }
+  return issues;
+}
+
+function assertTasksReady(root, options, { requireReviewed = false, requireHeldOut = false } = {}) {
   const tasksFile = resolveProjectPath(root, options.tasksFile, DEFAULT_TASKS_FILE);
-  const info = readTasksInfo(tasksFile);
   if (!fs.existsSync(tasksFile)) throw new Error(`Tasks file not found: ${rel(root, tasksFile)}`);
-  if (!info.reviewed) throw new Error(`Refusing real SkillOpt-Sleep run from unreviewed tasks file: ${rel(root, tasksFile)}`);
+  const payload = readTasksPayload(tasksFile);
+  if (requireReviewed && payload.reviewed !== true) {
+    throw new Error(`Refusing real SkillOpt-Sleep run from unreviewed tasks file: ${rel(root, tasksFile)}`);
+  }
+  const issues = validateTaskJudges(payload, { requireHeldOut });
+  if (issues.length > 0) {
+    throw new Error(`SkillOpt-Sleep task validation failed:\n- ${issues.join("\n- ")}`);
+  }
   return tasksFile;
 }
 
 function runSleep(root, action, options) {
-  if (action === "run") assertReviewedTasks(root, options);
+  if (options.tasksFile || action === "run") {
+    assertTasksReady(root, options, {
+      requireReviewed: action === "run",
+      requireHeldOut: action === "run"
+    });
+  }
   if (action === "run" && !options.backend) throw new Error("Real run requires explicit --backend, usually --backend codex.");
   const result = runPythonModule(root, action, options);
   const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
@@ -474,7 +565,7 @@ function adopt(root, options) {
     output,
     "",
     "Post-adoption verification required:",
-    "- node --test tests/project-ops.test.mjs",
+    "- node scripts/run-domain-tests.mjs",
     "- node scripts/release-check.mjs ."
   ].join("\n");
 }
@@ -492,7 +583,7 @@ function appendEvolutionLog(root, output) {
     "Output:",
     "",
     "```text",
-    output.trim(),
+    redactPersistentText(output.trim()),
     "```",
     ""
   ].join("\n");

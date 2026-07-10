@@ -25,6 +25,11 @@
 - `discussion-state.json` is only a freshness marker. If the agent ignores the Stop/PreCompact prompt and does not update state, the marker alone is not durable project memory.
 
 ## Technical Risks
+- Installer/bootstrap now use collection-level snapshots and bounded locks. Residual risk: snapshotting `.codex` and `.codex-context` can use noticeable temporary disk space in unusually large projects.
+- Process termination and ordinary late failures release file locks and are covered by rollback tests; forced power loss during the restore operation itself is not simulated.
+- Cross-volume temporary backup copy behavior is not stress-tested. Managed skill staging remains inside its destination root, while collection backups use the system temp directory.
+- `project-ops-health.mjs` loads the workflow runtime parser/schema dynamically. Future runtime relocation must preserve one of the documented source/installed resolution paths.
+- Domain sharding reduces the full suite from roughly 125 seconds to about 61 seconds on this machine. The bootstrap-runtime shard remains the longest path and should be split only when tests gain clearer independent fixtures.
 - The lightweight gate design reduces drift but does not make unapproved edits technically impossible in every harness; future hook telemetry or pre-tool checks may be considered if drift persists.
 - Project-level hook trust is still per repository; users may need to approve hooks through `/hooks`.
 - `PreCompact` manual blocking is still useful, but automatic compaction is allowed after emergency handoff because blocking under context pressure can stall without reliable visible feedback.
@@ -68,7 +73,7 @@
 - README, AGENTS snippets, workflow skills, `workflow-state.yaml`, and `workflow-state.mjs` must stay aligned when phases or transition names change.
 - README now declares Codex-only scope; future Claude adapter documentation must not imply the existing `.codex`/`.agents` layout is Claude-native.
 - README, AGENTS snippet, project-map, and skill routing can diverge after future changes.
-- README, AGENTS snippets, workflow skills, review-panel guidance, and asset-governance docs must stay aligned on the exact three Simplicity Gate rungs.
+- README, AGENTS snippets, workflow skills, review-panel guidance, and asset-governance docs must stay aligned on the four Simplicity Gate rungs.
 - Generated context archives may preserve outdated command evidence; keep main `verification.md` current.
 - `docs/solutions/` can accumulate overlapping or stale entries unless `codex-solution-memory` refresh/consolidation is used.
 
@@ -78,3 +83,22 @@
 - Release scans must exclude `.git` and verify no raw observations, logs, backups, local paths, or secrets are published.
 - Checkpoint commits must not stage unrelated user changes, secrets, raw observations, logs, backups, or local private paths.
 - Do not commit generated `%USERPROFILE%\.agents\skills\.dong-skills-source.json`; it intentionally contains a local source path.
+
+## 上下文风险
+- 暂无已知风险。
+
+
+## 技术风险
+- 暂无已知风险。
+
+
+## 架构风险
+- 暂无已知风险。
+
+
+## 文档风险
+- 暂无已知风险。
+
+
+## 安全 / 破坏性风险
+- 暂无已知风险。

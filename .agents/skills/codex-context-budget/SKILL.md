@@ -88,6 +88,29 @@ Do not remove guidance automatically. Recommend deletions or splits, then let th
 
 Do not weaken phase gates, verification gates, privacy rules, or destructive-operation safeguards just to save tokens. If a rule is too verbose, shorten it while preserving the constraint.
 
+## Recovery Probe Evaluation
+
+Token size is not enough to judge compaction quality. After changing handoff, recovery, summary, or context-loading behavior, start from the recovered artifacts and answer a fixed probe set without relying on chat memory:
+
+For an actual post-compaction or new-session resume, read `.codex-context/handoff-summary.md` first. The Active Wayfinder path in `current-state.md` is only a pointer: recovery must include the bounded Wayfinder summary and the referenced map sections before work continues.
+
+Run the executable evaluator:
+
+```powershell
+node .codex/hooks/project-ops.mjs context-recovery-eval
+```
+
+- Do not continue when the evaluator fails. Repair the stale or missing state first.
+- file and symbol locations needed for the next edit
+- decisions and rejected paths that constrain implementation
+- risks and forbidden actions
+- next action and verification evidence
+- current task identity, approvals, execution mode, and blocking decision
+
+Record whether each probe is correct, missing, stale, or ambiguous. A compact handoff that cannot answer these probes is lower quality than a larger one that can.
+
+Also observe repeated re-fetches after recovery. If the agent repeatedly reopens the same files or rediscovers the same decision because the recovery path omitted a pointer, treat that as context-loss evidence and improve the handoff or index. Do not copy full source bodies into hot context to eliminate every re-fetch; preserve concise pointers and the decisions that make those reads meaningful.
+
 Prefer reductions in this order:
 
 1. Archive oversized active state files into `.codex-context/archive/` while keeping compact active summaries.

@@ -30,6 +30,7 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - `scripts/session-history.mjs`: scans prior session metadata and keyword counts without printing raw transcripts.
 - `scripts/project-ops-health.mjs`: project install check and release-blocking asset parity check.
 - `scripts/release-check.mjs`: syntax, PowerShell parse, tests, privacy, and runtime-artifact release check.
+- `scripts/run-domain-tests.mjs`: validates unique test ownership and runs domain test files in bounded parallel child processes.
 - `.agents/skills/codex-architecture-governance/`: architecture governance skill and scan script.
 - `.agents/skills/codex-docs-stewardship/`: docs/state stewardship skill and scan script.
 - `.agents/skills/codex-asset-governance/`: lifecycle governance for state, docs, raw, archive, solution, backlog, scripts, hooks, tests, generated evidence, and code assets.
@@ -38,19 +39,22 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - `.agents/skills/codex-session-history/`: safe prior-session search workflow.
 - `.agents/skills/codex-strategy-anchor/`: `STRATEGY.md` workflow.
 - `.agents/skills/codex-evidence-capture/`: product-use evidence workflow.
+- `.agents/skills/codex-wayfinder/`: local Markdown frontier mapping for multi-session discovery.
+- `.agents/skills/codex-agent-architecture-audit/`: agent/harness wrapper, memory, tool, rendering, and persistence audit.
+- `.agents/skills/codex-loop-design-check/`: decidable-goal and independent-judge review for automated loops.
 
 ## Entry Points
 - User install: `scripts/install-windows.ps1`.
 - New project bootstrap: `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`.
 - Project hooks: `.codex/hooks/project-ops.mjs` invoked by `.codex/hooks.json`.
-- Tests: `tests/project-ops.test.mjs`.
+- Tests: `tests/domains/*.test.mjs`; `tests/project-ops-support.mjs` provides shared fixtures and `tests/project-ops.test.mjs` is the compatibility aggregator.
 
 ## Commands
 - Dev: edit Markdown/Node/PowerShell files directly.
 - Build: no build step.
 - Typecheck: `node --check <file>` for `.mjs` scripts.
 - Lint: no dedicated linter.
-- Test: `node --test tests/project-ops.test.mjs`.
+- Test: `node scripts/run-domain-tests.mjs`.
 - Health: `node scripts/project-ops-health.mjs .`.
 - Release: `node scripts/release-check.mjs .`.
 - Budget: `node .codex/hooks/project-ops.mjs context-budget`.
@@ -79,6 +83,7 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 - New project bootstrap/install: `scripts/install-windows.ps1` and `.agents/skills/codex-codebase-onboarding/scripts/bootstrap-project-ops.ps1`.
 - Curated skill routing: `.agents/skills/using-superpowers/SKILL.md`, `.agents/skills/codex-project-governance/SKILL.md`, and `AGENTS.project-ops.snippet.md`.
 - Release/privacy checks: `scripts/release-check.mjs`.
+- Test domain ownership and concurrency: `scripts/run-domain-tests.mjs`, `tests/domains/`, and `tests/project-ops-support.mjs`.
 - Asset lifecycle audit: `.codex/scripts/lib/assets.mjs`, `scripts/asset-governance.mjs`, and `codex-asset-governance`.
 - Dong Skills meta-learning routing: `.codex/scripts/lib/learning.mjs`, `.codex-context/dong-skills-outbox.md`, and `codex-learning-memory`.
 - Solution memory validation: `scripts/solutions.mjs` plus `codex-solution-memory` references.
@@ -95,3 +100,46 @@ Dong Skills is a personal Codex project-operations kit for long-running software
 
 ## Unknowns
 - Codex UI `/hooks` trust display cannot be verified programmatically from this repo.
+
+## 用途
+[这个项目做什么；未知则写“未知”。]
+
+
+## 技术栈
+- [语言 / 框架 / 包管理器。]
+
+
+## 架构
+- [关键组件及其连接方式。]
+
+
+## 重要路径
+- `path`: [用途]
+
+
+## 入口点
+- `path`: [运行时或命令入口]
+
+
+## 命令
+- Dev: `[命令或未知]`
+- Build: `[命令或未知]`
+- Typecheck: `[命令或未知]`
+- Lint: `[命令或未知]`
+- Test: `[命令或未知]`
+
+
+## 约定
+- [有证据支持的项目约定。]
+
+
+## 修改位置指南
+- [任务类型]: `path`
+
+
+## 架构关注点
+- [需要复查的大文件、平铺目录、耦合或所有权不清问题。]
+
+
+## 未知项
+- [未知内容，以及如何验证。]

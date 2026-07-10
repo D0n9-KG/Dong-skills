@@ -55,13 +55,26 @@ Use the output contract:
 
 If the file is missing, run `codex-codebase-onboarding` or `node .codex/hooks/project-ops.mjs workflow-state init` before continuing. If the state conflicts with the latest user instruction, the latest user instruction wins, but update `workflow-state.yaml` with `workflow-state transition <event>` or `workflow-state set <field> <value>` before moving on.
 
+When the recorded phase is `complete` and the user starts a distinct task, run `node .codex/hooks/project-ops.mjs workflow-state transition new-task` before discovery or brainstorming. This increments task identity and clears prior approvals, verification, review, checkpoint, and handoff hash state. When resuming from `blocked`, use `workflow-state transition resume`; it must restore the recorded `resume_phase` and `resume_skill`, not guess from chat memory.
+
 Do not route from chat memory alone when a valid workflow state exists.
+
+### Compaction And Session Recovery Gate
+
+After automatic compaction, a new session, or any resume where workflow state is already active, do not continue from `current-state.md`, an Active Wayfinder path, or chat memory alone.
+
+1. Read `.codex-context/handoff-summary.md` first, then the files listed under its re-read section.
+2. Run `node .codex/hooks/project-ops.mjs context-recovery-eval`. Treat any failed, missing, stale, or ambiguous probe as a blocker.
+3. Run `node .codex/hooks/project-ops.mjs workflow-state next`; use `workflow-state recover` when the state reports a recovery path.
+4. If recovery reports an Active Wayfinder, read the injected Wayfinder summary and open the referenced map. A path without its Destination, decisions, frontier, fog, and boundaries is not recovered context.
+5. Continue only when the handoff, workflow state, current plan/spec, verification evidence, and Active Wayfinder agree on the current task and next action.
 
 ## Phase Order
 
 For project work, keep this order:
 
 1. **Scope:** use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction work.
+   Use `codex-wayfinder` first when the destination is known but the route will span multiple sessions and cannot yet be written as a credible spec.
 2. **Spec approval:** for non-trivial work, do not leave brainstorming until the written spec is approved by the user or brainstorming is explicitly skipped.
 3. **Plan:** use `writing-plans` after the written spec is approved or requirements are explicitly clear.
 4. **Execution mode:** the plan must record `Execution Mode` as `Traditional task-by-task execution` or `Codex Goal mode`.
@@ -79,6 +92,7 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 ## Skill Selection
 
 - New repo or unclear structure: `codex-codebase-onboarding`.
+- Multi-session discovery with a known destination but unresolved route: `codex-wayfinder`.
 - Unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction: `brainstorming`.
 - Approved written spec or explicit skip-brainstorming multi-step requirements: `writing-plans`.
 - Written plan to execute: `executing-plans`.
@@ -90,6 +104,8 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Product/project direction, strategy drift, or missing upstream grounding: `codex-strategy-anchor`.
 - Prior session context needed beyond project files: `codex-session-history`.
 - Offline validation-gated evolution of Dong Skills itself from backlog/outbox issues: `codex-skill-evolution`.
+- Agent, LLM wrapper, tool harness, memory, rendering, or persistence audit: `codex-agent-architecture-audit`.
+- Autonomous, Goal-mode, scheduled, repeated, or self-improving loop design/review: `codex-loop-design-check`.
 - Before completion claim: `verification-before-completion`.
 - Observable UI/CLI/API/artifact behavior needs proof: `codex-evidence-capture`.
 - Before long pause, compaction, final delivery, or GitHub archive/push: `codex-git-checkpoint`.
@@ -136,7 +152,7 @@ At a decision point:
 - Before long pauses or final response with meaningful changes: commit/push a Git checkpoint or record the deferred reason in `handoff-summary.md`.
 - Before success claims: run or record verification in `verification.md`.
 - Before milestone handoff or release: run `asset-governance` when state files, raw snapshots, archives, solution docs, or generated assets have grown.
-- Before adding or accepting custom code/dependencies/abstractions, apply the Simplicity Gate from `writing-plans`/`executing-plans`: can avoid building, standard library, native platform.
+- Before adding or accepting custom code/dependencies/abstractions, apply the Simplicity Gate from `writing-plans`/`executing-plans`: can avoid building, standard library, native platform. Before custom code, also check whether the needed behavior already exists in the codebase and should be reused.
 
 ## Tool Mapping
 

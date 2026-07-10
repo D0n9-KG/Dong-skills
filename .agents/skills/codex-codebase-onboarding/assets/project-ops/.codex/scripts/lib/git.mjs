@@ -31,17 +31,22 @@ export function changedPathsNeedVerification(files) {
 
 export function gitStatusFiles(root) {
   try {
-    const out = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+    const out = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"]
     });
-    return out.split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => line.slice(3).trim())
-      .map((name) => name.includes(" -> ") ? name.split(" -> ").pop().trim() : name)
-      .map((name) => name.replace(/^"|"$/g, "").replace(/\\/g, "/"))
-      .filter(Boolean);
+    const records = out.split("\0");
+    const files = [];
+    for (let index = 0; index < records.length; index += 1) {
+      const record = records[index];
+      if (!record || record.length < 4) continue;
+      const status = record.slice(0, 2);
+      const name = record.slice(3);
+      if (name) files.push(name);
+      if (/[RC]/.test(status)) index += 1;
+    }
+    return [...new Set(files)];
   } catch {
     return [];
   }

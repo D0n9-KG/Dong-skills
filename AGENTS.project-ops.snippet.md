@@ -34,6 +34,7 @@ Use the lowest sufficient lane: `Lane 0` tiny mechanical edit; `Lane 1` small bo
 Use only the bundled curated set by default:
 
 - `using-superpowers`
+- `codex-wayfinder`
 - `brainstorming`
 - `writing-plans`
 - `executing-plans`
@@ -58,6 +59,8 @@ Use only the bundled curated set by default:
 - `codex-learning-memory`
 - `codex-context-budget`
 - `codex-project-governance`
+- `codex-agent-architecture-audit`
+- `codex-loop-design-check`
 
 Do not assume removed Superpowers/ECC components exist.
 Use `codex-learning-memory` for curated instincts only; do not save loose notes as memory without evidence, scope, and a save/improve/absorb/drop decision.
@@ -81,6 +84,8 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `worktree-state.md`
 - `workflow-state.yaml`
 - `handoff-summary.md`
+
+`workflow-state.yaml` carries a task identity (`task_id`, `task_generation`) as well as phase and approval state. A distinct task after `complete` must use `workflow-state transition new-task` so old approvals do not leak forward. A blocked task must resume through its recorded `resume_phase` and `resume_skill`.
 
 Use `.codex-context/raw/` for raw logs or large outputs.
 Project bootstrap should keep `.codex-context/raw/*` and `.codex-context/discussion-state.json` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
@@ -112,7 +117,7 @@ Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle
 
 Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 
-Use `codex-skill-evolution` only for offline, explicit SkillOpt-Sleep evolution of Dong Skills itself. It is a global maintenance entry, but it must operate on the real Dong Skills source repo, not the current business project. It turns Dong Skills backlog/outbox issues into reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. Do not run SkillOpt-Sleep from hooks, do not use `--auto-adopt`, and do not use it for business project code or project memory.
+Use `codex-skill-evolution` only for offline, explicit SkillOpt-Sleep evolution of Dong Skills itself. It is a global maintenance entry, but it must operate on the real Dong Skills source repo, not the current business project. It turns Dong Skills backlog/outbox issues into reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. Redact secrets before persisting task drafts or adoption diagnostics, and surface backend/auth/model/version failures explicitly instead of converting them into scores. Do not run SkillOpt-Sleep from hooks, do not use `--auto-adopt`, and do not use it for business project code or project memory.
 
 ## Learning Memory
 

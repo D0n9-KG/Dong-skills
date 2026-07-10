@@ -153,20 +153,25 @@ function emergencyHandoffNotice(ctx) {
   const markdown = readText(file);
   const marker = "## PreCompact Emergency Notice";
   const separator = "\n---\n\n";
-  const markerIndex = markdown.indexOf(marker);
-  const separatorIndex = markdown.indexOf(separator, markerIndex);
-  if (markerIndex === -1 || separatorIndex === -1) {
+  let remaining = markdown;
+  const notices = [];
+  while (true) {
+    const markerIndex = remaining.indexOf(marker);
+    const separatorIndex = remaining.indexOf(separator, markerIndex);
+    if (markerIndex === -1 || separatorIndex === -1) break;
+    notices.push(remaining.slice(markerIndex, separatorIndex).trim());
+    remaining = remaining.slice(separatorIndex + separator.length).trim();
+  }
+  if (!notices.length) {
     return { present: false, file, markdown, continuation: "", notice: "" };
   }
-  const notice = markdown.slice(markerIndex, separatorIndex).trim();
-  const continuation = markdown.slice(separatorIndex + separator.length).trim();
   return {
     present: true,
     file,
     markdown,
-    notice,
-    continuation,
-    canArchive: continuation.length > 0
+    notice: notices.join("\n\n---\n\n"),
+    continuation: remaining,
+    canArchive: remaining.length > 0
   };
 }
 

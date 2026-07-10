@@ -1,4 +1,6 @@
 workflow: standard
+task_id: task-1
+task_generation: 1
 phase: discovery
 next_skill: codex-codebase-onboarding
 auto_next: true
@@ -7,9 +9,12 @@ spec_status: not-started
 plan_status: not-started
 execution_mode: pending
 execution_approval: pending
+loop_review_status: pending
 verify_result: pending
 review_status: pending
 checkpoint_status: pending
+resume_phase: none
+resume_skill: none
 handoff_hash: null
 updated_at: not-started
 note: initialized

@@ -76,6 +76,7 @@ Before choosing the gate depth, classify the work into the lowest sufficient lan
 
 - `using-superpowers`: choose the relevant workflow skill.
 - `brainstorming`: unclear requirements, creative work, behavior changes.
+- `codex-wayfinder`: multi-session discovery where the destination is known but the route is too uncertain for a credible spec.
 - `codex-codebase-onboarding`: bootstrap Dong Skills project config when needed, then map an unfamiliar repo.
 - `writing-plans`: approved spec or multi-step implementation.
 - `executing-plans`: execute a written plan in Traditional task-by-task mode or explicit Codex Goal mode.
@@ -87,7 +88,7 @@ Before choosing the gate depth, classify the work into the lowest sufficient lan
 - `verification-before-completion`: before claiming complete, fixed, passing, ready, or delivered.
 - `codex-git-checkpoint`: archive verified work with clear commits and optional GitHub push before pauses, compaction, or delivery.
 - `codex-review-panel`: persona-based review for meaningful implementation, plans, docs, architecture, and delivery evidence.
-- `codex-simplicity-review`: anti-overengineering review for avoid-building, standard library, native platform, unnecessary abstraction, and simplification-debt findings.
+- `codex-simplicity-review`: anti-overengineering review for avoid-building, existing-codebase reuse, standard library, native platform, unnecessary abstraction, and simplification-debt findings.
 - `requesting-code-review`: lightweight review entry or handoff to `codex-review-panel`.
 - `receiving-code-review`: when review feedback arrives.
 - `codex-learning-memory`: record, validate, prune, and promote evidence-backed project instincts; route Dong Skills improvement candidates to the real Dong Skills backlog or fallback outbox.
@@ -98,6 +99,8 @@ Before choosing the gate depth, classify the work into the lowest sufficient lan
 - `codex-context-budget`: audit skill, hook, and state-file context cost.
 - `codex-asset-governance`: lifecycle audit and cleanup for state files, raw snapshots, archives, docs, scripts, hooks, tests, generated evidence, and code assets.
 - `codex-skill-evolution`: offline SkillOpt-Sleep evolution for Dong Skills itself; use backlog/outbox issues as candidates, run validation-gated dry-run/run, inspect staged proposals, and adopt only after user review.
+- `codex-agent-architecture-audit`: wrapper, memory, tool, rendering, hidden-repair, and persistence diagnosis for agent systems.
+- `codex-loop-design-check`: decidable-goal, boundary, retry, independent-judge, and human-judgment review for autonomous loops.
 
 Load only the skill needed for the current phase.
 
@@ -105,7 +108,7 @@ Load only the skill needed for the current phase.
 
 1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, worktree state, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
 2. Recover: read `workflow-state.yaml` and run `workflow-state recover` when phase or next action is unclear. If project files are still insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
-3. Scope: if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, truth hierarchy, work class/risk lane, and What-level scope; transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`; require written-spec approval before planning.
+3. Scope: if the destination is known but discovery will span sessions and the route is not yet specifiable, use `codex-wayfinder` and resolve one frontier ticket per session. Otherwise, if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, truth hierarchy, work class/risk lane, and What-level scope; transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`; require written-spec approval before planning.
 4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include work class/risk lane, execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; use `workflow-state transition plan-ready` when the plan is awaiting execution approval, then ask for execution mode approval unless the user explicitly requested plan-then-execute.
 5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
 6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; apply the Simplicity Gate before adding custom code, dependencies, abstractions, scripts, docs, or state assets; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh. During substantial investigation, keep `working-notes.md` fresh with checked facts, rejected paths, current hypothesis/conclusion, open questions, and next verification step.

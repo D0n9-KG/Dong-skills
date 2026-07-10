@@ -9,6 +9,8 @@ export const WORKFLOW_FILE = "workflow-state.yaml";
 
 const FIELD_ORDER = [
   "workflow",
+  "task_id",
+  "task_generation",
   "phase",
   "next_skill",
   "auto_next",
@@ -17,9 +19,12 @@ const FIELD_ORDER = [
   "plan_status",
   "execution_mode",
   "execution_approval",
+  "loop_review_status",
   "verify_result",
   "review_status",
   "checkpoint_status",
+  "resume_phase",
+  "resume_skill",
   "handoff_hash",
   "updated_at",
   "note"
@@ -44,6 +49,7 @@ const ALLOWED = {
   next_skill: [
     "using-superpowers",
     "codex-codebase-onboarding",
+    "codex-wayfinder",
     "brainstorming",
     "writing-plans",
     "executing-plans",
@@ -65,6 +71,8 @@ const ALLOWED = {
     "codex-docs-stewardship",
     "codex-context-budget",
     "codex-asset-governance",
+    "codex-agent-architecture-audit",
+    "codex-loop-design-check",
     "none"
   ],
   auto_next: ["true", "false"],
@@ -89,14 +97,22 @@ const ALLOWED = {
   plan_status: ["not-started", "drafting", "drafted", "approved"],
   execution_mode: ["pending", "traditional", "codex-goal"],
   execution_approval: ["pending", "approved-traditional", "approved-goal", "plan-then-execute-traditional"],
+  loop_review_status: ["pending", "approved", "not-required"],
   verify_result: ["pending", "pass", "fail", "gap-recorded"],
   review_status: ["pending", "done", "skipped"],
   checkpoint_status: ["pending", "done", "deferred"]
 };
 
+ALLOWED.resume_phase = ["none", ...ALLOWED.phase];
+ALLOWED.resume_skill = ["none", ...ALLOWED.next_skill.filter((skill) => skill !== "none")];
+
+export { ALLOWED as WORKFLOW_ALLOWED };
+
 export function defaultWorkflowState() {
   return {
     workflow: "standard",
+    task_id: "task-1",
+    task_generation: "1",
     phase: "discovery",
     next_skill: "codex-codebase-onboarding",
     auto_next: "true",
@@ -105,9 +121,12 @@ export function defaultWorkflowState() {
     plan_status: "not-started",
     execution_mode: "pending",
     execution_approval: "pending",
+    loop_review_status: "pending",
     verify_result: "pending",
     review_status: "pending",
     checkpoint_status: "pending",
+    resume_phase: "none",
+    resume_skill: "none",
     handoff_hash: "null",
     updated_at: new Date().toISOString(),
     note: "initialized"
@@ -136,6 +155,20 @@ export function parseWorkflowYaml(text) {
     const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
     if (!match) continue;
     state[match[1]] = stripQuotes(match[2]);
+  }
+  return state;
+}
+
+export function normalizeWorkflowState(input) {
+  const state = { ...(input || {}) };
+  if (!state.loop_review_status) {
+    const goalMode = state.execution_mode === "codex-goal" ||
+      state.execution_approval === "approved-goal";
+    const traditionalMode = state.execution_mode === "traditional" ||
+      ["approved-traditional", "plan-then-execute-traditional"].includes(state.execution_approval);
+    state.loop_review_status = goalMode
+      ? "pending"
+      : (traditionalMode ? "not-required" : "pending");
   }
   return state;
 }
@@ -174,7 +207,11 @@ export function loadWorkflowState(root, ctx) {
   if (!fs.existsSync(file)) {
     throw new Error(`${WORKFLOW_FILE} is missing; run workflow-state init only if initializing this project state is intentional.`);
   }
-  return parseWorkflowYaml(fs.readFileSync(file, "utf8"));
+  const parsed = normalizeWorkflowState(parseWorkflowYaml(fs.readFileSync(file, "utf8")));
+  return {
+    ...defaultWorkflowState(),
+    ...parsed
+  };
 }
 
 export function saveWorkflowState(root, ctx, state) {
@@ -196,7 +233,8 @@ function validateEnum(state, issues, field) {
   }
 }
 
-export function validateWorkflowState(state) {
+export function validateWorkflowState(input) {
+  const state = normalizeWorkflowState(input);
   const issues = [];
   for (const field of FIELD_ORDER) {
     if (field === "updated_at" || field === "note" || field === "handoff_hash") continue;
@@ -208,7 +246,10 @@ export function validateWorkflowState(state) {
   if (state.phase === "planning" && state.spec_status === "not-started") {
     issues.push(`${WORKFLOW_FILE} phase=planning requires spec_status`);
   }
-  return { ok: issues.length === 0, issues };
+  if (state.phase === "blocked" && ["", "none"].includes(state.resume_phase || "none")) {
+    issues.push(`${WORKFLOW_FILE} phase=blocked requires resume_phase`);
+  }
+  return { ok: issues.length === 0, issues, state };
 }
 
 const EXECUTION_OR_LATER_PHASES = new Set([
@@ -264,6 +305,28 @@ function planModeFromMarkdown(markdown) {
   return "unknown";
 }
 
+export function planArtifactReadinessFromMarkdown(markdown) {
+  const readiness = nonTemplateStatusText(sectionContent(markdown, "Artifact Readiness"));
+  if (!readiness) return "unknown";
+  if (/requirements-only|requirements only|仅需求|需求阶段|not\s+implementation[- ]ready|not\s+ready|不可实施|不可执行|尚未.{0,12}(?:可实施|可执行)|未.{0,12}(?:达到|具备).{0,8}(?:可实施|可执行)/.test(readiness)) {
+    return "requirements-only";
+  }
+  if (/implementation-ready|implementation ready|可实施|可执行/.test(readiness)) return "implementation-ready";
+  return "unknown";
+}
+
+export function planLoopReviewFromMarkdown(markdown) {
+  const review = nonTemplateStatusText(sectionContent(markdown, "Loop Review"));
+  if (!review) return "unknown";
+  if (/not-required|not required|无需|不需要/.test(review)) return "not-required";
+  if (/not\s+(?:approved|complete|completed)|incomplete|未(?:通过|完成|批准|审查)|不(?:通过|批准)|尚未.{0,8}(?:通过|完成|批准|审查)/.test(review)) {
+    return "pending";
+  }
+  if (/approved|complete|completed|通过|已审查|已批准/.test(review)) return "approved";
+  if (/pending|not reviewed|未审查|待审查|等待/.test(review)) return "pending";
+  return "unknown";
+}
+
 function phaseAtOrAfterExecution(phase) {
   return EXECUTION_OR_LATER_PHASES.has(phase);
 }
@@ -277,6 +340,12 @@ export function workflowConsistencyStatus(root, ctx, state = null) {
   const specDoc = specApprovalFromMarkdown(specMarkdown);
   const planApproval = planApprovalFromMarkdown(planMarkdown);
   const planMode = planModeFromMarkdown(planMarkdown);
+  const planReadiness = planArtifactReadinessFromMarkdown(planMarkdown);
+  const planLoopReview = planLoopReviewFromMarkdown(planMarkdown);
+
+  if (phaseAtOrAfterExecution(current.phase) && current.spec_status === "approved" && specDoc === "unknown") {
+    issues.push("state mismatch: workflow-state.yaml spec_status=approved, but spec.md has no parseable approval status");
+  }
 
   if (specDoc === "approved" && ["not-started", "living-draft", "pending-approval"].includes(current.spec_status)) {
     issues.push(`state mismatch: spec.md says approved, but workflow-state.yaml spec_status=${current.spec_status}`);
@@ -297,11 +366,34 @@ export function workflowConsistencyStatus(root, ctx, state = null) {
   if (phaseAtOrAfterExecution(current.phase) && !["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(current.execution_approval)) {
     issues.push(`state mismatch: phase=${current.phase} requires execution approval, got ${current.execution_approval}`);
   }
+  if (phaseAtOrAfterExecution(current.phase) &&
+      ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(current.execution_approval) &&
+      planApproval === "unknown") {
+    issues.push("state mismatch: workflow-state.yaml has execution approval, but plan-progress.md has no parseable execution approval");
+  }
   if (current.plan_status === "approved" && planApproval === "pending") {
     issues.push("state mismatch: workflow-state.yaml plan_status=approved, but plan-progress.md says execution is not approved");
   }
   if (["traditional", "codex-goal"].includes(planMode) && current.execution_mode !== "pending" && planMode !== current.execution_mode) {
     issues.push(`state mismatch: plan-progress.md execution mode=${planMode}, but workflow-state.yaml execution_mode=${current.execution_mode}`);
+  }
+  if (phaseAtOrAfterExecution(current.phase) && current.execution_mode !== "pending" && planMode === "unknown") {
+    issues.push("state mismatch: workflow-state.yaml has execution mode, but plan-progress.md has no parseable execution mode");
+  }
+  if (phaseAtOrAfterExecution(current.phase) &&
+      current.spec_status !== "mechanical-exception" &&
+      planReadiness !== "implementation-ready") {
+    issues.push(`state mismatch: phase=${current.phase} requires Artifact Readiness implementation-ready, got ${planReadiness}`);
+  }
+  if (phaseAtOrAfterExecution(current.phase) &&
+      (current.execution_mode === "codex-goal" || current.execution_approval === "approved-goal") &&
+      current.loop_review_status !== "approved") {
+    issues.push(`state mismatch: Codex Goal mode requires loop_review_status approved, got ${current.loop_review_status || "missing"}`);
+  }
+  if (phaseAtOrAfterExecution(current.phase) &&
+      (current.execution_mode === "codex-goal" || current.execution_approval === "approved-goal") &&
+      planLoopReview !== "approved") {
+    issues.push(`state mismatch: Codex Goal mode requires plan Loop Review approved, got ${planLoopReview}`);
   }
 
   if (current.phase === "complete" && current.next_skill !== "none") {
@@ -310,13 +402,21 @@ export function workflowConsistencyStatus(root, ctx, state = null) {
   if (["delivery", "handoff", "complete"].includes(current.phase) && !["pass", "gap-recorded"].includes(current.verify_result)) {
     issues.push(`state mismatch: phase=${current.phase} requires verify_result pass or gap-recorded, got ${current.verify_result}`);
   }
+  if (current.handoff_hash && current.handoff_hash !== "null") {
+    const currentHash = workflowContextHash(root, contextDir, false).combined;
+    if (currentHash !== current.handoff_hash) {
+      issues.push("state mismatch: saved handoff_hash does not match current workflow context");
+    }
+  }
 
   return {
     ok: issues.length === 0,
     issues,
     specDoc,
     planApproval,
-    planMode
+    planMode,
+    planReadiness,
+    planLoopReview
   };
 }
 
@@ -333,7 +433,11 @@ export function workflowStatus(root, ctx) {
       summary: `Workflow state needs review: ${issue}`
     };
   }
-  const state = parseWorkflowYaml(readText(file));
+  const parsed = normalizeWorkflowState(parseWorkflowYaml(readText(file)));
+  const state = {
+    ...defaultWorkflowState(),
+    ...parsed
+  };
   const validation = validateWorkflowState(state);
   const consistency = validation.ok
     ? workflowConsistencyStatus(root, contextDir, state)
@@ -364,6 +468,26 @@ function requireSpecReady(state, event) {
   }
 }
 
+function requirePlanImplementationReady(root, ctx, state, event) {
+  if (state.spec_status === "mechanical-exception") return;
+  const contextDir = ctxFor(root, ctx);
+  const readiness = planArtifactReadinessFromMarkdown(readText(path.join(contextDir, REQUIRED_FILES.plan)));
+  if (readiness !== "implementation-ready") {
+    throw new Error(`Cannot transition ${event}: Artifact Readiness must be implementation-ready, got ${readiness}`);
+  }
+}
+
+function requireGoalLoopReview(root, ctx, state, event) {
+  if (state.loop_review_status !== "approved") {
+    throw new Error(`Cannot transition ${event}: loop_review_status must be approved`);
+  }
+  const contextDir = ctxFor(root, ctx);
+  const planReview = planLoopReviewFromMarkdown(readText(path.join(contextDir, REQUIRED_FILES.plan)));
+  if (planReview !== "approved") {
+    throw new Error(`Cannot transition ${event}: plan Loop Review must be approved, got ${planReview}`);
+  }
+}
+
 function withBase(state, patch, note) {
   return {
     ...state,
@@ -377,7 +501,33 @@ export function transitionWorkflowState(root, ctx, event) {
   let next;
 
   switch (event) {
+    case "new-task": {
+      const generation = (Number.parseInt(state.task_generation || "0", 10) || 0) + 1;
+      next = withBase(state, {
+        task_id: `task-${generation}-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+        task_generation: String(generation),
+        phase: "discovery",
+        next_skill: "using-superpowers",
+        auto_next: "true",
+        decision_required: "none",
+        spec_status: "not-started",
+        plan_status: "not-started",
+        execution_mode: "pending",
+        execution_approval: "pending",
+        loop_review_status: "pending",
+        verify_result: "pending",
+        review_status: "pending",
+        checkpoint_status: "pending",
+        resume_phase: "none",
+        resume_skill: "none",
+        handoff_hash: "null"
+      }, "New task started");
+      break;
+    }
     case "discovery-start":
+      if (state.phase === "complete") {
+        throw new Error("Cannot transition discovery-start from complete; run workflow-state transition new-task");
+      }
       next = withBase(state, {
         phase: "discovery",
         next_skill: "codex-codebase-onboarding",
@@ -435,6 +585,7 @@ export function transitionWorkflowState(root, ctx, event) {
         plan_status: "approved",
         execution_mode: "traditional",
         execution_approval: "approved-traditional",
+        loop_review_status: "not-required",
         decision_required: "none"
       }, "Tiny mechanical exception");
       break;
@@ -444,12 +595,14 @@ export function transitionWorkflowState(root, ctx, event) {
         phase: "planning",
         next_skill: "writing-plans",
         plan_status: "drafting",
+        loop_review_status: "pending",
         decision_required: "none"
       }, "Planning started");
       break;
     case "plan-ready":
       requirePhase(state, event, ["planning"]);
       requireSpecReady(state, event);
+      requirePlanImplementationReady(root, ctx, state, event);
       next = withBase(state, {
         phase: "planning",
         next_skill: "writing-plans",
@@ -460,24 +613,44 @@ export function transitionWorkflowState(root, ctx, event) {
     case "execution-approved-traditional":
       requirePhase(state, event, ["planning", "execution"]);
       requireSpecReady(state, event);
+      requirePlanImplementationReady(root, ctx, state, event);
       next = withBase(state, {
         phase: "execution",
         next_skill: "executing-plans",
         plan_status: "approved",
         execution_mode: "traditional",
         execution_approval: "approved-traditional",
+        loop_review_status: "not-required",
         decision_required: "none"
       }, "Traditional execution approved");
       break;
+    case "loop-review-approved": {
+      requirePhase(state, event, ["planning"]);
+      const contextDir = ctxFor(root, ctx);
+      const planReview = planLoopReviewFromMarkdown(readText(path.join(contextDir, REQUIRED_FILES.plan)));
+      if (planReview !== "approved") {
+        throw new Error(`Cannot transition ${event}: plan Loop Review must be approved, got ${planReview}`);
+      }
+      next = withBase(state, {
+        phase: "planning",
+        next_skill: "writing-plans",
+        loop_review_status: "approved",
+        decision_required: "none"
+      }, "Goal loop design review approved");
+      break;
+    }
     case "execution-approved-goal":
       requirePhase(state, event, ["planning", "execution"]);
       requireSpecReady(state, event);
+      requirePlanImplementationReady(root, ctx, state, event);
+      requireGoalLoopReview(root, ctx, state, event);
       next = withBase(state, {
         phase: "execution",
         next_skill: "executing-plans",
         plan_status: "approved",
         execution_mode: "codex-goal",
         execution_approval: "approved-goal",
+        loop_review_status: "approved",
         decision_required: "none"
       }, "Codex Goal mode approved");
       break;
@@ -559,6 +732,9 @@ export function transitionWorkflowState(root, ctx, event) {
       break;
     case "delivery-complete":
       requirePhase(state, event, ["delivery", "handoff"]);
+      if (!["done", "deferred"].includes(state.checkpoint_status)) {
+        throw new Error("Cannot transition delivery-complete: checkpoint_status must be done or deferred");
+      }
       next = withBase(state, {
         phase: "complete",
         next_skill: "none",
@@ -569,13 +745,21 @@ export function transitionWorkflowState(root, ctx, event) {
       next = withBase(state, {
         phase: "blocked",
         next_skill: "using-superpowers",
+        resume_phase: state.phase,
+        resume_skill: state.next_skill,
         decision_required: state.decision_required === "none" ? "user-choice" : state.decision_required
       }, "Workflow blocked");
       break;
     case "resume":
+      requirePhase(state, event, ["blocked"]);
+      if (!state.resume_phase || state.resume_phase === "none") {
+        throw new Error("Cannot transition resume: blocked state has no resume_phase");
+      }
       next = withBase(state, {
-        phase: state.spec_status === "approved" ? "planning" : "discovery",
-        next_skill: state.spec_status === "approved" ? "writing-plans" : "using-superpowers",
+        phase: state.resume_phase,
+        next_skill: state.resume_skill && state.resume_skill !== "none" ? state.resume_skill : "using-superpowers",
+        resume_phase: "none",
+        resume_skill: "none",
         decision_required: "none"
       }, "Workflow resumed");
       break;
@@ -640,6 +824,17 @@ export function checkWorkflowEntry(root, ctx, phase) {
   }
   if (phase === "execution" && !["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(state.execution_approval)) {
     issues.push("execution requires explicit execution approval");
+  }
+  if (phase === "execution" && state.spec_status !== "mechanical-exception") {
+    const readiness = planArtifactReadinessFromMarkdown(readText(path.join(contextDir, REQUIRED_FILES.plan)));
+    if (readiness !== "implementation-ready") {
+      issues.push(`execution requires Artifact Readiness implementation-ready, got ${readiness}`);
+    }
+  }
+  if (phase === "execution" &&
+      (state.execution_mode === "codex-goal" || state.execution_approval === "approved-goal") &&
+      state.loop_review_status !== "approved") {
+    issues.push(`Codex Goal execution requires loop_review_status approved, got ${state.loop_review_status || "missing"}`);
   }
   if (phase === "delivery" && !["pass", "gap-recorded"].includes(state.verify_result)) {
     issues.push("delivery requires verification pass or recorded gap");

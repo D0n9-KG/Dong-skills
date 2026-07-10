@@ -133,7 +133,7 @@ Decision:
 Adapt Comet's state-machine pattern to Codex-only Dong Skills. Keep `.codex-context/` as the source of truth, do not add OpenSpec change directories, do not add Claude/cross-platform adapters, and do not make `workflow-state.yaml` a noisy per-file freshness gate. Use it for phase, next skill, blocking decision, verification/review/checkpoint status, and recovery hash.
 
 Verification:
-`tests/project-ops.test.mjs` covers workflow-state transitions, next routing, recovery, hashing, project hook forwarding, bootstrap installation, health-check validation, and skill documentation gates.
+The domain-sharded suite under `tests/domains/`, with `tests/project-ops.test.mjs` as a compatibility aggregator, covers workflow-state transitions, next routing, recovery, hashing, project hook forwarding, bootstrap installation, health-check validation, and skill documentation gates.
 
 ### 2026-06-14 - Fix Review-Validated Runtime And Workflow Gaps
 
@@ -192,7 +192,7 @@ Status: done
 Priority: P0
 Affected area: borrowed workflow skills / Superpowers parity / CE-ECC adaptation
 Source: user feedback after comparing Dong Skills behavior with original Superpowers-style skills
-Implemented: `writing-plans`, `executing-plans`, `systematic-debugging`, review skills, worktree/checkpoint guidance, and `codex-solution-memory` now include explicit gates for test-first planning, reproduction-before-fix, test discovery, mandatory review triggers, branch finishing choices, and solution-memory evaluation. `tests/project-ops.test.mjs` guards these sections.
+Implemented: `writing-plans`, `executing-plans`, `systematic-debugging`, review skills, worktree/checkpoint guidance, and `codex-solution-memory` now include explicit gates for test-first planning, reproduction-before-fix, test discovery, mandatory review triggers, branch finishing choices, and solution-memory evaluation. The `skills-contracts` domain guards these sections.
 
 Signal:
 Dong Skills should be lighter than upstream projects, but the lightening removed some necessary process constraints. Agents could still drift: start implementation from loose brainstorming, write vague plans, skip test discovery, fix without reproduction, treat review as optional, and finish branches without a fixed decision menu.
@@ -209,7 +209,7 @@ Status: done
 Priority: P0
 Affected area: brainstorming / user interaction / Superpowers parity
 Source: user feedback from downstream project usage
-Implemented: `brainstorming/SKILL.md` now has an explicit Continuation Loop requiring the agent to continue from each user answer to the next single question, approaches, design section, final approval, `writing-plans`, pause, or blocker. `tests/project-ops.test.mjs` guards the presence of this rule.
+Implemented: `brainstorming/SKILL.md` now has an explicit Continuation Loop requiring the agent to continue from each user answer to the next single question, approaches, design section, final approval, `writing-plans`, pause, or blocker. The `skills-contracts` domain guards the presence of this rule.
 
 Signal:
 After a user answered one brainstorming question, the agent updated living spec/state files and stopped instead of asking the next question or advancing to the next design phase. This lost useful upstream Superpowers behavior.
@@ -448,4 +448,4 @@ Decision:
 Promote `workflow-state.yaml` from a routing file to a consistency-checked state index. Keep automatic PreCompact as a rescue path, but give its emergency notice a cleanup lifecycle. Separate Safe-Auto cleanup from Confirm-First assets. Avoid forcing an endless checkpoint loop when only fresh governance/context notes remain after a real checkpoint.
 
 Verification:
-`tests/project-ops.test.mjs` covers workflow-state/doc mismatch detection, PostToolUse early reminders, PreCompact notice archiving, and existing checkpoint/asset behavior. `release-check` now scans text files for ANSI escape and unexpected control characters.
+The `workflow-hooks` and `assets-worktree` domains cover workflow-state/doc mismatch detection, PostToolUse early reminders, PreCompact notice archiving, and existing checkpoint/asset behavior. `release-check` now scans text files for ANSI escape and unexpected control characters.

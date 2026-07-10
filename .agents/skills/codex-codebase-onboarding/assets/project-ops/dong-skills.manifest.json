@@ -12,6 +12,7 @@
   ],
   "project_skills": [
     "brainstorming",
+    "codex-wayfinder",
     "writing-plans",
     "executing-plans",
     "systematic-debugging",
@@ -33,6 +34,8 @@
     "codex-session-history",
     "codex-strategy-anchor",
     "codex-evidence-capture",
-    "codex-skill-evolution"
+    "codex-skill-evolution",
+    "codex-agent-architecture-audit",
+    "codex-loop-design-check"
   ]
 }

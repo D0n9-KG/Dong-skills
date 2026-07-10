@@ -1,62 +1,48 @@
-# Spec
+# Dong Skills 复杂项目能力补强规格
 
 ## 问题
-用户已把 Codex 当前 shell 切到 PowerShell 7，但 Dong Skills 发布的 Windows hooks 仍通过 `powershell.exe` 入口运行。若简单把 hooks 全部改成 `pwsh`，旧机器或没有 PowerShell 7 的项目会直接失效；若完全保留旧入口，中文 Markdown、中文路径或中文输出在 Windows PowerShell 5.1 场景下仍容易出现乱码误判。
+当前 Dong Skills 已可辅助复杂项目，但四个关键能力仍主要依赖 skill 自律：`requirements-only` 计划可通过机器执行检查；恢复质量无可执行 probe；Goal mode 未强制 loop review；skill tests 主要验证文本合同而非真实模型行为。
 
 ## 目标
-- Windows hooks 在可用时优先走 PowerShell 7 / `pwsh`。
-- 没有 `pwsh` 时 hooks 仍能通过 Windows PowerShell 5.1 回退运行。
-- 保持 `-EncodedCommand`，避免 PowerShell 变量扩展和 quoting 问题。
-- 明确 agent 在 Windows 上处理中文 Markdown 时必须使用 UTF-8 视角验证，不把 Windows PowerShell 5.1 的显示乱码误判为文件损坏。
-- 根目录项目资产和 onboarding bootstrap 资产保持同步。
+- `requirements-only` 或缺失 Artifact Readiness 的新计划无法进入 execution。
+- 提供可执行 context recovery evaluator，并在 SessionStart 恢复 active Wayfinder 摘要。
+- Goal mode 在 loop review 未批准时无法进入 execution。
+- 建立可插拔的真实 skill forward-eval harness、场景格式和独立结果验证。
 
 ## 审批状态
-用户要求继续优化 Dong Skills；本项属于已讨论清楚的兼容性修补，不需要新增产品 spec 审批。
+Approved by user on 2026-07-10.
 
 ## 事实优先级
-- 最新用户指令。
-- 本机验证结果：Codex 当前 shell 为 PowerShell 7，`pwsh` 可用。
-- 当前 hooks 配置、health check 和测试结果。
-- 旧状态文件和历史讨论。
+1. 最新用户指令。
+2. 源码、真实临时项目行为和测试。
+3. 本规格与实施计划。
+4. 旧状态文档。
 
 ## 工作类别 / 风险等级
-Lane 1 / Lane 2：发布配置、bootstrap 镜像、健康检查、测试和治理文档更新；不改业务项目代码，不引入新依赖。
-
-## 用户决策
-- 当前 Dong Skills 保持 Codex 专用。
-- 中文状态文档和用户可读 Markdown 应可靠支持中文。
-- hooks 不应为了本机方便而牺牲旧环境兼容性。
-
-## 非目标
-- 不把所有 hooks 硬切为 `pwsh`。
-- 不修改用户本机非 Dong Skills 的其他 skills。
-- 不引入新的跨平台安装器。
-- 不解决所有 PowerShell 5.1 乱码场景，只降低 hooks 和 Dong Skills 文档操作中的风险。
+Lane 3：修改 workflow state machine、health、SessionStart recovery、project bootstrap runtime 和模型行为评测门禁。
 
 ## 已批准范围
-- 更新 `.codex/hooks.json` 和 bootstrap 镜像中的 `.codex/hooks.json`。
-- 更新 health check，防止后续 release 回退到不优先 `pwsh` 的 Windows hook。
-- 更新测试覆盖 hook 形状。
-- 更新 AGENTS 和工具映射中的 Windows / UTF-8 操作纪律。
+- `.codex/scripts/lib/workflow.mjs`、recovery/CLI/hook runtime 与镜像。
+- health、installer/bootstrap helper lists、manifest/receipt 和 tests。
+- planning/execution/loop/context-budget/skill-evolution skills。
+- 新增 recovery evaluator 与 skill forward-eval harness。
 
-## 设计
-- `commandWindows` 外层仍使用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand <outer>`。
-- outer script:
-  - `Get-Command pwsh -ErrorAction SilentlyContinue`
-  - 若存在，执行 `& $pwsh.Source -NoProfile -EncodedCommand <inner>`。
-  - 若不存在，直接执行旧逻辑：定位 Git root 并运行 `.codex/hooks/launch-project-ops.mjs`。
-- inner script 是原本 hook launcher 逻辑的 encoded PowerShell 版本。
-- health check 解码 outer script，检查 `Get-Command pwsh` 和 `} else {`，避免丢失优先 `pwsh` 或 fallback。
+## 非目标
+- 不依赖本机损坏的 `codex` 启动器作为唯一 forward-eval 后端。
+- 不在 CI 中强制付费模型调用。
+- 不引入第三方依赖、外部 issue tracker 或自动 merge/release。
 
 ## 验收标准
-- 发布的 `.codex/hooks.json` 和 onboarding bootstrap hook 配置都包含优先 `pwsh` 且有 fallback 的 Windows hook。
-- health check 能拒绝缺少 `pwsh` 优先路径或缺少 fallback 的 Windows hook。
-- 测试能解码 outer 和 inner `EncodedCommand` 并确认最终仍调用 `.codex/hooks/launch-project-ops.mjs`。
-- AGENTS 和工具映射明确中文 UTF-8 验证纪律。
-- 完整测试、release check、hook health check 和 diff check 通过。
+- plan-ready、execution approval、health 和 execution check 对 `requirements-only` fail closed。
+- legacy plan 仅在显式迁移/确认后可标记 implementation-ready，不静默放行。
+- recovery evaluator 能验证任务状态、文件指针、决策、风险、下一步、验证证据和 active Wayfinder。
+- SessionStart 包含 active Wayfinder 的受限摘要而非只包含路径。
+- Goal approval 需要 `loop_review_status=approved`，Traditional mode 标记 not-required。
+- forward-eval harness 支持外部命令后端、独立输出文件、required/forbidden 断言和 held-out cases；后端不可用时明确失败。
+- 定向测试、完整领域测试、release check、health 和真实安装同步通过。
 
 ## 开放问题
-- 无。
+- 无阻塞问题。真实付费 Codex CLI 后端当前不可用，harness 必须支持其他独立执行器。
 
 ## 下一步
-运行完整验证后提交并推送。
+四个纵向切片已实现并验证，等待用户审阅当前未提交 diff。

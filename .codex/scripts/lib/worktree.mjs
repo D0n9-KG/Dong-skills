@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -25,6 +26,16 @@ function normalizedPath(value) {
 function pathContainsSegment(value, segments) {
   const normalized = normalizedPath(value);
   return segments.some((segment) => normalized.includes(segment));
+}
+
+function dongManagedWorktree(root) {
+  const marker = path.join(root, ".codex-context", "dong-worktree.json");
+  try {
+    const payload = JSON.parse(fs.readFileSync(marker, "utf8"));
+    return payload.managed_by === "Dong Skills" && payload.role === "dong-managed-worktree";
+  } catch {
+    return false;
+  }
 }
 
 export function detectWorktree(cwd) {
@@ -56,7 +67,7 @@ export function detectWorktree(cwd) {
   } else if (pathContainsSegment(root, ["/.codex/worktrees/"])) {
     role = "codex-managed-worktree";
     cleanupOwner = "host";
-  } else if (pathContainsSegment(root, ["/.worktrees/", "/worktrees/"])) {
+  } else if (dongManagedWorktree(root)) {
     role = "dong-managed-worktree";
     cleanupOwner = "dong-skills";
   } else {

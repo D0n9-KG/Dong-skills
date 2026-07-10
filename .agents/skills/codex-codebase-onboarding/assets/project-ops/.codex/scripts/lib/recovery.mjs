@@ -4,6 +4,7 @@ import { readText } from "./core.mjs";
 import { sectionContent, meaningful } from "./markdown.mjs";
 import { gitCheckpointStatus } from "./git.mjs";
 import { learningStatus } from "./learning.mjs";
+import { activeWayfinderSummary } from "./recovery-eval.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 import { detectWorktree, worktreeSummary } from "./worktree.mjs";
 import { recoverWorkflowContext, workflowStatus } from "./workflow.mjs";
@@ -86,6 +87,7 @@ export function sessionRecoveryContext(root, ctx, eventName) {
     : `Pending learning review: ${learning.issues.join("; ")}.`;
   const checkpointSummary = gitCheckpointStatus(root, ctx, 0).summary;
   const workspaceSummary = worktreeSummary(detectWorktree(root));
+  const wayfinderSummary = activeWayfinderSummary(root, ctx);
 
   const parts = [
     "Codex Project Ops hooks are active.",
@@ -98,6 +100,8 @@ export function sessionRecoveryContext(root, ctx, eventName) {
     "",
     "Handoff excerpt:",
     handoffRecoveryExcerpt(ctx),
+    "",
+    wayfinderSummary,
     "",
     "Workflow recovery:",
     recoverWorkflowContext(root, ctx),

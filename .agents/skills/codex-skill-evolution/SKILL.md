@@ -21,6 +21,8 @@ This skill is a global maintenance entry. It may be visible even when the curren
 - Do not run SkillOpt-Sleep from `Stop`, `PreCompact`, `PostToolUse`, or any other hook.
 - Do not use SkillOpt-Sleep to modify business project code.
 - Do not use `--auto-adopt`.
+- Automatically redact secrets before persisting candidate tasks, adoption diagnostics, or evolution logs; manual review is a second gate, not the primary privacy control.
+- Surface backend failures explicitly, including auth, model, version, and command failures. Never convert an unavailable or failed backend into a zero score or a normal rejected candidate.
 - Do not commit raw transcripts, `.skillopt-sleep/`, staging reports containing private content, or reviewed task drafts unless they are manually sanitized and intentionally added as public eval fixtures.
 
 ## Workflow
@@ -76,7 +78,7 @@ node .codex/hooks/project-ops.mjs skill-evolution adopt --confirm-reviewed
 8. After adoption, run Dong Skills verification:
 
 ```powershell
-node --test tests/project-ops.test.mjs
+node scripts/run-domain-tests.mjs
 node scripts/release-check.mjs .
 ```
 
@@ -92,6 +94,21 @@ Good evolution candidates are recurring Dong Skills failures with observable acc
 - Dong Skills meta-learning is written into project instincts instead of backlog/outbox.
 
 Poor candidates are vague preferences, one-off frustrations, private implementation details, secrets, or project-specific business behavior.
+
+## Validation Integrity
+
+Before accepting an evolved skill:
+
+- Evaluate baseline and candidate on the same reviewed training tasks and on separate held-out evaluation tasks that were not shown to the optimizer.
+- The judge must be independent from the candidate-writing context when the harness supports separation. Do not leak the intended fix, suspected failure, or candidate rationale into the judge prompt.
+- The builder must not modify acceptance conditions, judge rules, golden outputs, or held-out tasks.
+- Unknown judge operations fail closed. A typo, unsupported operator, unavailable backend, parse error, or empty check set is an evaluation failure, not a passing or zero-score candidate.
+- Compare against the current skill and the best known skill with the same backend, model, tool surface, and budget. Environment drift invalidates the comparison.
+- Include negative and adversarial tasks that try to trigger the old rationalization or bypass, not only happy-path examples.
+
+Adoption requires: no regression on protected gates, improvement on the target behavior, no held-out regression, and a manual diff review. A higher aggregate score cannot override a failed hard boundary.
+
+For direct skill behavior checks that do not require a SkillOpt optimization run, use `scripts/skill-forward-eval.mjs` with a reviewed scenario. The external backend receives only the prompt and selected skill text; assertions stay in the local scenario and raw outputs are judged after they are written to separate files.
 
 ## Review Rules
 

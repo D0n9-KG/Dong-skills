@@ -4,7 +4,7 @@ Dong Skills is a Codex-specific project-operations kit for long-running software
 
 Current scope: Dong Skills targets OpenAI Codex only. Claude Code compatibility would require a separate adapter for `.claude/skills`, `CLAUDE.md`, and Claude hook settings.
 
-Dong Skills combines selected ideas from Superpowers, ECC, agent-skills-for-context-engineering, Compound Engineering, Comet, and Ponytail, adapted for Codex project-level skills, project-level hooks, and file-based recovery.
+Dong Skills combines selected ideas from Superpowers, Matt Pocock Skills, ECC, agent-skills-for-context-engineering, Compound Engineering, Comet, Ponytail, and SkillOpt, adapted for Codex project-level skills, project-level hooks, and file-based recovery.
 
 ## 中文
 
@@ -91,6 +91,9 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 - `codex-solution-memory`：结构化、可复用的项目解决方案。
 - `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构；`asset-governance --apply` 只做安全自动整理，例如清理过期 PreCompact raw snapshot、归档临时 PreCompact notice。
 - `codex-skill-evolution`：作为全局维护入口接入 SkillOpt-Sleep，离线把 Dong Skills backlog/outbox 中的反复失败转成可回放任务，生成 staged proposal，验证通过并经用户确认后才采纳；它操作真实 Dong Skills 源仓库，不优化业务项目代码。
+- `codex-wayfinder`：用于目标明确但路线仍处于迷雾、需要跨多个 session 逐个解决 frontier 决策的问题；默认使用本地 Markdown，不依赖 issue tracker。
+- `codex-agent-architecture-audit`：面向 agent/harness 自身的 wrapper、memory、tool、rendering、hidden repair 和 persistence 审查。
+- `codex-loop-design-check`：检查 Goal、自动循环和 SkillOpt 流程的可判定目标、边界、重试上限、独立 judge 与人工最终判断。
 - `codex-review-panel` / `codex-simplicity-review`：交付前审查和反过度工程。
 
 ### 上下文恢复
@@ -140,8 +143,12 @@ node .codex/hooks/project-ops.mjs state-prune --keep 8 --dry-run
 
 ```powershell
 node scripts/project-ops-health.mjs "C:\path\to\repo"
+node scripts/run-domain-tests.mjs
+node scripts/skill-forward-eval.mjs evals/skill-forward/complex-project-gates.json --backend <executable> --backend-arg <arg>
 node scripts/release-check.mjs "."
 ```
+
+`skill-forward-eval.mjs` 将 prompt 与 skill 正文交给外部执行器，但不会把 required/forbidden 判定条件发送给执行器。每个 case 的原始输出先写入独立文件，再由本地 judge 检查；也可用 `--read-output-dir` 对其他执行器产生的现有输出重新判定。场景必须经过人工确认，并同时包含 train 与 held-out cases。
 
 ### 隐私与发布安全
 
@@ -156,6 +163,7 @@ node scripts/release-check.mjs "."
 发布前运行：
 
 ```powershell
+node scripts/run-domain-tests.mjs
 node scripts/release-check.mjs "."
 ```
 
@@ -204,6 +212,12 @@ When running from the target repository, omit the target path:
 .\scripts\install-windows.ps1
 ```
 
+Preview the complete install plan without changing target files:
+
+```powershell
+.\scripts\install-windows.ps1 -TargetProjectRoot "C:\path\to\repo" -Preview
+```
+
 The installer:
 
 - installs global entry skills to `%USERPROFILE%\.agents\skills`: onboarding, the router, and Dong Skills maintenance
@@ -213,6 +227,9 @@ The installer:
 - installs full project-level Dong Skills into the target repo `.agents/skills/`
 - writes `.agents/skills/.dong-skills-project.json`
 - installs `.codex-context/`, project hooks, helper scripts, runtime `.gitignore` rules, and the managed `AGENTS.md` block
+- holds bounded project/global resource locks so two installers cannot write the same target concurrently
+- snapshots the complete managed install surface and rolls the collection back if a later step fails
+- reports add/replace/runtime/state/receipt actions in `-Preview` mode and prints `No files were written.`
 
 After installation, restart Codex or start a new thread. If Codex asks to trust hooks, open `/hooks` and trust the project hooks.
 
@@ -240,13 +257,16 @@ node .codex/hooks/project-ops.mjs health-check
 - `spec.md` is a current-task intent and acceptance record, not a permanent system truth. Durable knowledge belongs in `CONCEPTS.md`, `STRATEGY.md`, `docs/solutions/`, or curated instincts.
 - `context-budget` reports hot recovery path, warm on-demand path, and cold runtime/bootstrap path separately. Use the hot path as the main budget signal; the total scanned number is for maintenance awareness.
 - Non-trivial work has explicit phase gates: brainstorming produces a written spec, planning produces a verifiable plan with an execution mode, and execution waits for approval.
-- `.codex-context/workflow-state.yaml` stores the script-readable phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, and context hash. `workflow-state status`, hooks, and `health-check` audit it against `spec.md` and `plan-progress.md`.
+- `.codex-context/workflow-state.yaml` stores task identity, phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, blocked-resume source, and context hash. A distinct task after completion uses `workflow-state transition new-task`; blocked work resumes from its recorded phase/skill. `workflow-state status`, hooks, and `health-check` audit it against `spec.md` and `plan-progress.md`.
 - `.codex-context/working-notes.md` stores compact externalized investigation state. It is not for hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning.
 - `.codex-context/discussion-state.json` is a runtime-only dirty marker and should stay ignored by Git.
 - Project hooks inject recovery context, check compaction readiness, track changed artifacts, mark discussion/exploration state dirty, and block final stopping when state is stale.
 - Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue. After recovery, `asset-governance --apply` can archive that temporary notice when the preserved handoff body is present.
 - `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It separates Safe-Auto cleanup from Confirm-First assets that require human judgment.
 - `codex-skill-evolution` is also installed as a global maintenance entry and integrates SkillOpt-Sleep as an offline evolution layer for Dong Skills itself. It uses backlog/outbox issues as candidates, creates reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. It is not a hook, not project memory, and not a business-code optimizer.
+- `codex-wayfinder` maps one frontier decision per session when the destination is known but the route is still too uncertain for a credible spec. It uses local Markdown by default and does not require an issue tracker.
+- `codex-agent-architecture-audit` reviews agent wrappers, memory, tool discipline, hidden repair loops, rendering, and persistence boundaries.
+- `codex-loop-design-check` reviews Goal mode, autonomous loops, and SkillOpt-style optimization for decidable goals, boundaries, retry caps, independent judges, and human final judgment.
 
 ### Commands
 
@@ -271,8 +291,12 @@ From this kit:
 
 ```powershell
 node scripts/project-ops-health.mjs "C:\path\to\repo"
+node scripts/run-domain-tests.mjs
+node scripts/skill-forward-eval.mjs evals/skill-forward/complex-project-gates.json --backend <executable> --backend-arg <arg>
 node scripts/release-check.mjs "."
 ```
+
+`skill-forward-eval.mjs` sends prompts and skill text to an external executor without sending required/forbidden assertions. It stores each raw case output before local judging, and `--read-output-dir` can re-judge outputs produced by another executor. Reviewed scenarios must contain both train and held-out cases.
 
 ### Privacy And Safety
 
@@ -285,12 +309,14 @@ SkillOpt-Sleep artifacts are runtime/private by default. Keep `.skillopt-sleep/`
 Before release:
 
 ```powershell
+node scripts/run-domain-tests.mjs
 node scripts/release-check.mjs "."
 ```
 
 ### Sources And Licenses
 
 - Superpowers components are adapted from [obra/superpowers](https://github.com/obra/superpowers).
+- Planning, vertical-slice, expand-contract, and independent-test-oracle ideas are adapted from [mattpocock/skills](https://github.com/mattpocock/skills).
 - ECC onboarding and continuous-learning concepts are adapted from [affaan-m/ECC](https://github.com/affaan-m/ECC).
 - Context governance ideas are adapted from [muratcankoylan/agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering).
 - Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).

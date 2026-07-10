@@ -43,6 +43,16 @@ Classify the work before choosing ceremony:
 
 Use the lowest lane that still protects the user. The spec should lock the What: goals, boundaries, invariants, non-goals, user decisions, and executable acceptance criteria. Do not lock How such as technology choice, file structure, data structure, or implementation path unless the user explicitly decides it or the risk requires it.
 
+## Facts, Decisions, And Assumptions
+
+Separate verified facts from user decisions and from unverified assumptions:
+
+- **Facts** come from code, tests, commands, product evidence, official sources, or direct repo inspection. Record the evidence or pointer.
+- **Decisions** are choices the user explicitly made after seeing the relevant trade-offs. Record the alternatives and why the choice was made.
+- **Assumptions** are temporary defaults used to keep discussion moving. Label them, state the risk, and promote them to facts or decisions before they become implementation constraints.
+
+Do not present a recommendation as a fact, infer a decision from silence, or let an old decision override newer verified behavior.
+
 ## What Good Brainstorming Does
 
 - Understand the real problem, not just the first requested implementation.
@@ -52,6 +62,17 @@ Use the lowest lane that still protects the user. The spec should lock the What:
 - Keep spec as a current-task intent record, not a permanent system baseline.
 - Maintain forward motion through the brainstorming flow; state-file updates are never the final answer unless the user asked only for documentation.
 - Hand off to `writing-plans` for multi-step implementation.
+
+## Blindspot Pass
+
+When the user says they do not know the domain, or two consecutive answers show they cannot evaluate the options rather than merely have not chosen, pause the normal interview and offer a compact blindspot pass.
+
+- Map 3-7 decisions, hazards, or constraints the user may not know to ask about.
+- Ground each item in the current project or authoritative evidence, explain why it matters, and give realistic options plus a recommended default.
+- Ask which items the user wants to decide explicitly. Record the rest as labeled assumptions, not hidden decisions.
+- Resume one-question-at-a-time brainstorming after the user has enough context to make informed choices.
+
+Do not use the blindspot pass as an unsolicited lecture or as permission to choose product direction for the user.
 
 ## Process
 

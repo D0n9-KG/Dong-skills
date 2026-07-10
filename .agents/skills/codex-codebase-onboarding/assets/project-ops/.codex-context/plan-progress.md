@@ -9,6 +9,9 @@
 ## 执行审批
 尚未批准。实现前记录 “Approved by user for Traditional task-by-task execution on [日期/时间]”、“Approved by user for Codex Goal mode on [日期/时间]”，或 “plan-then-execute requested; Traditional task-by-task execution”。
 
+## Artifact Readiness
+requirements-only
+
 ## 执行模式
 等待用户选择。可选值：Traditional task-by-task execution；Codex Goal mode。不要从“继续”、“执行”或 plan-then-execute 推断为 Codex Goal mode。
 
@@ -17,6 +20,9 @@
 
 ## Goal 模式目标
 未选择。如果用户明确选择 Codex Goal mode，写明当前 Codex session 可用的 goal 机制、目标、规格路径、计划路径、已批准范围、非目标、当前步骤、验证命令、存档节奏、必须更新的状态文件和停止条件。若当前 session 没有真实 goal 机制，则 Goal mode 不可用。
+
+## Loop Review
+pending。选择 Traditional task-by-task execution 后记录 `not-required`；选择 Codex Goal mode 时，先运行 `codex-loop-design-check`，通过后记录 `Approved after codex-loop-design-check`。
 
 ## 运行约束
 - 除非阻塞项要求重新规划，否则按已批准计划顺序执行。

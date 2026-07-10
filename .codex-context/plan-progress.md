@@ -1,67 +1,67 @@
 # 计划进度
 
 ## 当前计划
-优化 Dong Skills Windows hook 启动策略：兼容旧 `powershell.exe` 外壳，优先委派 PowerShell 7 / `pwsh`，并补齐中文 UTF-8 文件处理纪律。
+补强计划就绪度、恢复评测、Goal loop review 和 skill forward-eval。
 
 ## 规格审批
-用户已明确要求继续优化 Dong Skills；本项是已讨论清楚的兼容性修补。
+Approved by user on 2026-07-10.
 
 ## 执行审批
-用户要求“优化一下 Dong Skills”，按传统逐项执行模式推进。
+Approved by user for Traditional task-by-task execution.
+
+## Artifact Readiness
+implementation-ready
 
 ## 工作类别 / 风险等级
-Lane 1 / Lane 2：hook 配置、bootstrap 镜像、health check、测试和文档规则更新。
+Lane 3。
 
 ## 执行模式
-Traditional task-by-task execution。
+Traditional task-by-task execution.
 
 ## Goal 模式目标
 未选择 Goal mode。
 
+## Loop Review
+not-required。
+
 ## 运行约束
-- 不硬依赖 `pwsh`。
-- 保持 `-EncodedCommand`。
-- 根目录 project-ops 资产和 onboarding bootstrap 镜像必须同步。
-- 中文用户可读 Markdown 按 UTF-8 处理。
-- 不修改非 Dong Skills 的本地 skills。
+- 每项先增加失败测试或可重复场景。
+- 根 runtime 与 bootstrap 镜像同步。
+- 新状态字段采用 expand-contract；旧 Traditional 状态兼容，Goal 状态 fail closed。
+- forward-eval 不把判定条件泄漏给执行后端。
+- 不提交、不推送。
 
 ## 存档节奏
-完整验证通过后提交并推送。
+用户已授权创建本地 checkpoint commit；本轮不 push。
 
 ## 验收映射
-- `.codex/hooks.json`：Windows hook 外层兼容 `powershell.exe`，内部优先 `pwsh` 并保留 fallback。
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/hooks.json`：bootstrap 新项目拿到同样 hook。
-- `scripts/project-ops-health.mjs` 与 bootstrap 镜像：检查 `pwsh` 优先路径和 fallback。
-- `tests/project-ops.test.mjs`：覆盖 outer/inner encoded command。
-- `AGENTS.md`、`AGENTS.project-ops.snippet.md`、bootstrap snippet、`codex-tools.md`：写明 Windows / 中文 UTF-8 操作纪律。
+- Artifact Readiness -> workflow transition、execution check、health 和 legacy Traditional 场景。
+- Recovery evaluator/Wayfinder excerpt -> evaluator CLI、hook dispatch、SessionStart 和独立 forward 场景。
+- Goal loop review -> transition、state consistency、health、executor 与 Traditional not-required 场景。
+- Skill forward eval -> 外部命令协议、recorded outputs、独立 judge、held-out 和真实 agent 输出。
 
 ## 测试场景
-- `node --test tests\project-ops.test.mjs`
-- `node scripts\release-check.mjs .`
-- `node .codex\hooks\project-ops.mjs health-check`
-- `git diff --check`
+- Happy: implementation-ready、approved loop、完整 recovery probes、forward outputs pass。
+- Edge: legacy Traditional state、Active Wayfinder、hook 自动前置 root、recorded outputs。
+- Error: requirements-only、Goal 未 review、缺失 backend、缺少 held-out、required/forbidden 失败。
+- Integration: bootstrap -> installed scripts -> hook CLI -> health/release -> 全局真实安装。
 
 ## 任务
-- [x] 审查当前差异，确认没有把 hooks 硬切到 `pwsh`。
-- [x] 同步 root hook 配置和 bootstrap hook 配置。
-- [x] 增加 health check 约束。
-- [x] 增加测试覆盖。
-- [x] 增加 Windows / UTF-8 操作纪律。
-- [x] 刷新 `.codex-context` 主动状态文档。
-- [x] 运行完整验证。
-- [x] 提交并推送。
+- [x] Task 1: 机器强制 Artifact Readiness。
+- [x] Task 2: 实现 recovery evaluator 和 Wayfinder 恢复摘要。
+- [x] Task 3: Goal mode 强制 loop review。
+- [x] Task 4: 建立并运行 skill forward-eval。
+- [x] Task 5: 完整验证、全局同步和交付状态。
 
 ## 当前步骤
-交付结果和旧项目更新提示词。
+全部任务完成，等待用户审阅。
 
 ## 验证
-- `node --test tests\project-ops.test.mjs`: pass，64/64 tests。
-- `node scripts\release-check.mjs .`: pass，包含 health-check、context budget、Node syntax checks、PowerShell parse checks、完整 Node tests、privacy scan、text readability scan、large file scan、runtime artifact scan。
-- `git diff --check`: pass，仅有 Git CRLF normalization warnings。
-- `node .codex\hooks\project-ops.mjs health-check`: pass，Issues none。
-- `git push origin main`: pass，远端 `main` 已更新到 `1a77fa9`。
+- 完整领域测试：106/106，通过。
+- release check：通过，包含 106 domain tests 和全部发布门禁。
+- 真实 forward-eval：独立 agent 4/4，修复后的真实 Codex CLI backend 直接重跑 4/4。
+- 全局安装文件集、receipt、临时 bootstrap 和 health：通过。
 
 ## 范围外
-- 不做 Claude Code 迁移。
-- 不改跨平台 installer。
-- 不碰用户本地非 Dong Skills 的 skills。
+- 付费模型调用进入默认 release check。
+- 完整多 agent 调度系统。

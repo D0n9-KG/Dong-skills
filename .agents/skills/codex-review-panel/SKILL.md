@@ -34,6 +34,7 @@ Use this panel, not only the lightweight review checklist, when any of these app
 - architecture, module-boundary, or dependency-direction changes
 - completed implementation plan before merge, PR, or final delivery
 - verification gaps, manual-only evidence, or failed checks that required judgment
+- a silent-pass verification mechanism such as CI/release gates, health checks, smoke contracts, coverage/lint enforcement, test harnesses, or installer diagnostics that could report green while the protected behavior is broken
 
 If the panel is intentionally skipped for a meaningful diff, record the low-risk reason and the skipped lenses in `.codex-context/verification.md` or `handoff-summary.md`.
 
@@ -63,13 +64,24 @@ Add conditional lenses only when the diff or plan justifies them:
 1. Define review scope from the current branch/diff. Do not switch branches.
 2. State selected personas and why each conditional persona was activated.
 3. Review from each persona separately. Keep findings grounded in file/line evidence.
-4. Deduplicate findings. Merge duplicates under the highest justified severity.
+4. Deduplicate findings only within the same review axis or persona. Merge duplicates under the highest justified severity inside that boundary.
 5. Validate cheap factual claims directly against code or docs.
 6. For the Simplicity lens, use the same tags as `codex-simplicity-review` when applicable: `delete`, `stdlib`, `native`, `yagni`, `shrink`, or `dong-debt`.
-7. Separate actionable findings from residual risks and test gaps.
-8. If fixes are in scope, apply only scoped fixes, run targeted verification, and update `.codex-context/verification.md`.
+7. For user-content preservation, deletion, overwrite, migration, or cleanup changes, enumerate all destructive paths to the target. Prefer one guard at the shared choke point over per-caller patches, and verify sibling callers cannot bypass it.
+8. Separate actionable findings from residual risks and test gaps.
+9. If fixes are in scope, apply only scoped fixes, run targeted verification, and update `.codex-context/verification.md`.
 
 If a finding requires scope, architecture, or UX changes beyond the approved spec/plan, stop implementation and route back to `brainstorming` or `writing-plans`. Do not silently expand scope during review cleanup.
+
+## Standards Verdict
+
+Report whether the change follows repository instructions, documented conventions, architecture decisions, and the selected correctness/testing/maintainability lenses. Cite the standard or code evidence for each hard violation; label heuristic smells as judgment calls.
+
+## Spec Verdict
+
+Report separately whether the change implements the approved requirements: missing or partial requirements, scope creep, and behavior that appears implemented but contradicts the spec. Quote or point to the requirement for every finding.
+
+Do not merge, deduplicate, or rerank findings across these two axes. A clean Standards verdict must not hide a failed Spec verdict, and faithful Spec implementation must not hide standards violations. Persona findings may be summarized under the relevant axis, but each axis keeps its own worst severity and final verdict.
 
 ## Severity
 
@@ -106,11 +118,13 @@ Lead with findings, ordered by severity:
 
 Then include:
 
+- Standards Verdict: Ready, Ready with fixes, Not ready, or Not reviewed.
+- Spec Verdict: Ready, Ready with fixes, Not ready, or Not reviewed because no spec exists.
 - Applied fixes, if any
 - Verification run or gaps
 - Residual risks
 - Related solution docs or learnings
-- Verdict: Ready, Ready with fixes, or Not ready
+- Overall delivery note without collapsing the two axis verdicts into one score
 
 ## State Updates
 

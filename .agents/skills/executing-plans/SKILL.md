@@ -21,6 +21,8 @@ If `## 执行模式` / `## Execution Mode` is missing, ambiguous, or set to Code
 
 Also stop if `.codex-context/spec.md` has no approved scope for the current task, unless the user explicitly skipped brainstorming or the task is a tiny mechanical edit.
 
+Confirm the plan's artifact readiness before execution. `requirements-only` means return to `writing-plans`; only `implementation-ready` plans may execute. Legacy plans without an Artifact Readiness field may proceed only after the executor confirms that the Product Contract, Planning Contract, Verification Contract, Definition of Done, and launch-blocking questions are fully resolved and records that assessment.
+
 When workflow state is available, run this before editing implementation files:
 
 ```powershell
@@ -49,6 +51,7 @@ Use this mode only when all conditions are true:
 - `.codex-context/plan-progress.md` records an approved plan.
 - The user explicitly selected `Codex Goal mode` for execution.
 - The plan includes `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Stop Conditions`.
+- The plan's `Loop Review` says `Approved after codex-loop-design-check`, and workflow state has `loop_review_status: approved`.
 - The current Codex session exposes an actual goal mechanism, such as available `create_goal` and `update_goal` tools. If those tools are not available, Goal mode is unavailable; ask before falling back to Traditional mode.
 
 Before launching Goal mode, write or refresh the Goal Objective from the plan. Include:
@@ -63,6 +66,14 @@ Before launching Goal mode, write or refresh the Goal Objective from the plan. I
 - checkpoint cadence
 - required state updates
 - stop conditions
+
+Run `codex-loop-design-check` before Goal approval. After it passes, record the result in the plan and run:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition loop-review-approved
+```
+
+Only then may `execution-approved-goal` succeed.
 
 Launching Goal mode means creating one concrete Codex goal from this objective and then working inside that goal until it is complete or genuinely blocked. Do not simulate Goal mode by merely writing a heading in `plan-progress.md`.
 
@@ -85,6 +96,7 @@ Goal mode runtime constraints:
 5. Read and honor the plan's `工作类别 / 风险等级`, `执行模式`, `Goal 模式目标`, `运行约束`, `存档节奏`, and `执行备注` sections, or their legacy English equivalents. If any of these are missing for non-tiny work, derive the missing non-Goal constraints from the plan and record them before editing; if Goal mode details are missing, stop and ask.
 6. Run the Simplicity Gate before adding code, dependencies, abstractions, scripts, docs, or state files:
    - can the approved outcome be reached by avoiding the new thing?
+   - does the needed helper, type, validator, workflow, or pattern already exist in the codebase?
    - does the standard library already do it?
    - does the native platform already do it?
    If the plan omitted the gate, record the decision in `.codex-context/plan-progress.md` before editing. Do not add one-line/minimum-implementation checks as mandatory Dong Skills rungs.
@@ -95,6 +107,10 @@ Goal mode runtime constraints:
    - identify the closest existing unit/e2e/CLI/API tests for the touched area
    - identify the smallest command that proves the task
    - for behavior changes, decide whether to add/update a test before implementation or record why that is impractical
+   - ensure expected values come from an independent source of truth; reject tautological tests that recompute the assertion with the implementation's own algorithm
+   - check every applicable scenario category: happy path, edge cases, error paths, and integration
+   - when the change touches callbacks, middleware, observers, and event handlers, trace at least two levels from the changed entrypoint and identify retries, fallbacks, persistence, and sibling interfaces
+   - use real-object integration coverage for the interacting layers; mocks may supplement unit tests but must not be the only proof of the chain
 9. Mark exactly one task as active.
 10. Implement the task using the repo's existing patterns.
 11. If taking a deliberate simplification with a known ceiling, mark it with a `dong-debt:` comment that names the ceiling and the revisit trigger.
