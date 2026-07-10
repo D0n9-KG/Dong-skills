@@ -99,3 +99,17 @@
   - Result: pass
   - Evidence: health、context budget、Node/PowerShell syntax、domain-sharded tests、privacy、readability、large-file 和 runtime-artifact 全部通过；退出码 0，耗时 99.8 秒。
   - Date: 2026-07-10 16:58 +08:00.
+
+## 发布与本机同步
+- `git push origin main`
+  - Result: pass
+  - Evidence: 远端 `refs/heads/main` 与本地功能提交均为 `868884aaf827837d593b95614e754d648d02c6d7`。
+  - Date: 2026-07-10 17:28 +08:00.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/install-windows.ps1`
+  - Result: pass
+  - Evidence: 从真实源码重新安装三个全局入口 skill，并更新 source receipt。
+  - Date: 2026-07-10 17:28 +08:00.
+- `Get-TreeSha256` receipt parity verification
+  - Result: pass
+  - Evidence: manifest SHA256 匹配；`codex-codebase-onboarding`、`using-superpowers`、`codex-skill-evolution` 的实际安装目录 tree SHA256 与 receipt 全部一致；无事务残留。
+  - Date: 2026-07-10 17:28 +08:00.
