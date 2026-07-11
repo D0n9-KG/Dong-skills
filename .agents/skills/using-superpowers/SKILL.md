@@ -20,6 +20,16 @@ Use the lowest sufficient work lane:
 - `Lane 2`: multi-file or behavior-changing work; use brainstorming, written spec approval, planning, execution, verification, and checkpoint discipline.
 - `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work; require stronger tests, review, rollback notes, and checkpointing.
 
+When workflow state is available, record the chosen lane before phase-specific work:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition work-lane-<0|1|2|3>
+```
+
+For a genuine Lane 0 edit, record the compact scope and acceptance criterion, then run `workflow-state transition mechanical-exception` before the direct edit. If the user explicitly says to skip brainstorming for a clear multi-step task, record the compact scope and run `workflow-state transition spec-skipped`; this skip is task-scoped and does not approve execution.
+
+Changing the lane during planning invalidates the existing plan approval and downstream verification/review/checkpoint evidence. Rebuild the plan at the new risk depth before execution.
+
 When records conflict, follow the truth hierarchy: latest user instruction; verified behavior from code/tests/commands/product evidence/live repo inspection; approved spec and plan; current state and handoff; older chat/raw notes/stale specs.
 
 ## Workflow State Gate
@@ -52,8 +62,9 @@ Use the output contract:
 - `NEXT: auto` + `SKILL: <skill>` means load that skill and continue from the recorded phase.
 - `NEXT: manual` means a blocking decision, stale state, or manual handoff is required; ask the user only for that decision and stop.
 - `NEXT: done` means the workflow is complete; use verification/checkpoint/handoff only if delivery evidence still needs refresh.
+- When `workflow-state next` prints `TRANSITIONS: ...`, those are the only registered resolution transitions for the pending decision. Present the user with the corresponding mutually exclusive choices, wait for a matching response, then use exactly one listed transition. Do not infer an unlisted transition or run it before the user response receipt exists.
 
-If the file is missing, run `codex-codebase-onboarding` or `node .codex/hooks/project-ops.mjs workflow-state init` before continuing. If the state conflicts with the latest user instruction, the latest user instruction wins, but update `workflow-state.yaml` with `workflow-state transition <event>` or `workflow-state set <field> <value>` before moving on.
+If the file is missing, run `codex-codebase-onboarding` or `node .codex/hooks/project-ops.mjs workflow-state init` before continuing. If the state conflicts with the latest user instruction, the latest user instruction wins, but repair it through a validated `workflow-state transition <event>` before moving on. Direct `workflow-state set` and direct edits to `workflow-state.yaml` are not normal workflow paths.
 
 When the recorded phase is `complete` and the user starts a distinct task, run `node .codex/hooks/project-ops.mjs workflow-state transition new-task` before discovery or brainstorming. This increments task identity and clears prior approvals, verification, review, checkpoint, and handoff hash state. When resuming from `blocked`, use `workflow-state transition resume`; it must restore the recorded `resume_phase` and `resume_skill`, not guess from chat memory.
 
@@ -69,6 +80,10 @@ After automatic compaction, a new session, or any resume where workflow state is
 4. If recovery reports an Active Wayfinder, read the injected Wayfinder summary and open the referenced map. A path without its Destination, decisions, frontier, fog, and boundaries is not recovered context.
 5. Continue only when the handoff, workflow state, current plan/spec, verification evidence, and Active Wayfinder agree on the current task and next action.
 
+Automatic compaction invalidates the recovery receipt, but a still-valid, unconsumed user decision receipt from the same session may survive because it is independently bound to task identity, evidence, and runtime hash. Re-run recovery after compaction; do not ask the user to repeat an approval unless `workflow-state next` still reports the decision and the prior receipt no longer matches.
+
+When this evaluation runs through the installed hook path, success creates a session-scoped recovery receipt bound to the active task, handoff hash, and hook runtime. Supported project mutations are denied until that receipt is valid. A receipt from another session, an older handoff, a prior task generation, or an older runtime cannot authorize the current mutation. Read-only repair and diagnosis should remain available.
+
 ## Phase Order
 
 For project work, keep this order:
@@ -81,9 +96,11 @@ For project work, keep this order:
 5. **Execute:** use `executing-plans` only after a written plan exists and execution mode is approved. Do not infer Codex Goal mode from vague "continue" or "execute" language.
 6. **Workspace:** use `codex-worktree-governance` before execution in a new/resumed worktree, when hook source paths are confusing, or before branch completion/cleanup.
 7. **Debug:** use `systematic-debugging` for bugs, failures, regressions, or unexpected behavior.
+   When a failure occurs while an execution plan still has work remaining, run `workflow-state transition debugging-start` before debugging. After the reproduced root cause is fixed and the focused check passes, run `workflow-state transition debugging-resolved` to return to the same execution plan. Verification-phase failures continue to use `verification-fail` and `verification-retry`.
 8. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
 9. **Simplicity review:** use `codex-simplicity-review` when a diff or plan may be overbuilt, adds dependencies/abstractions, or the user asks what can be deleted.
 10. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
+    If accepted review findings require project-file edits, run `workflow-state transition review-changes-requested`, use `receiving-code-review`, then return through `execution-complete` -> verification -> review. Do not edit in review and reuse the earlier verification result.
 11. **Asset cleanup:** use `codex-asset-governance` before milestone handoff, compaction, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, or bloated.
 12. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
 
@@ -95,9 +112,12 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Multi-session discovery with a known destination but unresolved route: `codex-wayfinder`.
 - Unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction: `brainstorming`.
 - Approved written spec or explicit skip-brainstorming multi-step requirements: `writing-plans`.
+- Explicit skip-brainstorming instruction: record compact scope, run `spec-skipped`, then use `writing-plans`.
+- Tiny mechanical edit: classify `work-lane-0`, run `mechanical-exception`, then execute directly with targeted verification.
 - Written plan to execute: `executing-plans`.
 - Starting, resuming, finishing, or debugging path confusion in a Git worktree: `codex-worktree-governance`.
 - Bug, failing test, build failure, regression, or unexpected behavior: `systematic-debugging`.
+- Execution-time user correction: a pure continuation or status question does not reopen state. A changed implementation instruction must be externalized before the next mutation; a scope, requirement, goal, acceptance, or priority change requires `workflow-state transition brainstorming-start` and fresh spec/plan approval.
 - Structural refactor, large-file growth, flat directories, unclear boundaries, or coupling concerns: `codex-architecture-governance`.
 - Overbuilt diff/plan, avoidable dependency, unnecessary abstraction, or "what can be deleted/simplified": `codex-simplicity-review`.
 - Stale, duplicate, orphaned, bloated, unsafe, or lifecycle-unclear docs/state/raw/code assets: `codex-asset-governance`.
@@ -123,8 +143,10 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 - A written spec is not approved until the user explicitly approves the written spec file or inline written spec, or explicitly asks to skip brainstorming.
 - For non-trivial work, final discussion approval is not enough; the user must approve the written spec before planning.
 - A plan is not execution-approved until the user chooses execution mode or explicitly asked earlier to plan-then-execute.
+- Written-spec and execution approvals bind to the approved contents of `spec.md` and `plan-progress.md`. Editing either approved artifact invalidates the matching approval; refreshing the general context hash does not reapprove changed content.
+- Reopen changed scope with `brainstorming-start`; reopen an implementation-plan change with `plan-start`, then obtain the matching approval again before project mutations continue.
 - Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution.
-- Codex Goal mode requires an explicit user choice, a Goal Mode Objective in `plan-progress.md`, and an actual goal mechanism exposed in the current Codex session. If goal tools are unavailable, ask before falling back to Traditional task-by-task execution.
+- Codex Goal mode requires an explicit user choice, a Goal Mode Objective in `plan-progress.md`, and an actual goal or workflow mechanism exposed in the current Codex session with visible progress and closure state. If no such mechanism is available, ask before falling back to Traditional task-by-task execution.
 - If the user says "continue" after a question, treat it as continuing the current phase, not approval to skip later gates.
 - If there is doubt, ask one short question and wait.
 
@@ -145,6 +167,7 @@ At a decision point:
 - Before edits: know the relevant files and update `artifact-index.md` when they matter.
 - At phase boundaries: update `.codex-context/workflow-state.yaml` with the phase, `next_skill`, and `decision_required`.
 - During work: keep `plan-progress.md` and `current-state.md` current.
+- Reopening brainstorming/spec or restarting a plan invalidates downstream plan approval, execution approval, verification, review, and checkpoint state. Never carry old approvals or evidence into changed scope.
 - During discussion, discovery, planning, debugging, or substantial exploration: keep `working-notes.md` current with externalized findings, rejected paths, current hypothesis/conclusion, open investigation questions, and next verification step. Do not store hidden chain-of-thought or raw transcripts.
 - During Goal mode work: periodically re-read `spec.md` and `plan-progress.md`, compare progress against acceptance criteria, and stop on ambiguity, scope change, repeated verification failure, destructive action, missing user decision, or state contradiction.
 - In or near a worktree: keep `worktree-state.md` current before execution, checkpoint, merge, PR, discard, or cleanup.

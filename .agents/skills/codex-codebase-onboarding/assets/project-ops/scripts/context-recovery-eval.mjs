@@ -13,11 +13,12 @@ if (!runtime) {
   throw new Error(`Dong Skills recovery evaluator runtime is missing. Checked: ${candidates.join(", ")}`);
 }
 
-const { evaluateRecovery, formatRecoveryEvaluation } = await import(pathToFileURL(runtime).href);
+const { acknowledgeRecovery, evaluateRecovery, formatRecoveryEvaluation } = await import(pathToFileURL(runtime).href);
 const args = process.argv.slice(2);
 const json = args.includes("--json");
 const rootArg = args.find((arg) => !arg.startsWith("--")) || process.cwd();
 const root = path.resolve(rootArg);
 const result = evaluateRecovery(root);
 process.stdout.write(`${json ? JSON.stringify(result, null, 2) : formatRecoveryEvaluation(result)}\n`);
-if (!result.ok) process.exitCode = 1;
+if (result.ok) acknowledgeRecovery(root);
+else process.exitCode = 1;

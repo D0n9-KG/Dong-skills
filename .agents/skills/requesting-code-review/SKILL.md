@@ -64,4 +64,14 @@ After review:
 - update `.codex-context/risks.md` with unresolved review risks
 - update `.codex-context/decisions.md` for accepted or rejected review findings that affect future work
 - update `.codex-context/verification.md` after fixes or additional checks
+- append `## 审查证据` / `## Review Evidence` with the reviewed range, verdict, blocking findings or explicit none, residual risks, and any required fix cycle before closing review
 - use `codex-review-panel` when findings are cross-cutting, high-risk, or plan/spec related
+
+When no project fix remains, finish the review phase explicitly:
+
+- Normal completion: run `node .codex/hooks/project-ops.mjs workflow-state transition review-complete`.
+- Low-risk Lane 0/1 skip only: record the concrete low-risk reason, confirm verification passed, then run `node .codex/hooks/project-ops.mjs workflow-state transition review-skipped`.
+
+Lane 2/3 cannot use `review-skipped`. If review findings require edits, use `review-changes-requested` instead of either closure transition.
+
+The closure transition records a content hash of `verification.md`; changing review or verification evidence afterward reopens the delivery gate.

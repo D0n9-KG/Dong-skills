@@ -18,6 +18,14 @@ Do not implement, scaffold, edit code, change configuration, or invoke implement
 
 Read-only discovery is allowed before approval. If you are unsure whether a request is mechanical, treat it as brainstorming.
 
+If the user explicitly says to skip brainstorming, still externalize the compact scope and acceptance criteria in `.codex-context/spec.md`, then run:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition spec-skipped
+```
+
+`UserPromptSubmit` records a one-time task-bound skip receipt from the explicit instruction. Do not ask the user to approve the same skip a second time, and do not treat `spec-skipped` as execution approval.
+
 When Dong Skills project hooks are installed, start or refresh the workflow state before the first substantive brainstorming response:
 
 ```powershell
@@ -42,6 +50,14 @@ Classify the work before choosing ceremony:
 - `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work; require stronger tests, review, evidence, and checkpointing.
 
 Use the lowest lane that still protects the user. The spec should lock the What: goals, boundaries, invariants, non-goals, user decisions, and executable acceptance criteria. Do not lock How such as technology choice, file structure, data structure, or implementation path unless the user explicitly decides it or the risk requires it.
+
+When workflow state is available, persist the selected lane with:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition work-lane-<0|1|2|3>
+```
+
+Do this before relying on lane-specific hook behavior. If later discovery raises or lowers the lane, run the new lane transition and treat the existing plan approval and downstream evidence as invalid.
 
 ## Facts, Decisions, And Assumptions
 
@@ -212,8 +228,10 @@ At the written-spec approval decision point, do not infer approval from silence,
 For a tiny mechanical edit, keep the process compact:
 
 1. State the assumption and acceptance criterion.
-2. Update `.codex-context/spec.md` with the compact scope.
-3. If the work is single-step, implement; otherwise use `writing-plans`.
+2. Run `workflow-state transition work-lane-0`.
+3. Update `.codex-context/spec.md` with the compact scope.
+4. Run `workflow-state transition mechanical-exception` before editing project files.
+5. If the work stops being mechanical or develops a design choice, return to `brainstorming`; otherwise implement and verify the single-step edit.
 
 Examples: typo fix, one clearly named config value, one obvious import path fix. Not examples: feature behavior, architecture, data migration, API shape, UX, test strategy, or anything touching multiple modules.
 

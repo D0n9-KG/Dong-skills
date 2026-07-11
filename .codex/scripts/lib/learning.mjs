@@ -44,8 +44,8 @@ export function containsPotentialSecret(text) {
   });
 }
 
-export function sanitizeLearningExcerpt(text) {
-  let value = normalizeWhitespace(text);
+export function redactSensitiveText(text) {
+  let value = String(text || "");
   value = value.replace(/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/gi, "[redacted-private-key]");
   value = value.replace(/https?:\/\/\S+/gi, (url) => {
     try {
@@ -78,7 +78,11 @@ export function sanitizeLearningExcerpt(text) {
   value = value.replace(/\bhf_[A-Za-z0-9]{20,}\b/g, "[redacted-huggingface-token]");
   value = value.replace(/\bxox[abprs]-[A-Za-z0-9-]{20,}\b/g, "[redacted-slack-token]");
   value = value.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[redacted-jwt]");
-  return truncate(value, 160);
+  return value;
+}
+
+export function sanitizeLearningExcerpt(text) {
+  return truncate(normalizeWhitespace(redactSensitiveText(text)), 160);
 }
 
 export function extractPromptText(input) {

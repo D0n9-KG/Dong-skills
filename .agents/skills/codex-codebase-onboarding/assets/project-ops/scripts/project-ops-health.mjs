@@ -6,17 +6,84 @@ import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+const REQUIRED_WORKFLOW_EXPORTS = [
+  "normalizeWorkflowState",
+  "planArtifactReadinessFromMarkdown",
+  "planLoopReviewFromMarkdown",
+  "parseWorkflowYaml",
+  "validateWorkflowState"
+];
+
+function validateWorkflowRuntime(module, runtime) {
+  const missing = REQUIRED_WORKFLOW_EXPORTS.filter((name) => typeof module?.[name] !== "function");
+  if (missing.length) {
+    throw new Error(`Dong Skills workflow API mismatch in ${runtime}; missing function export(s): ${missing.join(", ")}`);
+  }
+  return module;
+}
 
 async function loadWorkflowRuntime() {
   const candidates = [
     path.join(scriptDirectory, "lib", "workflow.mjs"),
-    path.join(scriptDirectory, "..", ".codex", "scripts", "lib", "workflow.mjs")
+    path.join(scriptDirectory, "..", ".codex", "scripts", "lib", "workflow.mjs"),
+    path.join(
+      scriptDirectory,
+      "..",
+      ".agents",
+      "skills",
+      "codex-codebase-onboarding",
+      "assets",
+      "project-ops",
+      ".codex",
+      "scripts",
+      "lib",
+      "workflow.mjs"
+    )
+  ];
+  const failures = [];
+  for (const runtime of candidates) {
+    if (!fs.existsSync(runtime)) continue;
+    try {
+      return validateWorkflowRuntime(await import(pathToFileURL(runtime).href), runtime);
+    } catch (error) {
+      failures.push(`${runtime}: ${error.message}`);
+    }
+  }
+  const detail = failures.length ? ` Load failures: ${failures.join(" | ")}` : "";
+  throw new Error(`Dong Skills workflow runtime is unavailable. Checked: ${candidates.join(", ")}.${detail}`);
+}
+
+async function loadRuntimeSupport() {
+  const candidates = [
+    path.join(scriptDirectory, "lib", "runtime.mjs"),
+    path.join(scriptDirectory, "..", ".codex", "scripts", "lib", "runtime.mjs")
   ];
   const runtime = candidates.find((candidate) => fs.existsSync(candidate));
   if (!runtime) {
-    throw new Error(`Dong Skills workflow runtime is missing. Checked: ${candidates.join(", ")}`);
+    throw new Error(`Dong Skills hook runtime support is missing. Checked: ${candidates.join(", ")}`);
   }
   return import(pathToFileURL(runtime).href);
+}
+
+let workflowRuntime;
+try {
+  workflowRuntime = await loadWorkflowRuntime();
+} catch (error) {
+  process.stdout.write([
+    "Dong Skills project health",
+    "",
+    "Hook control plane:",
+    "- Static configuration: unavailable",
+    "- Runtime parity: fail",
+    "- Recent hook liveness: unavailable",
+    "",
+    "Issues:",
+    `- ${error.message}`,
+    "",
+    "Result: fail",
+    ""
+  ].join("\n"));
+  process.exit(1);
 }
 
 const {
@@ -25,7 +92,17 @@ const {
   planLoopReviewFromMarkdown,
   parseWorkflowYaml,
   validateWorkflowState
-} = await loadWorkflowRuntime();
+} = workflowRuntime;
+let hookLivenessStatus = null;
+let runtimeSupportError = "";
+try {
+  ({ hookLivenessStatus } = await loadRuntimeSupport());
+  if (typeof hookLivenessStatus !== "function") {
+    throw new Error("Dong Skills hook runtime API mismatch; missing function export: hookLivenessStatus");
+  }
+} catch (error) {
+  runtimeSupportError = error.message;
+}
 
 const REQUIRED_CONTEXT_FILES = [
   "current-state.md",
@@ -45,13 +122,17 @@ const REQUIRED_CONTEXT_FILES = [
   "workflow-state.yaml",
   "handoff-summary.md"
 ];
+const CRITICAL_LIVENESS_EVENTS = ["PreToolUse", "PostToolUse", "Stop"];
 
 const REQUIRED_HOOK_EVENTS = [
   "SessionStart",
   "UserPromptSubmit",
+  "PreToolUse",
   "PostToolUse",
   "PreCompact",
   "PostCompact",
+  "SubagentStart",
+  "SubagentStop",
   "Stop"
 ];
 
@@ -215,6 +296,10 @@ function sha256(file) {
   return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
+function textSha256(text) {
+  return createHash("sha256").update(String(text || ""), "utf8").digest("hex");
+}
+
 function walkFiles(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -357,11 +442,24 @@ function checkWorkflowConsistency(workflow, spec, plan, issues) {
   if (phaseAtOrAfterExecution(workflow.phase) && !["approved", "skipped", "mechanical-exception"].includes(workflow.spec_status)) {
     issues.push(`workflow-state.yaml mismatch: phase=${workflow.phase} requires approved/skipped/mechanical spec_status, got ${workflow.spec_status}`);
   }
+  if (workflow.spec_status === "approved") {
+    if (!/^[a-f0-9]{64}$/.test(String(workflow.approved_spec_hash || ""))) {
+      issues.push("workflow-state.yaml approved spec is missing approved_spec_hash");
+    } else if (workflow.approved_spec_hash !== textSha256(spec)) {
+      issues.push("workflow-state.yaml/spec.md mismatch: spec.md changed after written-spec approval");
+    }
+  }
 
   if (planApproval === "pending" && ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(workflow.execution_approval)) {
     issues.push(`workflow-state.yaml/plan-progress.md mismatch: execution_approval=${workflow.execution_approval}, but plan-progress.md execution approval is pending`);
   }
-  if (["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(planApproval) && workflow.execution_approval === "pending") {
+  const stagedPlanThenExecute = planApproval === "plan-then-execute-traditional" &&
+    workflow.execution_approval === "pending" &&
+    workflow.decision_required === "execution-approval" &&
+    workflow.phase === "planning";
+  if (["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(planApproval) &&
+      workflow.execution_approval === "pending" &&
+      !stagedPlanThenExecute) {
     issues.push("workflow-state.yaml/plan-progress.md mismatch: plan-progress.md has execution approval, but execution_approval=pending");
   }
   if (phaseAtOrAfterExecution(workflow.phase) && !["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(workflow.execution_approval)) {
@@ -369,6 +467,14 @@ function checkWorkflowConsistency(workflow, spec, plan, issues) {
   }
   if (workflow.plan_status === "approved" && planApproval === "pending") {
     issues.push("workflow-state.yaml/plan-progress.md mismatch: plan_status=approved, but plan-progress.md says execution is not approved");
+  }
+  if (workflow.plan_status === "approved" &&
+      ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(workflow.execution_approval)) {
+    if (!/^[a-f0-9]{64}$/.test(String(workflow.approved_plan_hash || ""))) {
+      issues.push("workflow-state.yaml approved plan is missing approved_plan_hash");
+    } else if (workflow.approved_plan_hash !== textSha256(plan)) {
+      issues.push("workflow-state.yaml/plan-progress.md mismatch: plan changed after execution approval");
+    }
   }
   if (["traditional", "codex-goal"].includes(planMode) && workflow.execution_mode !== "pending" && planMode !== workflow.execution_mode) {
     issues.push(`workflow-state.yaml/plan-progress.md mismatch: execution mode=${workflow.execution_mode}, but plan-progress.md says ${planMode}`);
@@ -532,7 +638,7 @@ function checkContext(root, issues) {
 
   const checkpoint = sectionContent(handoff, ["Git Checkpoint", "Git 存档"]);
   for (const labels of REQUIRED_CHECKPOINT_FIELDS) {
-    if (!labels.some((field) => checkpoint.includes(`${field}:`))) {
+    if (!labels.some((field) => checkpoint.includes(`${field}:`) || checkpoint.includes(`${field}：`))) {
       issues.push(`handoff-summary.md Git Checkpoint missing field label: ${labels.join(" or ")}`);
     }
   }
@@ -697,6 +803,10 @@ function checkInstallReceipt(root, issues) {
       !/^[a-f0-9]{64}$/.test(marker.source_manifest_sha256)) {
     issues.push(".agents/skills/.dong-skills-project.json has no valid source_manifest_sha256");
   }
+  if (typeof marker.distribution_id !== "string" ||
+      !/^[a-f0-9]{64}$/.test(marker.distribution_id)) {
+    issues.push(".agents/skills/.dong-skills-project.json has no valid distribution_id; reinstall or bootstrap the project with the current Dong Skills distribution");
+  }
 
   for (const name of marker.installed_skills || []) {
     const expected = receipt.skill_trees[name];
@@ -762,6 +872,10 @@ function checkAssetParity(root, issues) {
   if (!fs.existsSync(assetRoot)) return;
 
   const pairs = [
+    [
+      path.join(root, ".codex", "hooks.json"),
+      path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks.json")
+    ],
     [
       path.join(root, ".codex", "hooks", "launch-project-ops.mjs"),
       path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", ".codex", "hooks", "launch-project-ops.mjs")
@@ -862,6 +976,8 @@ function checkAssetParity(root, issues) {
 
 function run(root) {
   const issues = [];
+  const hookIssues = [];
+  const parityIssues = [];
 
   if (!fs.existsSync(path.join(root, ".codex", "hooks", "project-ops.mjs"))) {
     issues.push("Missing .codex/hooks/project-ops.mjs");
@@ -883,23 +999,58 @@ function run(root) {
     }
   }
 
-  checkHooksJson(root, issues);
+  checkHooksJson(root, hookIssues);
   checkRuntimeGitignore(root, issues);
   checkTrackedRaw(root, issues);
   checkContext(root, issues);
   checkProjectSkills(root, issues);
   checkSourceManifestCoverage(root, issues);
   checkInstallReceipt(root, issues);
-  checkRuntimeContract(root, issues);
-  checkAssetParity(root, issues);
+  checkRuntimeContract(root, parityIssues);
+  checkAssetParity(root, parityIssues);
+  if (runtimeSupportError) parityIssues.push(runtimeSupportError);
+  issues.push(...hookIssues, ...parityIssues);
+  const liveness = hookLivenessStatus
+    ? hookLivenessStatus(root, path.join(root, ".codex-context"), {
+        requiredEvents: CRITICAL_LIVENESS_EVENTS
+      })
+    : {
+        status: "unavailable",
+        recent: false,
+        lastEvent: "unknown",
+        lastSeenAt: "",
+        events: {},
+        missingEvents: CRITICAL_LIVENESS_EVENTS,
+        detail: runtimeSupportError || "hook runtime support unavailable"
+      };
 
   const lines = [
     "Dong Skills health check",
     `Root: ${root}`,
     "",
     ...worktreeHealthLines(detectWorktree(root)),
+    "",
+    "Hook control plane:",
+    `- Static configuration: ${hookIssues.length ? "fail" : "pass"}`,
+    `- Runtime parity: ${parityIssues.length ? "fail" : "pass"}`,
+    `- Recent hook liveness: ${liveness.status}`,
+    `- Last event: ${liveness.lastEvent}`,
+    `- Last seen: ${liveness.lastSeenAt || "not observed"}`,
+    `- Critical event coverage: ${liveness.missingEvents.length ? "incomplete" : "complete"}`,
+    `- Missing critical events: ${liveness.missingEvents.length ? liveness.missingEvents.join(", ") : "none"}`,
     ""
   ];
+
+  if (!liveness.recent) {
+    lines.push("Warnings:");
+    lines.push(`- Hook liveness is ${liveness.status}: ${liveness.detail}. This does not prove whether host trust is enabled.`);
+    lines.push("");
+  }
+  if (liveness.recent && liveness.missingEvents.length) {
+    lines.push("Warnings:");
+    lines.push(`- Recent liveness does not yet cover critical events: ${liveness.missingEvents.join(", ")}.`);
+    lines.push("");
+  }
 
   if (issues.length) {
     lines.push("Issues:");

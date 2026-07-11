@@ -23,6 +23,8 @@ Also stop if `.codex-context/spec.md` has no approved scope for the current task
 
 Confirm the plan's artifact readiness before execution. `requirements-only` means return to `writing-plans`; only `implementation-ready` plans may execute. Legacy plans without an Artifact Readiness field may proceed only after the executor confirms that the Product Contract, Planning Contract, Verification Contract, Definition of Done, and launch-blocking questions are fully resolved and records that assessment.
 
+Treat approved `spec.md` and `plan-progress.md` content as immutable execution inputs. A normal workflow context hash refresh records current recovery state; it does not authorize changed scope or plan content. If the spec must change, run `brainstorming-start` and reapprove the written spec. If only the implementation plan must change, run `plan-start`, refresh the plan, and obtain fresh execution approval.
+
 When workflow state is available, run this before editing implementation files:
 
 ```powershell
@@ -52,7 +54,7 @@ Use this mode only when all conditions are true:
 - The user explicitly selected `Codex Goal mode` for execution.
 - The plan includes `Goal Mode Objective`, `Runtime Constraints`, `Checkpoint Cadence`, and `Stop Conditions`.
 - The plan's `Loop Review` says `Approved after codex-loop-design-check`, and workflow state has `loop_review_status: approved`.
-- The current Codex session exposes an actual goal mechanism, such as available `create_goal` and `update_goal` tools. If those tools are not available, Goal mode is unavailable; ask before falling back to Traditional mode.
+- The current Codex session exposes an actual goal or workflow mechanism that can record the objective, expose progress, and be explicitly closed as complete or blocked. This may be dedicated goal tools, a model-native workflow runner, or an equivalent surfaced orchestration mechanism. If no such mechanism is exposed, Goal mode is unavailable; ask before falling back to Traditional mode.
 
 Before launching Goal mode, write or refresh the Goal Objective from the plan. Include:
 
@@ -75,7 +77,7 @@ node .codex/hooks/project-ops.mjs workflow-state transition loop-review-approved
 
 Only then may `execution-approved-goal` succeed.
 
-Launching Goal mode means creating one concrete Codex goal from this objective and then working inside that goal until it is complete or genuinely blocked. Do not simulate Goal mode by merely writing a heading in `plan-progress.md`.
+Launching Goal mode means creating or activating one concrete, visible Codex goal/workflow from this objective and then working inside that mechanism until it is complete or genuinely blocked. Do not simulate Goal mode by merely writing a heading in `plan-progress.md` or narrating an internal loop.
 
 Goal mode runtime constraints:
 
@@ -116,6 +118,8 @@ Goal mode runtime constraints:
 11. If taking a deliberate simplification with a known ceiling, mark it with a `dong-debt:` comment that names the ceiling and the revisit trigger.
 12. For behavior-changing tasks, add/update the planned test or record the explicit reason no automated test was added.
 13. Run the task's verification command or record why it cannot be run.
+    - If the command exposes an unexpected bug or regression while planned work remains, update `working-notes.md`, run `workflow-state transition debugging-start`, and use `systematic-debugging`. After the focused reproduction passes, run `workflow-state transition debugging-resolved` and resume the same active task. Do not use `execution-complete` to escape an execution-time debugging detour.
+    - If the latest user instruction changes scope, requirements, goals, acceptance criteria, or priority, stop project mutations, run `workflow-state transition brainstorming-start`, and refresh/reapprove the spec and plan. A bare continuation, status question, or learning-only preference does not reopen scope.
 14. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
 15. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
 16. Repeat until the plan is complete or a blocker is reached.
@@ -156,6 +160,8 @@ Stop and surface the issue when:
 - A dependency, credential, environment, or user decision is missing.
 - The workspace is detached HEAD or a host-managed worktree but the plan assumes a normal branch merge or cleanup.
 - The next step would delete data, rewrite history, force-push, or perform another destructive action without explicit approval.
+
+When the stop condition is an external blocker and no workflow decision is already pending, update `current-state.md` and `handoff-summary.md`, then run `node .codex/hooks/project-ops.mjs workflow-state transition blocked`. After the user explicitly chooses to continue and the matching decision receipt exists, run `node .codex/hooks/project-ops.mjs workflow-state transition resume` before editing again. Do not leave the workflow in `execution` while reporting that it is blocked.
 
 ## Completion
 

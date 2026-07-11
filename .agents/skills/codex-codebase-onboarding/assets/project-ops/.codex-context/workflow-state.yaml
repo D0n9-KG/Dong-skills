@@ -1,4 +1,5 @@
 workflow: standard
+work_lane: lane-1
 task_id: task-1
 task_generation: 1
 phase: discovery
@@ -7,12 +8,17 @@ auto_next: true
 decision_required: none
 spec_status: not-started
 plan_status: not-started
+approved_spec_hash: none
+approved_plan_hash: none
 execution_mode: pending
 execution_approval: pending
 loop_review_status: pending
 verify_result: pending
+verification_gap_status: not-required
 review_status: pending
 checkpoint_status: pending
+verification_evidence_hash: none
+review_evidence_hash: none
 resume_phase: none
 resume_skill: none
 handoff_hash: null

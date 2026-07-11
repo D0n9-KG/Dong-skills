@@ -31,6 +31,8 @@ When records conflict, use this order: latest user instruction; verified behavio
 
 Use the lowest sufficient lane: `Lane 0` tiny mechanical edit; `Lane 1` small bounded change; `Lane 2` multi-file or behavior-changing work; `Lane 3` high-risk core logic, migration, security, money, permissions, release, or production-sensitive work. The lane controls plan depth, verification depth, state update cadence, review, rollback, and checkpoint cadence.
 
+For a genuine Lane 0 direct edit, record the compact scope and acceptance criterion, run `workflow-state transition work-lane-0`, then `workflow-state transition mechanical-exception`. If the user explicitly says to skip brainstorming, record the compact scope and run `workflow-state transition spec-skipped`; the task-bound skip does not approve execution.
+
 ## Curated Skills
 
 Use only the bundled curated set by default:
@@ -87,7 +89,7 @@ Keep `.codex-context/` current when work spans files, turns, or phases:
 - `workflow-state.yaml`
 - `handoff-summary.md`
 
-`workflow-state.yaml` carries a task identity (`task_id`, `task_generation`) as well as phase and approval state. A distinct task after `complete` must use `workflow-state transition new-task` so old approvals do not leak forward. A blocked task must resume through its recorded `resume_phase` and `resume_skill`.
+`workflow-state.yaml` carries a task identity (`task_id`, `task_generation`) as well as phase, approval state, `verification_evidence_hash` / `review_evidence_hash`, and an execution-debug return path. A distinct task after `complete` must use `workflow-state transition new-task` so old approvals do not leak forward. A blocked task must resume through its recorded `resume_phase` and `resume_skill`. An unexpected execution failure uses `debugging-start` and returns through `debugging-resolved`; do not skip remaining plan work with `execution-complete`.
 
 Use `.codex-context/raw/` for raw logs or large outputs.
 Project bootstrap should keep `.codex-context/raw/*` and `.codex-context/discussion-state.json` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
@@ -119,6 +121,10 @@ Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle
 
 Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 
+If accepted review findings require project-file edits, run `workflow-state transition review-changes-requested`, use `receiving-code-review`, implement the scoped fix, then run `execution-complete` and repeat verification and review. Reopening brainstorming/spec or restarting a plan invalidates downstream approvals and evidence; never reuse the old plan approval, verification result, review result, or checkpoint.
+
+Before `verification-pass`, record concrete command/product evidence and no unresolved gap, or use the explicit verification-gap path. Before `review-complete` or a permitted low-risk `review-skipped`, append `Review Evidence` after verification closure. Delivery must reject missing, reused, or post-review-modified evidence.
+
 Use `codex-skill-evolution` only for offline, explicit SkillOpt-Sleep evolution of Dong Skills itself. It is a global maintenance entry, but it must operate on the real Dong Skills source repo, not the current business project. It turns Dong Skills backlog/outbox issues into reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. Redact secrets before persisting task drafts or adoption diagnostics, and surface backend/auth/model/version failures explicitly instead of converting them into scores. Do not run SkillOpt-Sleep from hooks, do not use `--auto-adopt`, and do not use it for business project code or project memory.
 
 ## Learning Memory
@@ -139,9 +145,17 @@ For recurring Dong Skills failures that need validation before changing skills, 
 
 Use `codex-session-history` only when project files are insufficient or the user references previous sessions. Search metadata/keyword counts first, never paste full transcripts, and move durable findings into `.codex-context/` or `docs/solutions/`.
 
+## Hooks Control Plane
+
+When project hooks are installed and trusted, `PreToolUse` denies supported project mutations if recovery, task identity, a pending decision, the current lane/phase, execution approval, Git state, or an unexternalized execution-time user directive is invalid. Canonical governance artifacts under `.codex-context/`, `STRATEGY.md`, `docs/codex/specs/`, `docs/codex/plans/`, and `docs/codex/wayfinder/` remain writable before execution approval; Lane 2/3 product-code edits do not. Scope, requirement, goal, acceptance, or priority changes during execution require `brainstorming-start` and fresh approval. Bare continuation, pure status inquiry, and learning-only future preferences do not reopen scope. A successful hooked `context-recovery-eval` writes a session-scoped receipt bound to the task, handoff hash, and runtime; another session or stale receipt cannot authorize the mutation. Read-only diagnosis should remain available. These hooks are guardrails over supported tool paths, not a complete security sandbox.
+
+`PostToolUse` keeps read/search handling lightweight, but validates mutations with tool-invocation-scoped pre-mutation intent plus current Git evidence, including tool-contained commits. Parallel mutations in one session must not overwrite each other's intent. Failed or no-op governance edits do not satisfy state freshness. `SubagentStart` and `SubagentStop` bind lifecycle/result summaries to the parent task and require usable evidence/findings, risks/open gaps, and a parent next action; fixed headings are recommended but not required. They do not enforce file-level delegated scope.
+
+`Stop` rechecks current delivery evidence and uses session-scoped bounded continuations for unresolved issues, so another session cannot consume or exhaust the current session's budget. Learning observations and ordinary asset hygiene are advisory; invalid workflow/Git state, severe asset issues, or missing evidence required by the current work can block. If the continuation bound is exhausted, the final response must disclose the unresolved gaps and must not claim verified completion. `health-check` reports static configuration, root/bootstrap parity, and per-event freshness for recent critical-hook liveness separately; a new runtime cannot inherit old event coverage, and missing liveness does not prove whether host trust is enabled.
+
 ## Compaction
 
-Write a fresh handoff at phase boundaries and before long pauses. During discussion, discovery, planning, debugging, or substantial exploration, keep `working-notes.md` fresh before stopping or compacting. The `UserPromptSubmit` hook may mark `.codex-context/discussion-state.json` dirty, and `PostToolUse` may immediately surface a reminder after exploration tools even before Stop. `Stop`/`PreCompact` can require refreshed spec/current/decisions/open-questions/working-notes/handoff files. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled. After recovery, treat the emergency notice as temporary: run `asset-governance --apply` or refresh a normal handoff so the notice is archived out of the active handoff.
+Write a fresh handoff at phase boundaries and before long pauses. During discussion, discovery, planning, debugging, or substantial exploration, keep `working-notes.md` fresh before stopping or compacting. The `UserPromptSubmit` hook may mark `.codex-context/discussion-state.json` dirty, and `PostToolUse` may surface a reminder after exploration tools. `Stop`/`PreCompact` require only the state files named by current issues. The `PreCompact` hook blocks stale manual compaction. For automatic compaction, it prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below that notice, writes a raw snapshot, and allows compaction to continue, because automatic compaction may happen under context pressure where a hard block can leave the session stalled. After recovery, run `context-recovery-eval` through the installed hook path before supported mutations. Treat the emergency notice as temporary: run `asset-governance --apply` or refresh a normal handoff so the notice is archived out of the active handoff.
 
 After compaction, recover in this order:
 

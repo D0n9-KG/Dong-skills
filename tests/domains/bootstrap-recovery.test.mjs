@@ -87,6 +87,51 @@ test("project bootstrap serializes concurrent writes with a bounded lock", () =>
   }
 });
 
+test("project bootstrap uses one lock for real and junction aliases", () => {
+  const realProject = tempProject();
+  const aliasRoot = tempProject();
+  const junctionProject = path.join(aliasRoot, "project-junction");
+  fs.symlinkSync(realProject, junctionProject, "junction");
+  const lockFile = installLockPath(realProject);
+  fs.mkdirSync(path.dirname(lockFile), { recursive: true });
+  fs.rmSync(lockFile, { force: true });
+
+  const escapedLock = lockFile.replace(/'/g, "''");
+  const holder = spawn("powershell.exe", [
+    "-NoProfile",
+    "-Command",
+    `$stream = [System.IO.File]::Open('${escapedLock}', 'OpenOrCreate', 'ReadWrite', 'None'); Write-Output 'LOCKED'; Start-Sleep -Seconds 10; $stream.Dispose()`
+  ], {
+    cwd: root,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  try {
+    const deadline = Date.now() + 5000;
+    while (!fs.existsSync(lockFile) && Date.now() < deadline) sleep(25);
+    assert.equal(fs.existsSync(lockFile), true, "lock holder did not create the lock file");
+    let error;
+    try {
+      execFileSync("powershell.exe", [
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", bootstrap,
+        "-TargetProjectRoot", junctionProject,
+        "-LockTimeoutSeconds", "1"
+      ], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      assert.fail("junction alias unexpectedly bypassed the active install lock");
+    } catch (caught) {
+      error = caught;
+    }
+    assert.match(String(error.message), /Command failed/);
+    assert.match(String(error.stderr), /Another Dong Skills install is already modifying this target/);
+  } finally {
+    holder.kill();
+  }
+});
+
 test("root installer recovers a process-terminated transaction on the next run", () => {
   const fixtureRoot = tempProject();
   const sourceCopy = path.join(fixtureRoot, "source");

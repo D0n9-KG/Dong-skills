@@ -20,6 +20,8 @@ Before planning, confirm one of these is true:
 
 If the task is behavior-changing or multi-file and no approved spec exists, return to `brainstorming`.
 
+When the user explicitly asked to skip brainstorming, first record the compact scope and acceptance criteria in `spec.md`, then run `workflow-state transition spec-skipped`. Do not silently edit `spec_status` or ask for the same skip approval again.
+
 When workflow state is available, run this before drafting the plan:
 
 ```powershell
@@ -68,6 +70,14 @@ Record one lane before task breakdown:
 - `Lane 3`: high-risk core logic, migration, security, money, permissions, release, or production-sensitive work. Use characterization/test-first work, stronger evidence, review, rollback notes, and checkpointing.
 
 The lane controls plan depth, test depth, state update cadence, and checkpoint cadence. Use the lowest lane that still protects the user.
+
+Before `plan-ready`, confirm `workflow-state.yaml` records the same lane as the plan. If not, run:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition work-lane-<0|1|2|3>
+```
+
+A lane change invalidates the current plan approval and downstream evidence. Rebuild the affected plan sections before requesting execution approval.
 
 ## File Structure
 
@@ -124,7 +134,7 @@ The gate is a constraint, not a research project. If a higher rung clearly works
 10. Include an `Execution Mode` section with two choices: `Traditional task-by-task execution` and `Codex Goal mode`.
 11. Include a `Loop Review` section. Traditional mode records `not-required`; Goal mode remains `pending` until `codex-loop-design-check` approves the machine-decidable goal, boundaries, retry cap, independent judge, and human stop points.
 12. Include a `Goal Mode Objective Draft` even when Goal mode is not selected yet. It must be safe to copy into Codex Goal mode only after explicit user selection.
-13. State that Codex Goal mode requires a real goal mechanism in the current Codex session, such as available `create_goal` and `update_goal` tools. If that mechanism is absent, Goal mode is not selectable.
+13. State that Codex Goal mode requires a real, session-native goal or workflow mechanism that can record the objective, expose progress, and be explicitly closed as complete or blocked. Examples include goal tools, a model-native workflow runner, or an equivalent surfaced orchestration mechanism. If no such mechanism is exposed, Goal mode is not selectable.
 14. Include `Runtime Constraints` and `Checkpoint Cadence` so long-running execution cannot drift away from the spec.
 15. Include an `Execution Note` for implementers: files that must be read first, constraints that must not be violated, test commands to prefer, rollback notes, and the Simplicity Gate decision.
 16. Record risks, assumptions, rollback notes, and open questions.
@@ -171,7 +181,7 @@ Include these sections in the plan when the work is not tiny:
 - 必须更新的状态文件:
 - 停止条件:
 
-Goal mode is unavailable if the current Codex session does not expose an actual goal mechanism. Do not treat this draft as permission to simulate Goal mode manually.
+Goal mode is unavailable if the current Codex session does not expose an actual goal or workflow mechanism with visible progress and closure state. Do not treat this draft as permission to simulate Goal mode manually in prose or by only writing status headings.
 
 ## Loop Review
 - 当前状态: pending / not-required / Approved after codex-loop-design-check。

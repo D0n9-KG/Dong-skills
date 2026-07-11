@@ -80,12 +80,18 @@ Update `.codex-context/project-map.md` with:
 After onboarding:
 
 - update `.codex-context/current-state.md` with the current understanding and next action
-- update `.codex-context/workflow-state.yaml` with `phase: discovery` or the next workflow phase and `next_skill`
 - update `.codex-context/worktree-state.md` with current workspace role and branch state when relevant
 - update `.codex-context/open-questions.md` with unresolved unknowns
 - update `.codex-context/artifact-index.md` if key files were inspected or created
 - update `.codex-context/solution-index.md` when `docs/solutions/` or `CONCEPTS.md` changed
 - update `.codex-context/handoff-summary.md` if the session may be resumed later
+
+Do not edit `workflow-state.yaml` directly. Read `workflow-state next` after the map is current, then choose one explicit route:
+
+- If onboarding refreshed an active task already beyond discovery, preserve the current workflow phase and continue its recorded `next_skill`; do not reset it to discovery.
+- If the pending task needs multi-session route discovery before a credible spec, run `node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start`, then use `codex-wayfinder`.
+- If a pending non-trivial task is ready for normal scope discussion, run `node .codex/hooks/project-ops.mjs workflow-state transition brainstorming-start`, then use `brainstorming`.
+- If the user asked only for onboarding or a repository overview, keep the workflow in discovery and answer from `project-map.md`. Do not repeat the full map on the next turn unless the repository changed or the user asks for a refresh.
 
 If the user asked for a repo overview, answer from `project-map.md` after updating it.
 

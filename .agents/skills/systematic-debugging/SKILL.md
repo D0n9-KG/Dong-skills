@@ -56,6 +56,13 @@ Do not propose a patch until you can state:
 7. Record the debugging state.
    Update `.codex-context/current-state.md` with the current hypothesis, changed files, and next action. Update `.codex-context/verification.md` with reproduction and verification evidence. If the root cause exposes a durable risk, update `.codex-context/risks.md`.
 
+## Workflow State
+
+- For an unexpected failure during active plan execution, run `workflow-state transition debugging-start` before implementation edits. This records `systematic-debugging` as the recoverable next skill while preserving the return to `executing-plans`.
+- After the focused reproduction passes, run `workflow-state transition debugging-resolved` and continue the same active plan task.
+- If debugging is interrupted by an external blocker, `blocked` / `resume` returns to debugging without losing the execution return path.
+- Do not use `debugging-resolved` for verification-failure or review-change cycles; those paths return through their existing verification and review transitions.
+
 ## Evidence Discipline
 
 - Prefer real unit/e2e tests or the project's normal verification commands.

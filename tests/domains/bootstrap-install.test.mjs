@@ -19,6 +19,17 @@ const {
   write
 } = support;
 
+function copySourceFixture(destination) {
+  fs.cpSync(root, destination, {
+    recursive: true,
+    filter(source) {
+      const rel = path.relative(root, source).replace(/\\/g, "/");
+      return rel !== ".git" && !rel.startsWith(".git/") &&
+        rel !== ".codex-context" && !rel.startsWith(".codex-context/");
+    }
+  });
+}
+
 test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   const project = tempProject();
   write(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md"), "---\nname: local-only-skill\n---\n");
@@ -63,8 +74,9 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "local-only-skill", "SKILL.md")), true);
   const workflowStateText = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
   assert.match(workflowStateText, /next_skill: codex-codebase-onboarding/);
-  assert.match(workflowStateText, /^handoff_task_id: none$/m);
-  assert.match(workflowStateText, /^handoff_task_generation: none$/m);
+  assert.doesNotMatch(workflowStateText, /^handoff_hash: null$/m);
+  assert.match(workflowStateText, /^handoff_task_id: task-1$/m);
+  assert.match(workflowStateText, /^handoff_task_generation: 1$/m);
   const spec = fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8");
   assert.match(spec, /## 审批状态/);
   assert.match(spec, /## 事实优先级/);
@@ -98,43 +110,104 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
   assert.match(context, /Workflow recovery:/);
 });
 
-test("custom global skills install can bootstrap another project", () => {
-  const installedProject = tempProject();
-  const targetProject = tempProject();
-  const skillsRoot = path.join(tempProject(), "skills");
-  const alternateSource = tempProject();
-  const sentinel = "CUSTOM TARGET SKILLS SOURCE";
+test("fresh bootstrap can recover and permit the first governance edit", () => {
+  const project = tempProject();
+  execFileSync("git", ["init"], {
+    cwd: project,
+    stdio: ["ignore", "ignore", "pipe"]
+  });
 
   execFileSync("powershell.exe", [
     "-NoProfile",
     "-ExecutionPolicy",
     "Bypass",
     "-File",
-    installWindows,
+    bootstrap,
     "-TargetProjectRoot",
-    installedProject,
-    "-TargetSkillsRoot",
-    skillsRoot
+    project
   ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
 
-  fs.cpSync(
-    path.join(root, ".agents", "skills"),
-    path.join(alternateSource, ".agents", "skills"),
-    { recursive: true }
+  const installedHook = path.join(project, ".codex", "hooks", "project-ops.mjs");
+  const runInstalledHook = (input) => {
+    const output = execFileSync(process.execPath, [installedHook], {
+      cwd: project,
+      input: JSON.stringify({ cwd: project, ...input }),
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"]
+    }).trim();
+    return output ? JSON.parse(output) : {};
+  };
+
+  runInstalledHook({
+    hook_event_name: "SessionStart",
+    session_id: "fresh-bootstrap-session",
+    source: "startup"
+  });
+
+  const recoveryCommand = "node .codex/hooks/project-ops.mjs context-recovery-eval";
+  const recoveryToolInput = { command: recoveryCommand };
+  const recoveryPre = runInstalledHook({
+    hook_event_name: "PreToolUse",
+    session_id: "fresh-bootstrap-session",
+    tool_name: "shell_command",
+    tool_use_id: "fresh-bootstrap-recovery",
+    tool_input: recoveryToolInput
+  });
+  assert.notEqual(recoveryPre.hookSpecificOutput?.permissionDecision, "deny");
+
+  const recoveryOutput = execFileSync(
+    process.execPath,
+    [installedHook, "context-recovery-eval"],
+    { cwd: project, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
   );
-  fs.copyFileSync(
-    path.join(root, "dong-skills.manifest.json"),
-    path.join(alternateSource, "dong-skills.manifest.json")
-  );
-  fs.appendFileSync(
-    path.join(alternateSource, ".agents", "skills", "brainstorming", "SKILL.md"),
-    `\n${sentinel}\n`,
-    "utf8"
-  );
-  const customMarkerFile = path.join(skillsRoot, ".dong-skills-source.json");
-  const customMarker = readJson(customMarkerFile);
-  customMarker.source_repo = alternateSource;
-  write(customMarkerFile, `${JSON.stringify(customMarker, null, 2)}\n`);
+  assert.match(recoveryOutput, /Result: pass/);
+
+  runInstalledHook({
+    hook_event_name: "PostToolUse",
+    session_id: "fresh-bootstrap-session",
+    tool_name: "shell_command",
+    tool_use_id: "fresh-bootstrap-recovery",
+    tool_input: recoveryToolInput,
+    tool_response: { is_error: false, exit_code: 0 }
+  });
+
+  const editPre = runInstalledHook({
+    hook_event_name: "PreToolUse",
+    session_id: "fresh-bootstrap-session",
+    tool_name: "apply_patch",
+    tool_use_id: "fresh-bootstrap-edit",
+    tool_input: {
+      patch: [
+        "*** Begin Patch",
+        "*** Update File: .codex-context/current-state.md",
+        "@@",
+        "-尚未记录任务级指令；等待用户提供或确认当前项目目标。",
+        "+已收到首次项目检查指令。",
+        "*** End Patch"
+      ].join("\n")
+    }
+  });
+  assert.notEqual(editPre.hookSpecificOutput?.permissionDecision, "deny");
+});
+
+test("installed global entry bootstraps from its verified snapshot after source relocation", () => {
+  const fixture = tempProject();
+  const source = path.join(fixture, "source");
+  const relocated = path.join(fixture, "source-relocated");
+  const installedProject = path.join(fixture, "installed-project");
+  const targetProject = path.join(fixture, "target-project");
+  const skillsRoot = path.join(fixture, "global-skills");
+  fs.mkdirSync(installedProject, { recursive: true });
+  fs.mkdirSync(targetProject, { recursive: true });
+  copySourceFixture(source);
+  const copiedInstaller = path.join(source, "scripts", "install-windows.ps1");
+
+  execFileSync("powershell.exe", [
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", copiedInstaller,
+    "-TargetProjectRoot", installedProject,
+    "-TargetSkillsRoot", skillsRoot
+  ], { cwd: source, stdio: ["ignore", "pipe", "pipe"] });
+  fs.renameSync(source, relocated);
 
   const installedBootstrap = path.join(
     skillsRoot,
@@ -150,15 +223,104 @@ test("custom global skills install can bootstrap another project", () => {
     installedBootstrap,
     "-TargetProjectRoot",
     targetProject
-  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+  ], { cwd: fixture, stdio: ["ignore", "pipe", "pipe"] });
 
   assert.equal(fs.existsSync(path.join(targetProject, ".agents", "skills", ".dong-skills-project.json")), true);
-  assert.match(
-    fs.readFileSync(path.join(targetProject, ".agents", "skills", "brainstorming", "SKILL.md"), "utf8"),
-    new RegExp(sentinel)
+  assert.equal(
+    fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "assets", "project-skills", "brainstorming", "SKILL.md")),
+    true
   );
+  const sourceMarker = readJson(path.join(skillsRoot, ".dong-skills-source.json"));
+  const projectMarker = readJson(path.join(targetProject, ".agents", "skills", ".dong-skills-project.json"));
+  assert.match(sourceMarker.distribution_id, /^[a-f0-9]{64}$/);
+  assert.equal(projectMarker.distribution_id, sourceMarker.distribution_id);
   execFileSync(process.execPath, [path.join(targetProject, ".codex", "scripts", "project-ops-health.mjs"), targetProject], {
     cwd: targetProject,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+});
+
+test("installed global entry refuses a changed source instead of mixing distributions", () => {
+  const fixture = tempProject();
+  const source = path.join(fixture, "source");
+  const installedProject = path.join(fixture, "installed-project");
+  const targetProject = path.join(fixture, "target-project");
+  const skillsRoot = path.join(fixture, "global-skills");
+  fs.mkdirSync(installedProject, { recursive: true });
+  fs.mkdirSync(targetProject, { recursive: true });
+  copySourceFixture(source);
+  const copiedInstaller = path.join(source, "scripts", "install-windows.ps1");
+  execFileSync("powershell.exe", [
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", copiedInstaller,
+    "-TargetProjectRoot", installedProject,
+    "-TargetSkillsRoot", skillsRoot
+  ], { cwd: source, stdio: ["ignore", "pipe", "pipe"] });
+
+  fs.appendFileSync(
+    path.join(source, ".agents", "skills", "brainstorming", "SKILL.md"),
+    "\nSOURCE CHANGED AFTER GLOBAL INSTALL\n",
+    "utf8"
+  );
+  const installedBootstrap = path.join(
+    skillsRoot,
+    "codex-codebase-onboarding",
+    "scripts",
+    "bootstrap-project-ops.ps1"
+  );
+  assert.throws(() => {
+    execFileSync("powershell.exe", [
+      "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", installedBootstrap,
+      "-TargetProjectRoot", targetProject
+    ], {
+      cwd: fixture,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+  assert.equal(fs.existsSync(path.join(targetProject, ".agents", "skills", ".dong-skills-project.json")), false);
+});
+
+test("bootstrap migrates a historical workflow schema before health validation", () => {
+  const project = tempProject();
+  execFileSync("powershell.exe", [
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", bootstrap,
+    "-TargetProjectRoot", project
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
+phase: discovery
+next_skill: codex-codebase-onboarding
+auto_next: true
+decision_required: none
+spec_status: not-started
+plan_status: not-started
+execution_mode: pending
+execution_approval: pending
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+handoff_hash: null
+updated_at: historical-fixture
+note: historical-fixture
+`);
+
+  execFileSync("powershell.exe", [
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", bootstrap,
+    "-TargetProjectRoot", project
+  ], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+
+  const migrated = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  assert.match(migrated, /^work_lane: lane-1$/m);
+  assert.match(migrated, /^task_id: task-1$/m);
+  assert.match(migrated, /^task_generation: 1$/m);
+  assert.match(migrated, /^verification_gap_status: not-required$/m);
+  assert.match(migrated, /^verification_evidence_hash: none$/m);
+  assert.match(migrated, /^review_evidence_hash: none$/m);
+  assert.match(migrated, /^resume_phase: none$/m);
+  assert.match(migrated, /^resume_skill: none$/m);
+  execFileSync(process.execPath, [path.join(project, ".codex", "scripts", "project-ops-health.mjs"), project], {
+    cwd: project,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });

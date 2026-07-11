@@ -5,11 +5,15 @@ import { meaningful, sectionContent, validateGitCheckpointSection } from "./mark
 import { REQUIRED_FILES } from "./templates.mjs";
 
 export function isGovernancePath(relPath) {
-  return relPath === ".codex" ||
-    relPath.startsWith(".codex/") ||
-    relPath === ".codex-context" ||
-    relPath.startsWith(".codex-context/") ||
-    relPath === "AGENTS.md";
+  const normalized = String(relPath || "").replace(/\\/g, "/").toLowerCase();
+  return normalized === ".codex-context" ||
+    normalized.startsWith(".codex-context/");
+}
+
+function isProjectOpsRuntimePath(relPath) {
+  const normalized = String(relPath || "").replace(/\\/g, "/");
+  return normalized === ".codex-context/raw/project-ops-runtime" ||
+    normalized.startsWith(".codex-context/raw/project-ops-runtime/");
 }
 
 export function gitChangedFiles(root) {
@@ -20,21 +24,22 @@ export function isVerificationRelevantPath(relPath) {
   const normalized = String(relPath || "").replace(/\\/g, "/").toLowerCase();
   if (!normalized) return false;
   if (isGovernancePath(normalized)) return false;
-  if (normalized === "readme.md" || normalized === "agents.md") return false;
-  if (normalized.startsWith("docs/") || normalized.endsWith("/skill.md")) return false;
-  return /\.(js|mjs|cjs|ts|tsx|jsx|py|go|rs|java|cs|json|toml|ya?ml|ps1|sh|bat|cmd|html|css|scss|sql)$/i.test(normalized);
+  if (normalized === "agents.md" || /^\.agents\/skills\/.+\/skill\.md$/.test(normalized)) return true;
+  if (/(?:^|\/)(?:readme|changelog|license)(?:\.[^/]*)?$/i.test(normalized)) return false;
+  if (/\.(?:md|txt|rst|adoc)$/i.test(normalized)) return false;
+  return true;
 }
 
 export function changedPathsNeedVerification(files) {
   return files.some((file) => isVerificationRelevantPath(file));
 }
 
-export function gitStatusFiles(root) {
+export function gitStatusResult(root) {
   try {
     const out = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
       cwd: root,
       encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"]
+      stdio: ["ignore", "pipe", "pipe"]
     });
     const records = out.split("\0");
     const files = [];
@@ -46,9 +51,70 @@ export function gitStatusFiles(root) {
       if (name) files.push(name);
       if (/[RC]/.test(status)) index += 1;
     }
-    return [...new Set(files)];
-  } catch {
-    return [];
+    return {
+      ok: true,
+      files: [...new Set(files)],
+      error: ""
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      files: [],
+      error: String(error.stderr || error.message || error).trim()
+    };
+  }
+}
+
+export function gitStatusFiles(root) {
+  return gitStatusResult(root).files;
+}
+
+export function gitHeadResult(root) {
+  try {
+    return {
+      ok: true,
+      head: execFileSync("git", ["rev-parse", "--verify", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      }).trim(),
+      error: ""
+    };
+  } catch (error) {
+    const status = gitStatusResult(root);
+    if (status.ok) return { ok: true, head: "", error: "" };
+    return {
+      ok: false,
+      head: "",
+      error: String(error.stderr || error.message || error).trim()
+    };
+  }
+}
+
+export function gitDiffFilesResult(root, fromHead, toHead) {
+  if (!toHead || fromHead === toHead) {
+    return { ok: true, files: [], error: "" };
+  }
+  const args = fromHead
+    ? ["diff", "--name-only", "-z", fromHead, toHead]
+    : ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", toHead];
+  try {
+    const out = execFileSync("git", args, {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    return {
+      ok: true,
+      files: [...new Set(out.split("\0").filter(Boolean))],
+      error: ""
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      files: [],
+      error: String(error.stderr || error.message || error).trim()
+    };
   }
 }
 
@@ -121,13 +187,15 @@ function formatMtime(ms) {
 }
 
 export function gitCheckpointStatus(root, ctx, latest) {
-  const statusFiles = gitStatusFiles(root);
+  const statusResult = gitStatusResult(root);
+  const statusFiles = statusResult.files.filter((file) => !isProjectOpsRuntimePath(file));
   const branch = gitCurrentBranch(root);
   const remote = gitHasRemote(root);
   const aheadBehind = gitAheadBehind(root);
   const issues = [];
   const checkpointDetails = [];
 
+  if (!statusResult.ok) issues.push(`Git status unavailable: ${statusResult.error || "unknown error"}`);
   if (statusFiles.length > 0) issues.push(`${statusFiles.length} uncommitted file(s)`);
   if (aheadBehind.ahead > 0) issues.push(`${aheadBehind.ahead} unpushed commit(s)`);
   if (remote && branch && !aheadBehind.hasUpstream) issues.push(`branch '${branch}' has no upstream`);
@@ -165,7 +233,9 @@ export function gitCheckpointStatus(root, ctx, latest) {
   const detailText = checkpointDetails.length ? ` Details: ${checkpointDetails.join(" ")}` : "";
 
   return {
-    ok: !needsCheckpoint || checkpointRecorded,
+    ok: statusResult.ok && (!needsCheckpoint || checkpointRecorded),
+    gitAvailable: statusResult.ok,
+    gitError: statusResult.error,
     needsCheckpoint,
     checkpointTailAccepted,
     checkpointRecorded,

@@ -24,25 +24,25 @@ export const TEMPLATES = {
   "current-state.md": `# 当前状态
 
 ## 目标
-[一句话说明当前目标。]
+建立当前任务范围，并在实施前确认正确的工作流入口。
 
 ## 最新用户指令
-[最近一次改变范围或优先级的用户指令。]
+最新任务指令尚待从当前会话外化到本文件。
 
 ## 当前阶段
-[discovery | brainstorming | spec | planning | implementation | debugging | verification | review | delivery | blocked | handoff]
+discovery
 
 ## 当前假设
-- [假设内容，以及为什么现在可以接受。]
+- 尚无任务级假设；先使用 \`using-superpowers\` 判断下一阶段。
 
 ## 阻塞项
 - 无。
 
 ## 下一步动作
-[只写一个下一步动作。]
+使用 \`using-superpowers\` 根据最新用户指令选择 onboarding、Wayfinder、brainstorming 或直接小改路径。
 
 ## 最后更新
-[YYYY-MM-DD HH:mm 本地时间。]
+当前任务初始化。
 `,
   "project-map.md": `# 项目地图
 
@@ -169,13 +169,13 @@ Living Draft / Not Approved。最终讨论通过后使用 Pending written-spec a
   "artifact-index.md": `# 资产索引
 
 ## 已创建
-- 暂无。
+- 当前 task-scoped 上下文已初始化。
 
 ## 已修改
-- 暂无。
+- 尚未开始任务级项目修改。
 
 ## 已读取 / 已检查
-- 暂无。
+- 最新任务范围和项目相关文件尚待检查。
 
 ## 原始输出
 - 暂无。
@@ -211,14 +211,14 @@ Living Draft / Not Approved。最终讨论通过后使用 Pending written-spec a
 `,
   "verification.md": `# 验证
 
-## 已运行命令
-- 暂无。
-
-## 产品证据
-- 暂无。
+## 验证证据
+- 当前任务仅完成上下文初始化，尚未开始项目实现。
 
 ## 尚未验证
-- 暂无。
+- 最新任务的业务行为、实现和测试均尚未验证。
+
+## 审查证据
+- 尚未审查。
 `,
   "working-notes.md": `# 工作笔记
 
@@ -333,56 +333,88 @@ Living Draft / Not Approved。最终讨论通过后使用 Pending written-spec a
 - 如果 session 从 Codex App worktree 恢复，编辑项目文件前先更新本文件。
 `,
   "workflow-state.yaml": `workflow: standard
+work_lane: lane-1
+task_id: task-1
+task_generation: 1
 phase: discovery
 next_skill: codex-codebase-onboarding
 auto_next: true
 decision_required: none
 spec_status: not-started
 plan_status: not-started
+approved_spec_hash: none
+approved_plan_hash: none
 execution_mode: pending
 execution_approval: pending
+loop_review_status: pending
 verify_result: pending
+verification_gap_status: not-required
 review_status: pending
 checkpoint_status: pending
+verification_evidence_hash: none
+review_evidence_hash: none
+resume_phase: none
+resume_skill: none
+debug_return_phase: none
+debug_return_skill: none
 handoff_hash: null
+handoff_task_id: none
+handoff_task_generation: none
 updated_at: not-started
 note: initialized
 `,
   "handoff-summary.md": `# Handoff 摘要
 
 ## 目标
+建立当前任务范围，并选择正确的项目工作流。
 
 ## 最新用户指令
+最新任务指令尚待从当前会话外化。
 
 ## 已批准范围 / 规格
+尚未形成或批准当前任务规格。
 
 ## 计划状态
+暂无正式计划；当前阶段为 discovery。
 
 ## 已修改文件
+- 当前 task-scoped 上下文已重置。
 
 ## 已读取但未修改文件
+ - 尚未检查任务相关项目文件。
 
 ## 已做决策
+- 使用 \`using-superpowers\` 选择下一阶段。
 
 ## 开放问题与假设
+- 当前任务目标、边界、风险等级和验证方式尚待确认。
 
 ## 风险
+- 在最新用户指令外化前，不应依赖旧任务范围或批准状态。
 
 ## 验证证据
+- 当前任务仅完成上下文初始化。
 
 ## Git 存档
-- 最新提交:
-- 推送状态:
-- 已包含文件:
-- 有意保留未提交的文件:
-- 暂缓原因:
-- 下次存档:
+- 最新提交: 尚未检查。
+- 推送状态: 尚未检查。
+- 已包含文件: 当前 task-scoped 上下文初始化。
+- 有意保留未提交的文件: 尚未检查。
+- 暂缓原因: 当前任务尚未形成首个验证里程碑。
+- 下次存档: 首个有意义且已验证的任务里程碑后。
 
 ## 需要保留的经验沉淀
+- 尚无当前任务经验。
 
 ## 下一步动作
+使用 \`using-superpowers\` 读取最新用户指令并选择下一阶段。
 
 ## 优先重读文件
+- \`.codex-context/workflow-state.yaml\`
+- \`.codex-context/current-state.md\`
+- \`.codex-context/project-map.md\`
+- \`.codex-context/spec.md\`
+- \`.codex-context/plan-progress.md\`
 `
 };
 

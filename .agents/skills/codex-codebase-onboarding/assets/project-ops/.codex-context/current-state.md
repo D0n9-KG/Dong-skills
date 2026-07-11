@@ -1,22 +1,22 @@
 # 当前状态
 
 ## 目标
-[一句话说明当前目标。]
+初始化项目上下文，并在首次任务开始前建立可靠的代码库地图。
 
 ## 最新用户指令
-[最近一次改变范围或优先级的用户指令。]
+尚未记录任务级指令；等待用户提供或确认当前项目目标。
 
 ## 当前阶段
-[discovery | brainstorming | spec | planning | implementation | debugging | verification | review | delivery | blocked | handoff]
+discovery
 
 ## 当前假设
-- [假设内容，以及为什么现在可以接受。]
+- 尚无任务级假设；首次项目检查后再记录。
 
 ## 阻塞项
 - 无。
 
 ## 下一步动作
-[只写一个下一步动作。]
+使用 `codex-codebase-onboarding` 检查项目结构、命令、测试和约定。
 
 ## 最后更新
-[YYYY-MM-DD HH:mm 本地时间。]
+Dong Skills bootstrap 初始化。

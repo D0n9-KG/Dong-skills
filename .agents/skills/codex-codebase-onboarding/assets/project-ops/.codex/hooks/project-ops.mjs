@@ -2,16 +2,20 @@
 import path from "node:path";
 import { contextBudget } from "../scripts/lib/budget.mjs";
 import { runInstinctCommand, runProjectOpsScript } from "../scripts/lib/cli.mjs";
-import { gitRoot, readStdinJson } from "../scripts/lib/core.mjs";
+import { gitRoot, readStdinJson, validateHookInput } from "../scripts/lib/core.mjs";
 import {
   postCompact,
   postToolUse,
+  preToolUse,
   preCompact,
   sessionStart,
   stop,
+  subagentStart,
+  subagentStop,
   userPromptSubmit
 } from "../scripts/lib/events.mjs";
 import { learningStatusText } from "../scripts/lib/learning.mjs";
+import { writeHookLiveness } from "../scripts/lib/runtime.mjs";
 
 const ROOTLESS_FIRST_ARGS = {
   "session-history": new Set(["scan", "help", "--help", "-h"]),
@@ -104,17 +108,20 @@ if (Object.hasOwn(projectOpsScripts, cliMode)) {
   process.exit(0);
 }
 
-const input = readStdinJson();
+const input = validateHookInput(readStdinJson());
 const cwd = input.cwd || process.cwd();
 const root = gitRoot(cwd);
 const ctx = path.join(root, ".codex-context");
 
 switch (input.hook_event_name) {
   case "SessionStart":
-    sessionStart(root, ctx);
+    sessionStart(input, root, ctx);
     break;
   case "UserPromptSubmit":
     userPromptSubmit(input, root, ctx);
+    break;
+  case "PreToolUse":
+    preToolUse(input, root, ctx);
     break;
   case "PostToolUse":
     postToolUse(input, root, ctx);
@@ -123,11 +130,22 @@ switch (input.hook_event_name) {
     preCompact(input, root, ctx);
     break;
   case "PostCompact":
-    postCompact(root, ctx);
+    postCompact(input, root, ctx);
+    break;
+  case "SubagentStart":
+    subagentStart(input, root, ctx);
+    break;
+  case "SubagentStop":
+    subagentStop(input, root, ctx);
     break;
   case "Stop":
     stop(input, root, ctx);
     break;
   default:
-    break;
+    throw new Error(`Unsupported hook event: ${input.hook_event_name}`);
+}
+try {
+  writeHookLiveness(root, ctx, input.hook_event_name);
+} catch (error) {
+  process.stderr.write(`Dong Skills hook liveness update failed: ${error.message}\n`);
 }

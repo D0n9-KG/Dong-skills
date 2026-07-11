@@ -69,6 +69,7 @@ const HEADING_ALIASES = {
   "Raw Outputs": ["原始输出"],
   "Read / Inspected": ["已读取 / 已检查"],
   "Rejected Paths": ["已排除路径"],
+  "Review Evidence": ["审查证据", "Review"],
   "Resume Instructions": ["恢复指令"],
   "Risks": ["风险"],
   "Runtime Constraints": ["运行约束"],
@@ -130,7 +131,7 @@ export function escapeRegex(value) {
 export function checkpointField(checkpoint, labels) {
   for (const label of labels) {
     for (const candidate of headingAliases(label)) {
-      const pattern = new RegExp(`^\\s*(?:[-*]\\s*)?${escapeRegex(candidate)}\\s*:\\s*(.*)$`, "im");
+      const pattern = new RegExp(`^\\s*(?:[-*]\\s*)?${escapeRegex(candidate)}\\s*[:：]\\s*(.*)$`, "im");
       const match = checkpoint.match(pattern);
       if (match) return match[1].trim();
     }

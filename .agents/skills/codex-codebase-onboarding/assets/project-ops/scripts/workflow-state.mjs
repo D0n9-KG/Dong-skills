@@ -40,6 +40,7 @@ function usage() {
     "",
     "Commands:",
     "  init",
+    "  migrate",
     "  status",
     "  get <field>",
     "  set <field> <value>",
@@ -54,6 +55,7 @@ function usage() {
 function printNext(next) {
   console.log(`NEXT: ${next.next}`);
   if (next.skill && next.skill !== "none") console.log(`SKILL: ${next.skill}`);
+  if (next.transitions?.length) console.log(`TRANSITIONS: ${next.transitions.join(", ")}`);
   if (next.hint) console.log(`HINT: ${next.hint}`);
 }
 
@@ -66,6 +68,12 @@ try {
     case "init": {
       const file = workflow.ensureWorkflowState(root, ctx);
       console.log(`Initialized workflow state: ${path.relative(root, file).replace(/\\/g, "/")}`);
+      break;
+    }
+    case "migrate": {
+      const result = workflow.migrateWorkflowState(root, ctx);
+      console.log(result.changed ? "Migrated workflow-state.yaml." : "workflow-state.yaml is already current.");
+      if (result.addedFields.length) console.log(`Added fields: ${result.addedFields.join(", ")}`);
       break;
     }
     case "status": {
@@ -84,11 +92,7 @@ try {
     case "set": {
       const [field, value] = args;
       if (!field || value === undefined) throw new Error("set requires <field> <value>");
-      const state = workflow.loadWorkflowState(root, ctx);
-      const next = { ...state, [field]: value, note: `Manually set ${field}` };
-      const validation = workflow.validateWorkflowState(next);
-      if (!validation.ok) throw new Error(validation.issues.join("; "));
-      workflow.saveWorkflowState(root, ctx, next);
+      workflow.setWorkflowStateField(root, ctx, field, value);
       console.log(`[SET] ${field}=${value}`);
       break;
     }

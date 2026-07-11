@@ -26,6 +26,7 @@ const {
   root,
   runHook,
   setWorkflowPhase,
+  syncApprovalHashes,
   skillEvolution,
   sleep,
   solutions,
@@ -37,6 +38,76 @@ const {
   write,
   writeDongProjectSkillsFixture
 } = support;
+
+function acknowledgeSessionRecovery(project, sessionId, toolUseId = `recovery-${sessionId}`) {
+  const command = "node .codex/hooks/project-ops.mjs context-recovery-eval";
+  const toolInput = { command };
+  const pre = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: sessionId,
+    tool_name: "shell_command",
+    tool_use_id: toolUseId,
+    tool_input: toolInput
+  });
+  assert.notEqual(pre.hookSpecificOutput?.permissionDecision, "deny");
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    session_id: sessionId,
+    tool_name: "shell_command",
+    tool_use_id: toolUseId,
+    tool_input: toolInput,
+    tool_response: { is_error: false, exit_code: 0 }
+  });
+}
+
+function runHookProcess(project, input) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [hook], {
+      cwd: project,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr || stdout || `hook exited with code ${code}`));
+        return;
+      }
+      resolve(stdout.trim());
+    });
+    child.stdin.end(JSON.stringify({ cwd: project, ...input }));
+  });
+}
+
+function bindWorkflowEvidenceHashes(project) {
+  const ctx = path.join(project, ".codex-context");
+  const verificationFile = path.join(ctx, "verification.md");
+  const evidenceHash = createHash("sha256")
+    .update(fs.readFileSync(verificationFile))
+    .digest("hex");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  let state = fs.readFileSync(stateFile, "utf8");
+  for (const field of ["verification_evidence_hash", "review_evidence_hash"]) {
+    const pattern = new RegExp(`^${field}:.*$`, "m");
+    state = pattern.test(state)
+      ? state.replace(pattern, `${field}: ${evidenceHash}`)
+      : `${state.trimEnd()}\n${field}: ${evidenceHash}\n`;
+  }
+  write(stateFile, state);
+  syncApprovalHashes(project);
+}
 
 test("published Windows hook commands are encoded project hook invocations", () => {
   const hookJsonFiles = [
@@ -212,6 +283,7 @@ test("workflow-state exposes deterministic transition, next, recover, and hash c
   assert.match(out, /NEXT: manual/);
   assert.match(out, /SKILL: brainstorming/);
   assert.match(out, /written-spec-approval/);
+  assert.match(out, /TRANSITIONS: spec-approved, spec-skipped/);
 
   const state = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
   assert.match(state, /phase: spec/);
@@ -313,12 +385,12 @@ test("Stop accepts Chinese Git checkpoint field labels", () => {
   git(project, ["init"]);
   write(path.join(project, "work.txt"), "dirty\n");
 
-  readyState(project, `- 最新提交: not ready
-- 推送状态: not pushed because work is intentionally deferred
-- 已包含文件: none
-- 有意保留未提交的文件: work.txt
-- 暂缓原因: test fixture keeps dirty work uncommitted
-- 下次存档: commit after fixture completes
+  readyState(project, `- 最新提交：not ready
+- 推送状态：not pushed because work is intentionally deferred
+- 已包含文件：none
+- 有意保留未提交的文件：work.txt
+- 暂缓原因：test fixture keeps dirty work uncommitted
+- 下次存档：commit after fixture completes
 `);
   const structured = runHook(project, { hook_event_name: "Stop" });
   assert.deepEqual(structured, {});
@@ -433,6 +505,65 @@ test("Stop does not require verification or checkpoint for docs-only discussion 
   assert.deepEqual(output, {});
 });
 
+test("Stop requires verification for agent control-plane changes", () => {
+  const cases = [
+    [".agents/skills/brainstorming/SKILL.md", "\nChanged brainstorming behavior.\n"],
+    [".codex/hooks/project-ops.mjs", "\n// Changed hook behavior.\n"],
+    ["AGENTS.md", "\nChanged project agent instructions.\n"]
+  ];
+
+  for (const [relativePath, addition] of cases) {
+    const project = tempProject();
+    git(project, ["init"]);
+    git(project, ["config", "user.email", "test@example.com"]);
+    git(project, ["config", "user.name", "Test User"]);
+    readyHealthFixture(project);
+    setWorkflowPhase(project, "brainstorming", "brainstorming");
+    write(path.join(project, "AGENTS.md"), "# Project Instructions\n");
+    git(project, ["add", "."]);
+    git(project, ["commit", "-m", "baseline"]);
+    backdateContextFiles(project, ["verification.md", "handoff-summary.md"]);
+
+    fs.appendFileSync(path.join(project, ...relativePath.split("/")), addition, "utf8");
+    write(path.join(project, ".codex-context", "current-state.md"), `# Current State\n\n## Next Action\nValidate ${relativePath}.\n`);
+    write(path.join(project, ".codex-context", "artifact-index.md"), `# Artifact Index\n\n## Modified\n- ${relativePath}: agent control-plane change.\n`);
+
+    const output = runHook(project, { hook_event_name: "Stop" });
+    assert.equal(output.decision, "block", relativePath);
+    assert.match(output.reason, /verification\.md is older than changed files/, relativePath);
+    assert.match(output.reason, /Git checkpoint needs review:/, relativePath);
+  }
+});
+
+test("Stop requires verification for non-document project files without known extensions", () => {
+  const cases = [
+    ["src/App.vue", "<template><main>Changed UI</main></template>\n"],
+    ["Dockerfile", "FROM node:22-alpine\n"],
+    ["schemas/events.proto", "syntax = \"proto3\";\n"],
+    ["docs/site/app.js", "document.body.textContent = 'changed';\n"]
+  ];
+
+  for (const [relativePath, content] of cases) {
+    const project = tempProject();
+    git(project, ["init"]);
+    git(project, ["config", "user.email", "test@example.com"]);
+    git(project, ["config", "user.name", "Test User"]);
+    readyHealthFixture(project);
+    setWorkflowPhase(project, "brainstorming", "brainstorming");
+    git(project, ["add", "."]);
+    git(project, ["commit", "-m", "baseline"]);
+    backdateContextFiles(project, ["verification.md", "handoff-summary.md"]);
+
+    write(path.join(project, ...relativePath.split("/")), content);
+    write(path.join(project, ".codex-context", "current-state.md"), `# Current State\n\n## Next Action\nValidate ${relativePath}.\n`);
+    write(path.join(project, ".codex-context", "artifact-index.md"), `# Artifact Index\n\n## Modified\n- ${relativePath}: project behavior change.\n`);
+
+    const output = runHook(project, { hook_event_name: "Stop" });
+    assert.equal(output.decision, "block", relativePath);
+    assert.match(output.reason, /verification\.md is older than changed files/, relativePath);
+  }
+});
+
 test("Stop still requires verification and checkpoint for code changes during discussion phases", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -514,6 +645,7 @@ Resume final task.
   write(path.join(project, ".codex-context", "solution-index.md"), "# Solution Index\n\n## Knowledge Store\n- docs/solutions present: yes\n");
   write(path.join(project, ".codex-context", "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- None.\n");
   write(path.join(project, ".codex-context", "worktree-state.md"), "# Worktree State\n\n## Current Workspace\n- Role: primary-checkout\n");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture passed.\n\n## Review Evidence\n- Review completed with no blocking findings.\n");
   write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
 task_id: task-1
 task_generation: 1
@@ -532,6 +664,7 @@ handoff_hash: null
 updated_at: fixture
 note: fixture
 `);
+  bindWorkflowEvidenceHashes(project);
 
   const output = runHook(project, { hook_event_name: "SessionStart" });
   const context = output.hookSpecificOutput.additionalContext;
@@ -639,8 +772,12 @@ test("context recovery accepts a completed workflow with next_skill none", () =>
       .replace(/^checkpoint_status:.*$/m, "checkpoint_status: done")
   );
   write(path.join(ctx, "decisions.md"), "# Decisions\n\n## Accepted\n- Completed fixture.\n");
-  write(path.join(ctx, "risks.md"), "# Risks\n\n## Technical Risks\n- None.\n");
-  write(path.join(ctx, "verification.md"), "# Verification\n\n## Commands Run\n- Fixture passed.\n");
+  write(
+    path.join(ctx, "risks.md"),
+    "# Risks\n\n## Technical Risks\n- Keep completed-workflow recovery isolated to the temporary fixture.\n"
+  );
+  write(path.join(ctx, "verification.md"), "# Verification\n\n## Commands Run\n- Fixture passed.\n\n## Review Evidence\n- Review completed with no blocking findings.\n");
+  bindWorkflowEvidenceHashes(project);
 
   const out = execFileSync(process.execPath, [recoveryEval, project], {
     cwd: root,
@@ -678,13 +815,49 @@ WAYFINDER-RECOVERY-PROBE
   const currentFile = path.join(project, ".codex-context", "current-state.md");
   write(
     currentFile,
-    `${fs.readFileSync(currentFile, "utf8")}\nActive Wayfinder: ${wayfinderRelative}\n`
+    `${fs.readFileSync(currentFile, "utf8")}\n当前 Wayfinder: [Platform route](${wayfinderRelative})\n`
   );
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: wayfinding")
+      .replace(/^next_skill:.*$/m, "next_skill: codex-wayfinder")
+      .replace(/^spec_status:.*$/m, "spec_status: living-draft")
+      .replace(/^plan_status:.*$/m, "plan_status: not-started")
+      .replace(/^execution_mode:.*$/m, "execution_mode: pending")
+      .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+  );
+  const specFile = path.join(project, ".codex-context", "spec.md");
+  write(
+    specFile,
+    fs.readFileSync(specFile, "utf8").replace(
+      /(## (?:Approval Status|审批状态)\s*\r?\n)[^\r\n]*/,
+      "$1Living Draft / Not Approved."
+    )
+  );
+  write(path.join(project, ".codex-context", "plan-progress.md"), `# Plan Progress
+
+## Spec Approval
+Pending written-spec approval.
+
+## Execution Approval
+Pending user choice.
+
+## Artifact Readiness
+requirements-only
+
+## Execution Mode
+Pending.
+
+## Current Step
+Resolve the active Wayfinder ticket.
+`);
   write(path.join(project, ".codex-context", "decisions.md"), "# Decisions\n\n## Accepted\n- Staged rollout.\n");
   write(path.join(project, ".codex-context", "risks.md"), "# Risks\n\n## Technical Risks\n- Migration volume.\n");
   write(
     path.join(project, ".codex-context", "verification.md"),
-    "# Verification\n\n## Commands Run\n- `node --test`: pass.\n"
+    "# Verification\n\n## Not Yet Verified\n- Wayfinding only; implementation verification is not expected yet.\n"
   );
   execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
     cwd: root,
@@ -712,7 +885,75 @@ WAYFINDER-RECOVERY-PROBE
   assert.match(recoveryContext, /Active Wayfinder summary/);
   assert.match(recoveryContext, /WAYFINDER-RECOVERY-PROBE/);
 
+  write(
+    wayfinderFile,
+    fs.readFileSync(wayfinderFile, "utf8").replace(
+      "Use staged rollout.",
+      "Use staged rollout with a mandatory canary."
+    )
+  );
+  const staleAfterMapChange = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "wayfinder-map-changed",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: src/app.mjs\n*** End Patch"
+    }
+  });
+  assert.equal(staleAfterMapChange.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(
+    staleAfterMapChange.hookSpecificOutput.permissionDecisionReason,
+    /context recovery|saved handoff_hash|workflow state is not valid/i
+  );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  execFileSync(process.execPath, [hook, "context-recovery-eval", project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  execFileSync(process.execPath, [workflowState, project, "transition", "wayfinder-complete"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  write(
+    currentFile,
+    fs.readFileSync(currentFile, "utf8")
+      .replace(/当前 Wayfinder:.*$/m, "当前 Wayfinder: 无")
+  );
   write(wayfinderFile, "");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const inactiveOutput = execFileSync(process.execPath, [recoveryEval, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(inactiveOutput, /active-wayfinder: pass - not active/);
+
+  execFileSync(process.execPath, [workflowState, project, "transition", "wayfinder-start"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  write(
+    currentFile,
+    fs.readFileSync(currentFile, "utf8")
+      .replace(/当前 Wayfinder:.*$/m, `当前 Wayfinder: [Platform route](${wayfinderRelative})`)
+  );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
   let emptyOutput = "";
   assert.throws(() => {
     execFileSync(process.execPath, [recoveryEval, project], {
@@ -726,6 +967,58 @@ WAYFINDER-RECOVERY-PROBE
   });
   assert.match(emptyOutput, /active Wayfinder file is empty/);
 
+  write(wayfinderFile, `# Platform Wayfinder
+
+## Destination
+
+## Decisions So Far
+
+## Frontier
+
+## Fog
+
+## Out Of Scope
+`);
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  let emptySectionsOutput = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [recoveryEval, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    emptySectionsOutput = String(error.stdout || "");
+    return /Result: fail/.test(emptySectionsOutput);
+  });
+  assert.match(emptySectionsOutput, /Destination|Frontier|Fog/i);
+
+  write(wayfinderFile, `# Platform Wayfinder
+
+## Destination
+Ship the platform safely.
+
+## Decisions So Far
+- Use staged rollout with a mandatory canary.
+
+## Frontier
+WAYFINDER-RECOVERY-PROBE
+
+## Fog
+- Unknown migration volume.
+
+## Out Of Scope
+- Automatic production deploy.
+`);
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
   write(path.join(project, ".codex-context", "verification.md"), "# Verification\n");
   assert.throws(() => {
     execFileSync(process.execPath, [recoveryEval, project], {
@@ -736,10 +1029,88 @@ WAYFINDER-RECOVERY-PROBE
   }, /Command failed/);
 });
 
+test("context recovery rejects an active Wayfinder outside the wayfinding phase", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const wayfinderRelative = "docs/codex/wayfinder/mismatched.md";
+  write(path.join(project, ...wayfinderRelative.split("/")), `# Mismatched Wayfinder
+
+## Destination
+Resolve the route.
+
+## Decisions So Far
+- None yet.
+
+## Frontier
+- Inspect the current system.
+
+## Fog
+- None yet.
+
+## Out Of Scope
+- Product implementation.
+`);
+  const currentFile = path.join(project, ".codex-context", "current-state.md");
+  write(
+    currentFile,
+    `${fs.readFileSync(currentFile, "utf8")}\n当前 Wayfinder: [Mismatched](${wayfinderRelative})\n`
+  );
+  write(
+    path.join(project, ".codex-context", "verification.md"),
+    "# Verification\n\n## Commands Run\n- Baseline verification fixture.\n"
+  );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  let output = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    output = String(error.stdout || "");
+    return /Result: fail/.test(output);
+  });
+  assert.match(output, /Wayfinder.*wayfinding|wayfinding.*Wayfinder/i);
+});
+
 test("PostCompact emits only common hook output fields", () => {
   const project = tempProject();
   const output = runHook(project, { hook_event_name: "PostCompact", trigger: "auto" });
   assert.deepEqual(output, { continue: true });
+});
+
+test("PostCompact fails closed when recovery receipts cannot be invalidated", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  write(path.join(runtimeDir, "recovery.json"), JSON.stringify({ schema: "fixture" }));
+  write(path.join(runtimeDir, "recovery.json.lock"), "held");
+
+  assert.throws(() => {
+    runHook(project, { hook_event_name: "PostCompact", trigger: "auto" });
+  }, /Command failed/);
+});
+
+test("liveness write failures do not replace the core hook result", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  write(path.join(runtimeDir, "liveness.json.lock"), "held");
+
+  const output = runHook(project, {
+    hook_event_name: "SessionStart",
+    session_id: "liveness-lock-session",
+    source: "resume"
+  });
+  assert.match(output.hookSpecificOutput?.additionalContext || "", /Codex Project Ops hooks are active/);
 });
 
 test("PostToolUse blocks when artifact index is stale after project file changes", () => {
@@ -759,6 +1130,108 @@ test("PostToolUse blocks when artifact index is stale after project file changes
   assert.match(output.reason, /Actual Git root:/);
   assert.match(output.reason, /Latest changed file: work\.txt/);
   assert.match(output.reason, /work\.txt/);
+});
+
+test("PostToolUse uses change receipts when code and artifact mtimes are identical", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  write(path.join(project, "work.txt"), "baseline\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: no remote
+- Files included: baseline
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: fixture
+- Next checkpoint: after verification
+`);
+  write(path.join(project, ".codex-context", "decisions.md"), "# Decisions\n\n- Use content hashes for the fixture.\n");
+  write(path.join(project, ".codex-context", "risks.md"), "# Risks\n\n- Same-mtime writes must remain detectable.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const sameTime = new Date(Date.now() - 2_000);
+  const artifactFile = path.join(project, ".codex-context", "artifact-index.md");
+  write(artifactFile, "# Artifact Index\n\n## Modified\n- Baseline only.\n");
+  fs.utimesSync(artifactFile, sameTime, sameTime);
+  const codeInput = {
+    tool_name: "apply_patch",
+    tool_use_id: "tool-identical-code",
+    tool_input: { patch: "*** Update File: work.txt" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...codeInput });
+  write(path.join(project, "work.txt"), "changed\n");
+  fs.utimesSync(path.join(project, "work.txt"), sameTime, sameTime);
+
+  const blocked = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...codeInput,
+    tool_response: { is_error: false }
+  });
+  assert.equal(blocked.decision, "block");
+  assert.match(blocked.reason, /artifact-index\.md is not fresh/i);
+
+  const artifactInput = {
+    tool_name: "apply_patch",
+    tool_use_id: "tool-identical-artifact",
+    tool_input: {
+      patch: "*** Update File: .codex-context/artifact-index.md\n@@\n+- `work.txt`: changed by fixture."
+    }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...artifactInput });
+  write(artifactFile, "# Artifact Index\n\n## Modified\n- `work.txt`: changed by fixture.\n");
+  fs.utimesSync(artifactFile, sameTime, sameTime);
+  const refreshed = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...artifactInput,
+    tool_response: { is_error: false }
+  });
+  assert.notEqual(refreshed.decision, "block");
+
+  for (const name of ["current-state.md", "verification.md", "handoff-summary.md"]) {
+    fs.utimesSync(path.join(project, ".codex-context", name), sameTime, sameTime);
+  }
+  const staleStop = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(staleStop.decision, "block");
+  assert.match(staleStop.reason, /current-state\.md has not been refreshed after the latest project mutation/i);
+
+  for (const name of ["current-state.md", "verification.md", "handoff-summary.md"]) {
+    const file = path.join(project, ".codex-context", name);
+    const refreshInput = {
+      tool_name: "apply_patch",
+      tool_use_id: `tool-identical-refresh-${name}`,
+      tool_input: {
+        patch: `*** Update File: .codex-context/${name}\n@@\n+- Receipt refresh for work.txt.`
+      }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...refreshInput });
+    fs.appendFileSync(file, "\n- Receipt refresh fixture.\n", "utf8");
+    fs.utimesSync(file, sameTime, sameTime);
+    const stateRefresh = runHook(project, {
+      hook_event_name: "PostToolUse",
+      ...refreshInput,
+      tool_response: { is_error: false }
+    });
+    assert.notEqual(stateRefresh.decision, "block");
+  }
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const allowedStop = runHook(project, { hook_event_name: "Stop" });
+  assert.notEqual(allowedStop.decision, "block", JSON.stringify(allowedStop));
 });
 
 test("UserPromptSubmit marks discussion state during active brainstorming", () => {
@@ -785,9 +1258,58 @@ test("UserPromptSubmit marks discussion state during active brainstorming", () =
   assert.match(marker.prompt_excerpt, /\[redacted\]/);
 });
 
+test("planning prompts require plan progress instead of unrelated spec artifacts", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "planning", "writing-plans");
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "把验证步骤调整为先跑领域测试，再跑 release check。"
+  });
+
+  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
+  assert.ok(marker.required_files.includes("plan-progress.md"));
+  assert.ok(marker.required_files.includes("current-state.md"));
+  assert.ok(marker.required_files.includes("handoff-summary.md"));
+  assert.equal(marker.required_files.includes("spec.md"), false);
+  assert.equal(marker.required_files.includes("decisions.md"), false);
+  assert.equal(marker.required_files.includes("open-questions.md"), false);
+});
+
+test("each new discussion prompt resets freshness baselines", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+  const markerFile = path.join(project, ".codex-context", "discussion-state.json");
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "第一轮：采用本地 receipt。"
+  });
+  const first = readJson(markerFile);
+  for (const name of first.required_files) {
+    fs.appendFileSync(path.join(project, ".codex-context", name), "\n- First prompt refresh.\n", "utf8");
+  }
+
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "第二轮：改为 session-scoped receipt。"
+  });
+  const second = readJson(markerFile);
+  assert.notEqual(second.baseline_hashes["spec.md"], first.baseline_hashes["spec.md"]);
+  assert.notEqual(second.baseline_hashes["current-state.md"], first.baseline_hashes["current-state.md"]);
+  assert.match(second.prompt_excerpt, /第二轮/);
+});
+
 test("Stop blocks stale discussion state even when no project files changed", () => {
   const project = tempProject();
   readyHealthFixture(project);
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
   setWorkflowPhase(project, "brainstorming", "brainstorming");
 
   runHook(project, {
@@ -799,8 +1321,8 @@ test("Stop blocks stale discussion state even when no project files changed", ()
   const blocked = runHook(project, { hook_event_name: "Stop" });
   assert.equal(blocked.decision, "block");
   assert.match(blocked.reason, /No non-context files changed/);
-  assert.match(blocked.reason, /spec\.md is older than latest discussion or investigation marker/);
-  assert.match(blocked.reason, /decisions\.md is older than latest discussion or investigation marker/);
+  assert.match(blocked.reason, /spec\.md content has not changed since the latest discussion or investigation marker/);
+  assert.match(blocked.reason, /decisions\.md content has not changed since the latest discussion or investigation marker/);
   assert.match(blocked.reason, /Discussion: needs-state-refresh/);
 
   write(path.join(project, ".codex-context", "spec.md"), "# Spec\n\n## Approval Status\nLiving Draft / Not Approved.\n\n## Open Questions\n- Continue discussion.\n");
@@ -833,10 +1355,10 @@ Not applicable.
 ## Git Checkpoint
 - Latest commit: fixture
 - Push state: no remote
-- Files included: none
-- Files intentionally left uncommitted: none
-- Deferred reason: none
-- Next checkpoint: none
+- Files included: baseline fixture
+- Files intentionally left uncommitted: working-notes.md, current-state.md, and handoff-summary.md
+- Deferred reason: governance-only fixture refresh
+- Next checkpoint: after the fixture assertion
 
 ## Next Action
 Ask the next question.
@@ -852,6 +1374,11 @@ Ask the next question.
 test("PostToolUse exploration requires working notes before stopping", () => {
   const project = tempProject();
   readyHealthFixture(project);
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
   setWorkflowPhase(project, "execution", "executing-plans");
 
   const post = runHook(project, {
@@ -869,7 +1396,7 @@ test("PostToolUse exploration requires working notes before stopping", () => {
 
   const blocked = runHook(project, { hook_event_name: "Stop" });
   assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /working-notes\.md is older than latest discussion or investigation marker/);
+  assert.match(blocked.reason, /working-notes\.md content has not changed since the latest discussion or investigation marker/);
 
   write(path.join(project, ".codex-context", "working-notes.md"), `# Working Notes
 
@@ -921,10 +1448,10 @@ Stop hook fixture.
 ## Git Checkpoint
 - Latest commit: fixture
 - Push state: no remote
-- Files included: none
-- Files intentionally left uncommitted: none
-- Deferred reason: none
-- Next checkpoint: none
+- Files included: baseline fixture
+- Files intentionally left uncommitted: working-notes.md, current-state.md, and handoff-summary.md
+- Deferred reason: governance-only fixture refresh
+- Next checkpoint: after the fixture assertion
 
 ## Next Action
 Continue.
@@ -1019,7 +1546,7 @@ note: fixture
 - Fixture plan.
 
 ## Spec Approval
-Approved by user.
+Recorded in spec.md.
 
 ## Execution Approval
 尚未批准。
@@ -1103,6 +1630,7 @@ None.
 ## 范围外
 - None.
 `);
+  syncApprovalHashes(project);
 
   const out = execFileSync(process.execPath, [workflowState, project, "status"], {
     cwd: root,
@@ -1145,12 +1673,19 @@ test("PreCompact automatic compaction captures stale discussion and working-note
     tool_name: "Read",
     tool_input: { path: ".codex/scripts/lib/events.mjs" }
   });
+  const secret = ["sk", "precompactsecret123456789012345"].join("-");
+  const privatePath = ["C:", "Users", "PrivateFixture", "project"].join("\\");
+  fs.appendFileSync(
+    path.join(project, ".codex-context", "working-notes.md"),
+    `\nSensitive fixture: ${secret}\nPrivate path: ${privatePath}\n`,
+    "utf8"
+  );
   backdateContextFiles(project, ["spec.md", "current-state.md", "decisions.md", "open-questions.md", "handoff-summary.md", "working-notes.md"]);
 
   const output = runHook(project, { hook_event_name: "PreCompact", trigger: "auto" });
   assert.equal(output.continue, true);
   assert.match(output.systemMessage, /allowed automatic compaction/);
-  assert.match(output.systemMessage, /working-notes\.md is older than latest discussion or investigation marker/);
+  assert.match(output.systemMessage, /spec\.md content has not changed since the latest discussion or investigation marker/);
 
   const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
   assert.match(handoff, /## PreCompact Emergency Notice/);
@@ -1163,6 +1698,10 @@ test("PreCompact automatic compaction captures stale discussion and working-note
   const raw = fs.readFileSync(path.join(project, ".codex-context", "raw", rawFile), "utf8");
   assert.match(raw, /## Discussion Marker/);
   assert.match(raw, /## Working Notes/);
+  assert.doesNotMatch(raw, new RegExp(escapeRegExp(secret)));
+  assert.doesNotMatch(raw, /C:\\Users\\PrivateFixture/);
+  assert.match(raw, /\[redacted-openai-key\]/);
+  assert.match(raw, /C:\\Users\\\[redacted\]/);
 });
 
 test("PreCompact writes emergency handoff and allows automatic compaction", () => {
@@ -1344,4 +1883,1552 @@ test("workflow-state detects a stale handoff hash", () => {
       stdio: ["ignore", "pipe", "pipe"]
     });
   }, /Command failed/);
+});
+
+test("malformed hook stdin fails visibly instead of silently skipping the event", () => {
+  const project = tempProject();
+  assert.throws(() => {
+    execFileSync(process.execPath, [hook], {
+      cwd: project,
+      input: "{ malformed",
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  }, (error) => {
+    assert.notEqual(error.status, 0);
+    assert.match(String(error.stderr || ""), /invalid hook input json/i);
+    return true;
+  });
+});
+
+test("hook input validation rejects event payloads missing required fields", () => {
+  const project = tempProject();
+  assert.throws(() => {
+    execFileSync(process.execPath, [hook], {
+      cwd: project,
+      input: JSON.stringify({
+        cwd: project,
+        hook_event_name: "PreToolUse",
+        tool_input: {}
+      }),
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  }, (error) => {
+    assert.notEqual(error.status, 0);
+    assert.match(String(error.stderr || ""), /PreToolUse requires tool_name/i);
+    return true;
+  });
+});
+
+test("Stop blocks a malformed discussion marker", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+  write(path.join(project, ".codex-context", "discussion-state.json"), "{ malformed");
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /discussion-state\.json is invalid/i);
+  assert.match(output.reason, /Repair or remove the corrupt discussion marker/);
+});
+
+test("Stop rechecks unresolved issues when stop_hook_active is true", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  write(path.join(project, "work.txt"), "baseline\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: no remote
+- Files included: baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  sleep(1100);
+  write(path.join(project, "work.txt"), "changed without state refresh\n");
+
+  const first = runHook(project, { hook_event_name: "Stop", stop_hook_active: false });
+  assert.equal(first.decision, "block");
+  const retry = runHook(project, { hook_event_name: "Stop", stop_hook_active: true });
+  assert.equal(retry.decision, "block");
+  assert.match(retry.reason, /still unresolved after Stop continuation/i);
+
+  const receiptFile = path.join(
+    project,
+    ".codex-context",
+    "raw",
+    "project-ops-runtime",
+    "stop-continuation.json"
+  );
+  const staleReceipt = readJson(receiptFile);
+  assert.equal(staleReceipt.task_id, "task-1");
+  assert.equal(String(staleReceipt.task_generation), "1");
+  staleReceipt.task_id = "previous-task";
+  write(receiptFile, `${JSON.stringify(staleReceipt, null, 2)}\n`);
+
+  const staleRetry = runHook(project, { hook_event_name: "Stop", stop_hook_active: true });
+  assert.equal(staleRetry.decision, "block");
+
+  const retryAfterReset = runHook(project, { hook_event_name: "Stop", stop_hook_active: true });
+  assert.equal(retryAfterReset.decision, "block");
+
+  const exhausted = runHook(project, { hook_event_name: "Stop", stop_hook_active: true });
+  assert.notEqual(exhausted.decision, "block");
+  assert.match(exhausted.systemMessage, /unresolved after the bounded Stop continuations/i);
+  assert.match(exhausted.systemMessage, /must disclose these gaps/i);
+  const receipt = readJson(receiptFile);
+  assert.equal(receipt.exhausted, true);
+  assert.equal(receipt.task_id, "task-1");
+});
+
+test("Stop continuation budgets remain isolated across concurrent sessions", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  write(path.join(project, "work.txt"), "baseline\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: no remote
+- Files included: baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  sleep(1100);
+  write(path.join(project, "work.txt"), "changed without state refresh\n");
+
+  const sessionAFirst = runHook(project, {
+    hook_event_name: "Stop",
+    session_id: "stop-session-a",
+    stop_hook_active: false
+  });
+  assert.equal(sessionAFirst.decision, "block");
+
+  const sessionBFirst = runHook(project, {
+    hook_event_name: "Stop",
+    session_id: "stop-session-b",
+    stop_hook_active: false
+  });
+  assert.equal(sessionBFirst.decision, "block");
+
+  const sessionARetry = runHook(project, {
+    hook_event_name: "Stop",
+    session_id: "stop-session-a",
+    stop_hook_active: true
+  });
+  assert.equal(sessionARetry.decision, "block");
+  assert.match(sessionARetry.reason, /still unresolved after Stop continuation/i);
+});
+
+test("learning-only observations advise without blocking normal Stop", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
+  const prompt = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    prompt: "以后都不要在没有验证的情况下声称已经修复。"
+  });
+  assert.match(prompt.hookSpecificOutput.additionalContext, /captured a raw learning observation/);
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.notEqual(output.decision, "block");
+});
+
+test("Stop blocks when Git is unavailable instead of treating the worktree as clean", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  write(path.join(project, "work.txt"), "baseline\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: no remote
+- Files included: baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  write(path.join(project, "work.txt"), "dirty\n");
+
+  const out = execFileSync(process.execPath, [hook], {
+    cwd: project,
+    input: JSON.stringify({ cwd: project, hook_event_name: "Stop" }),
+    encoding: "utf8",
+    env: { ...process.env, PATH: path.dirname(process.execPath) },
+    stdio: ["pipe", "pipe", "pipe"]
+  }).trim();
+  const output = JSON.parse(out);
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /Git status unavailable/i);
+});
+
+test("PreCompact blocks manual compaction when Git is unavailable", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  readyState(project, `- Latest commit: fixture
+- Push state: no remote
+- Files included: baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+
+  const out = execFileSync(process.execPath, [hook], {
+    cwd: project,
+    input: JSON.stringify({
+      cwd: project,
+      hook_event_name: "PreCompact",
+      trigger: "manual"
+    }),
+    encoding: "utf8",
+    env: { ...process.env, PATH: path.dirname(process.execPath) },
+    stdio: ["pipe", "pipe", "pipe"]
+  }).trim();
+  const output = JSON.parse(out);
+  assert.equal(output.continue, false);
+  assert.match(output.systemMessage, /Git status unavailable/i);
+});
+
+test("complete workflow records the first prompt of a new task before transition", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: complete")
+      .replace(/^next_skill:.*$/m, "next_skill: none")
+      .replace(/^verify_result:.*$/m, "verify_result: pass")
+      .replace(/^review_status:.*$/m, "review_status: done")
+      .replace(/^checkpoint_status:.*$/m, "checkpoint_status: done")
+  );
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture passed.\n\n## Review Evidence\n- Review completed with no blocking findings.\n");
+  bindWorkflowEvidenceHashes(project);
+
+  const output = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    prompt: "开始新的复杂任务，先确认目标和风险。"
+  });
+  assert.match(output.hookSpecificOutput.additionalContext, /pending new task/i);
+  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
+  assert.equal(marker.status, "pending-new-task");
+  assert.match(marker.prompt_excerpt, /开始新的复杂任务/);
+
+  const transition = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-new-task-transition",
+    tool_input: { command: "node .codex/hooks/project-ops.mjs workflow-state transition new-task" }
+  });
+  assert.deepEqual(transition, {});
+
+  const codeMutation = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-complete-code",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: src/index.js\n*** End Patch"
+    }
+  });
+  assert.equal(codeMutation.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(codeMutation.hookSpecificOutput.permissionDecisionReason, /previous workflow is complete/i);
+});
+
+test("PreToolUse denies supported mutations until recovery is acknowledged", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
+
+  const denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-1",
+    tool_input: { command: "*** Begin Patch" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+
+  const recoveryCommand = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-recovery-command",
+    tool_input: { command: "node .codex/hooks/project-ops.mjs context-recovery-eval" }
+  });
+  assert.deepEqual(recoveryCommand, {});
+
+  const governanceRepair = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-governance-repair",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: .codex-context/handoff-summary.md\n*** End Patch"
+    }
+  });
+  assert.deepEqual(governanceRepair, {});
+
+  const chainedCommand = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-chained-recovery-command",
+    tool_input: {
+      command: "node .codex/hooks/project-ops.mjs context-recovery-eval; Remove-Item work.txt"
+    }
+  });
+  assert.equal(chainedCommand.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(chainedCommand.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+
+  const fakeControlPlane = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-fake-control-plane",
+    tool_input: {
+      command: "node tools/project-ops.mjs workflow-state transition new-task"
+    }
+  });
+  assert.equal(fakeControlPlane.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(fakeControlPlane.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+
+  const remotePathMutation = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__tracker__update_status",
+    tool_use_id: "tool-remote-path-mutation",
+    tool_input: {
+      path: ".codex-context/workflow-state.yaml",
+      status: "done"
+    }
+  });
+  assert.equal(remotePathMutation.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(remotePathMutation.hookSpecificOutput.permissionDecisionReason, /workflow-state\.yaml/i);
+
+  const readOnly = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__context7__query_docs",
+    tool_use_id: "tool-2",
+    tool_input: { query: "hooks" }
+  });
+  assert.notEqual(readOnly.hookSpecificOutput?.permissionDecision, "deny");
+
+  for (const command of ["git status", "git branch --show-current", "git worktree list"]) {
+    const diagnostic = runHook(project, {
+      hook_event_name: "PreToolUse",
+      tool_name: "shell_command",
+      tool_use_id: `tool-read-${command.replace(/\W+/g, "-")}`,
+      tool_input: { command }
+    });
+    assert.deepEqual(diagnostic, {});
+  }
+
+  for (const command of [
+    "git status; Set-Content work.txt changed",
+    "Get-Content work.txt | Set-Content copy.txt",
+    "git worktree add ../other branch"
+  ]) {
+    const mutation = runHook(project, {
+      hook_event_name: "PreToolUse",
+      tool_name: "shell_command",
+      tool_use_id: `tool-write-${command.replace(/\W+/g, "-")}`,
+      tool_input: { command }
+    });
+    assert.equal(mutation.hookSpecificOutput.permissionDecision, "deny");
+    assert.match(mutation.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+  }
+
+  const upsert = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__database__upsert_records",
+    tool_use_id: "tool-upsert",
+    tool_input: { records: [{ id: 1 }] }
+  });
+  assert.equal(upsert.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(upsert.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+});
+
+test("successful recovery evaluation writes a receipt that allows supported mutations", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
+
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const allowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-allow",
+    tool_input: { command: "*** Begin Patch" }
+  });
+  assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
+});
+
+test("recovery receipt is invalidated when the installed hook runtime changes", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  write(path.join(project, ".codex", "hooks", "project-ops.mjs"), "console.log('changed runtime');\n");
+  const denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-stale",
+    tool_input: { command: "*** Begin Patch" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /runtime/i);
+});
+
+test("recovery receipt covers transitive hook runtime modules", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  write(path.join(project, ".codex", "scripts", "lib", "markdown.mjs"), "export const changed = true;\n");
+  const denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-stale-transitive-runtime",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: src/index.js\n*** End Patch"
+    }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /runtime/i);
+});
+
+test("PreToolUse enforces pending decisions and Lane 3 execution approval", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8").replace(/^decision_required:.*$/m, "decision_required: user-choice")
+  );
+  let denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-decision",
+    tool_input: { patch: "*** Begin Patch" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /user decision/i);
+
+  denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__tracker__update_status",
+    tool_use_id: "tool-mcp-decision",
+    tool_input: { status: "done" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /user decision/i);
+
+  const decisionRecord = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-record-decision",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: .codex-context/workflow-state.yaml\n*** End Patch"
+    }
+  });
+  assert.equal(decisionRecord.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(decisionRecord.hookSpecificOutput.permissionDecisionReason, /workflow-state\.yaml/i);
+
+  const arbitrarySet = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-clear-decision",
+    tool_input: {
+      command: "node .codex/hooks/project-ops.mjs workflow-state set decision_required none"
+    }
+  });
+  assert.equal(arbitrarySet.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(arbitrarySet.hookSpecificOutput.permissionDecisionReason, /validated workflow-state transition/i);
+
+  denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__tracker__reset_status",
+    tool_use_id: "tool-mcp-destructive-decision",
+    tool_input: { status: "pending" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /user decision/i);
+
+  const readOnlyStatus = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__tracker__get_status",
+    tool_use_id: "tool-mcp-read-status",
+    tool_input: { item: "current" }
+  });
+  assert.deepEqual(readOnlyStatus, {});
+
+  denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__filesystem__copy_file",
+    tool_use_id: "tool-mcp-unknown-copy",
+    tool_input: { source: "a.txt", destination: "b.txt" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /user decision/i);
+
+  denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__tracker__execute_query",
+    tool_use_id: "tool-mcp-execute-query",
+    tool_input: { query: "current status" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /user decision/i);
+
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: planning")
+      .replace(/^next_skill:.*$/m, "next_skill: writing-plans")
+      .replace(/^work_lane:.*$/m, "work_lane: lane-3")
+      .replace(/^decision_required:.*$/m, "decision_required: none")
+      .replace(/^plan_status:.*$/m, "plan_status: drafted")
+      .replace(/^execution_mode:.*$/m, "execution_mode: pending")
+      .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+  );
+  write(
+    path.join(project, ".codex-context", "plan-progress.md"),
+    fs.readFileSync(path.join(project, ".codex-context", "plan-progress.md"), "utf8")
+      .replace(
+        /(## (?:Execution Approval|执行审批)\s*\r?\n)[^\r\n]*/,
+        "$1Pending user approval."
+      )
+      .replace(
+        /(## (?:Execution Mode|执行模式)\s*\r?\n)[^\r\n]*/,
+        "$1Pending."
+      )
+  );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-lane-3",
+    tool_input: { patch: "*** Begin Patch" }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /Lane 3/i);
+
+  const planMutation = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-lane-3-plan",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: docs/codex/plans/current.md\n*** End Patch"
+    }
+  });
+  assert.deepEqual(planMutation, {});
+
+  const codeMutation = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-lane-3-code",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: src/index.js\n*** End Patch"
+    }
+  });
+  assert.equal(codeMutation.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(codeMutation.hookSpecificOutput.permissionDecisionReason, /Lane 3/i);
+});
+
+test("PreToolUse allows validated verification failure resolution transitions", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: verification")
+      .replace(/^next_skill:.*$/m, "next_skill: codex-verification-loop")
+      .replace(/^decision_required:.*$/m, "decision_required: none")
+  );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  execFileSync(process.execPath, [workflowState, project, "transition", "verification-fail"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    prompt: "继续修复后重试验证。"
+  });
+
+  const allowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-verification-retry",
+    tool_input: {
+      command: "node .codex/hooks/project-ops.mjs workflow-state transition verification-retry"
+    }
+  });
+  assert.deepEqual(allowed, {});
+});
+
+test("PostToolUse treats final git status as closure evidence, not new investigation", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "execution", "executing-plans");
+  const markerFile = path.join(project, ".codex-context", "discussion-state.json");
+
+  const output = runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "shell_command",
+    tool_input: { command: "git status --short" }
+  });
+  assert.deepEqual(output, {});
+  assert.equal(fs.existsSync(markerFile), false);
+});
+
+test("hook config covers PreToolUse and subagent lifecycle", () => {
+  const config = readJson(path.join(root, ".codex", "hooks.json"));
+  assert.ok(config.hooks.PreToolUse);
+  assert.ok(config.hooks.SubagentStart);
+  assert.ok(config.hooks.SubagentStop);
+  assert.match(config.hooks.PreToolUse[0].matcher, /mcp__/);
+  assert.match(config.hooks.PostToolUse[0].matcher, /mcp__/);
+  assert.match(config.hooks.PostToolUse[0].matcher, /ext__/);
+});
+
+test("health reports missing hook liveness separately without failing static checks", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Hook control plane:/);
+  assert.match(out, /Static configuration: pass/);
+  assert.match(out, /Runtime parity: pass/);
+  assert.match(out, /Recent hook liveness: missing/);
+  assert.match(out, /Result: pass/);
+});
+
+test("health reports recent liveness after a real hook event", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    prompt: "x"
+  });
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Recent hook liveness: recent/);
+  assert.match(out, /Last event: UserPromptSubmit/);
+  assert.match(out, /Critical event coverage: incomplete/);
+  assert.match(out, /Missing critical events: PreToolUse, PostToolUse, Stop/);
+  assert.match(out, /Result: pass/);
+});
+
+test("health reports complete critical event liveness after control hooks run", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "liveness-pre",
+    tool_input: { command: "git status" }
+  });
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "liveness-post",
+    tool_input: { command: "git status" }
+  });
+  runHook(project, { hook_event_name: "Stop" });
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Critical event coverage: complete/);
+  assert.match(out, /Missing critical events: none/);
+});
+
+test("health treats stale critical event timestamps as missing coverage", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "Read",
+    tool_use_id: "stale-pre",
+    tool_input: { path: "README.md" }
+  });
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "Read",
+    tool_use_id: "stale-post",
+    tool_input: { path: "README.md" }
+  });
+  runHook(project, { hook_event_name: "Stop" });
+
+  const receiptFile = path.join(
+    project,
+    ".codex-context",
+    "raw",
+    "project-ops-runtime",
+    "liveness.json"
+  );
+  const receipt = readJson(receiptFile);
+  const staleAt = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  receipt.last_event = "Stop";
+  receipt.last_seen_at = staleAt;
+  for (const eventName of ["PreToolUse", "PostToolUse", "Stop"]) {
+    receipt.events[eventName] = staleAt;
+  }
+  write(receiptFile, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  runHook(project, {
+    hook_event_name: "SessionStart",
+    session_id: "fresh-session",
+    source: "resume"
+  });
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Recent hook liveness: recent/);
+  assert.match(out, /Critical event coverage: incomplete/);
+  assert.match(out, /Missing critical events: PreToolUse, PostToolUse, Stop/);
+});
+
+test("a new hook runtime does not inherit event coverage from the previous runtime", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "Read",
+    tool_use_id: "runtime-pre",
+    tool_input: { path: "README.md" }
+  });
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "Read",
+    tool_use_id: "runtime-post",
+    tool_input: { path: "README.md" }
+  });
+  runHook(project, { hook_event_name: "Stop" });
+
+  const runtimeFile = path.join(project, ".codex", "scripts", "lib", "core.mjs");
+  write(runtimeFile, `${fs.readFileSync(runtimeFile, "utf8")}\nexport const runtimeVersion = 2;\n`);
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    prompt: "record the new runtime"
+  });
+
+  const receipt = readJson(path.join(
+    project,
+    ".codex-context",
+    "raw",
+    "project-ops-runtime",
+    "liveness.json"
+  ));
+  assert.deepEqual(Object.keys(receipt.events).sort(), ["UserPromptSubmit"]);
+});
+
+test("concurrent hook events preserve shared liveness receipts without process failures", async () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const receiptFile = path.join(
+    project,
+    ".codex-context",
+    "raw",
+    "project-ops-runtime",
+    "liveness.json"
+  );
+
+  for (let round = 0; round < 8; round += 1) {
+    fs.rmSync(receiptFile, { force: true });
+    const events = [
+      {
+        hook_event_name: "PreToolUse",
+        session_id: "concurrent-session",
+        tool_name: "Read",
+        tool_use_id: `concurrent-pre-${round}`,
+        tool_input: { path: "README.md" }
+      },
+      {
+        hook_event_name: "PostToolUse",
+        session_id: "concurrent-session",
+        tool_name: "Read",
+        tool_use_id: `concurrent-post-${round}`,
+        tool_input: { path: "README.md" }
+      },
+      {
+        hook_event_name: "Stop",
+        session_id: "concurrent-session",
+        stop_hook_active: false
+      }
+    ];
+
+    await Promise.all(events.flatMap((event) => [
+      runHookProcess(project, event),
+      runHookProcess(project, event),
+      runHookProcess(project, event)
+    ]));
+
+    const receipt = readJson(receiptFile);
+    for (const eventName of ["PreToolUse", "PostToolUse", "Stop"]) {
+      assert.ok(receipt.events?.[eventName], `round ${round} lost ${eventName} liveness`);
+    }
+  }
+});
+
+test("parallel mutation intents in one session remain isolated by tool invocation", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  runHook(project, {
+    hook_event_name: "SessionStart",
+    session_id: "parallel-session",
+    source: "resume"
+  });
+  acknowledgeSessionRecovery(project, "parallel-session");
+
+  for (const toolUseId of ["parallel-tool-a", "parallel-tool-b"]) {
+    const pre = runHook(project, {
+      hook_event_name: "PreToolUse",
+      session_id: "parallel-session",
+      tool_name: "apply_patch",
+      tool_use_id: toolUseId,
+      tool_input: {
+        patch: `*** Begin Patch\n*** Update File: ${toolUseId}.txt\n*** End Patch`
+      }
+    });
+    assert.notEqual(pre.hookSpecificOutput?.permissionDecision, "deny");
+  }
+
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  const intentFiles = fs.readdirSync(runtimeDir)
+    .filter((name) => /^mutation-intent-.*\.json$/i.test(name));
+  assert.equal(intentFiles.length, 2);
+});
+
+test("SubagentStart injects lifecycle context and SubagentStop bounds missing summaries", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+
+  const start = runHook(project, {
+    hook_event_name: "SubagentStart",
+    agent_id: "agent-1",
+    agent_type: "reviewer",
+    permission_mode: "default"
+  });
+  assert.match(start.hookSpecificOutput.additionalContext, /task_id=/);
+  assert.match(start.hookSpecificOutput.additionalContext, /Do not advance the parent workflow phase/);
+  assert.match(start.hookSpecificOutput.additionalContext, /does not enforce file-level delegated scope/i);
+
+  const firstStop = runHook(project, {
+    hook_event_name: "SubagentStop",
+    agent_id: "agent-1",
+    agent_type: "reviewer",
+    stop_hook_active: false,
+    last_assistant_message: ""
+  });
+  assert.equal(firstStop.decision, "block");
+  assert.match(firstStop.reason, /concise result summary/i);
+
+  const retry = runHook(project, {
+    hook_event_name: "SubagentStop",
+    agent_id: "agent-1",
+    agent_type: "reviewer",
+    stop_hook_active: true,
+    last_assistant_message: ""
+  });
+  assert.notEqual(retry.decision, "block");
+  assert.match(retry.systemMessage, /subagent result remains incomplete/i);
+  assert.match(retry.systemMessage, /must not be used as completion or verification evidence/i);
+
+  const meaningless = runHook(project, {
+    hook_event_name: "SubagentStop",
+    agent_id: "agent-1",
+    agent_type: "reviewer",
+    stop_hook_active: false,
+    last_assistant_message: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  });
+  assert.equal(meaningless.decision, "block");
+  assert.match(meaningless.reason, /evidence|risks|next action/i);
+
+  const valid = runHook(project, {
+    hook_event_name: "SubagentStop",
+    agent_id: "agent-1",
+    agent_type: "reviewer",
+    stop_hook_active: false,
+    last_assistant_message: [
+      "Evidence: inspected the hook runtime and reproduced the target behavior.",
+      "Risks: no unresolved P0 or P1 risk remains in the delegated scope.",
+      "Next action: the parent should run the targeted regression test."
+    ].join("\n")
+  });
+  assert.notEqual(valid.decision, "block");
+
+  const narrative = runHook(project, {
+    hook_event_name: "SubagentStop",
+    agent_id: "agent-1",
+    agent_type: "reviewer",
+    stop_hook_active: false,
+    last_assistant_message: [
+      "I inspected the hook runtime and confirmed the delegated path with the local fixture.",
+      "No unresolved blocking risk remains in this delegated scope.",
+      "The parent should externalize the accepted result and run the targeted regression test."
+    ].join("\n")
+  });
+  assert.notEqual(narrative.decision, "block");
+
+  const markerFile = path.join(project, ".codex-context", "discussion-state.json");
+  const marker = JSON.parse(fs.readFileSync(markerFile, "utf8"));
+  assert.equal(marker.enforce_before_mutation, true);
+  assert.deepEqual(
+    [...marker.required_files].sort(),
+    ["current-state.md", "handoff-summary.md", "working-notes.md"].sort()
+  );
+
+  const parentBlocked = runHook(project, {
+    hook_event_name: "Stop",
+    session_id: "parent-session"
+  });
+  assert.equal(parentBlocked.decision, "block");
+  assert.match(parentBlocked.reason, /working-notes\.md/i);
+
+  for (const name of ["working-notes.md", "current-state.md", "handoff-summary.md"]) {
+    const file = path.join(project, ".codex-context", name);
+    write(file, `${fs.readFileSync(file, "utf8")}\n- Integrated subagent result.\n`);
+  }
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "integrate subagent result"]);
+  const parentAllowed = runHook(project, {
+    hook_event_name: "Stop",
+    session_id: "parent-session"
+  });
+  assert.notEqual(parentAllowed.decision, "block");
+});
+
+test("PostToolUse and Stop preserve governance after a tool commits its own changes", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "before\n");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const command = "Set-Content work.txt changed; git add work.txt; git commit -m changed";
+  const input = {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-commit-inside",
+    tool_input: { command }
+  };
+  const pre = runHook(project, input);
+  assert.notEqual(pre.hookSpecificOutput?.permissionDecision, "deny");
+
+  write(path.join(project, "work.txt"), "changed\n");
+  git(project, ["add", "work.txt"]);
+  git(project, ["commit", "-m", "changed"]);
+  assert.equal(git(project, ["status", "--short"]).trim(), "");
+
+  const post = runHook(project, {
+    ...input,
+    hook_event_name: "PostToolUse",
+    tool_response: { is_error: false, exit_code: 0 }
+  });
+  assert.equal(post.decision, "block");
+  assert.match(post.reason || post.hookSpecificOutput?.additionalContext || "", /artifact-index/i);
+
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(receipt.changed_files, ["work.txt"]);
+  const stopped = runHook(project, { hook_event_name: "Stop" });
+  assert.equal(stopped.decision, "block");
+});
+
+test("shell governance refresh satisfies a clean committed change receipt", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "before\n");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const codeInput = {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-clean-commit-inside",
+    tool_input: {
+      command: "Set-Content work.txt changed; git add work.txt; git commit -m changed"
+    }
+  };
+  runHook(project, codeInput);
+  write(path.join(project, "work.txt"), "changed\n");
+  git(project, ["add", "work.txt"]);
+  git(project, ["commit", "-m", "changed"]);
+  runHook(project, {
+    ...codeInput,
+    hook_event_name: "PostToolUse",
+    tool_response: { is_error: false, exit_code: 0 }
+  });
+
+  const evidenceInput = {
+    hook_event_name: "PreToolUse",
+    tool_name: "shell_command",
+    tool_use_id: "tool-shell-verification-refresh",
+    tool_input: {
+      command: "Set-Content -LiteralPath .codex-context/verification.md -Value '# Verification`n`n## Commands Run`n- Shell evidence refresh passed.'"
+    }
+  };
+  const allowed = runHook(project, evidenceInput);
+  assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
+  write(
+    path.join(project, ".codex-context", "verification.md"),
+    "# Verification\n\n## Commands Run\n- Shell evidence refresh passed.\n"
+  );
+  runHook(project, {
+    ...evidenceInput,
+    hook_event_name: "PostToolUse",
+    tool_response: { is_error: false, exit_code: 0 }
+  });
+
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.ok(receipt.refreshed_hashes["verification.md"]);
+});
+
+test("failed or no-op governance edits cannot satisfy change-state refresh requirements", () => {
+  for (const response of [
+    { is_error: true, exit_code: 1 },
+    { is_error: false, exit_code: 0 }
+  ]) {
+    const project = tempProject();
+    git(project, ["init"]);
+    git(project, ["config", "user.email", "test@example.com"]);
+    git(project, ["config", "user.name", "Test User"]);
+    readyHealthFixture(project);
+    readyState(project, `- Latest functional commit: baseline
+- Push state: local only
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: active test
+- Next checkpoint: after verification`);
+    write(path.join(project, "work.txt"), "before\n");
+    write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+    execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    git(project, ["add", "-A"]);
+    git(project, ["commit", "-m", "baseline"]);
+    execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    const codeInput = {
+      tool_name: "apply_patch",
+      tool_use_id: "tool-code-change",
+      tool_input: {
+        patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch"
+      }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...codeInput });
+    write(path.join(project, "work.txt"), "changed\n");
+    runHook(project, {
+      hook_event_name: "PostToolUse",
+      ...codeInput,
+      tool_response: { is_error: false }
+    });
+
+    for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+      const governanceInput = {
+        tool_name: "apply_patch",
+        tool_use_id: `tool-noop-${name}`,
+        tool_input: {
+          patch: `*** Begin Patch\n*** Update File: .codex-context/${name}\n*** End Patch`
+        }
+      };
+      runHook(project, { hook_event_name: "PreToolUse", ...governanceInput });
+      runHook(project, {
+        hook_event_name: "PostToolUse",
+        ...governanceInput,
+        tool_response: response
+      });
+    }
+
+    const stopped = runHook(project, { hook_event_name: "Stop" });
+    assert.equal(stopped.decision, "block");
+  }
+});
+
+test("Lane 2 planning blocks project mutations until execution approval", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^work_lane:.*$/m, "work_lane: lane-2")
+      .replace(/^phase:.*$/m, "phase: planning")
+      .replace(/^next_skill:.*$/m, "next_skill: writing-plans")
+      .replace(/^plan_status:.*$/m, "plan_status: drafted")
+      .replace(/^execution_mode:.*$/m, "execution_mode: traditional")
+      .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+  );
+  write(path.join(project, ".codex-context", "plan-progress.md"), `# Plan Progress
+
+## Spec Approval
+Recorded in spec.md.
+
+## Execution Approval
+Pending user choice.
+
+## Artifact Readiness
+implementation-ready
+
+## Execution Mode
+Traditional task-by-task execution.
+
+## Current Step
+Finish planning.
+`);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-lane-2-planning-code",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: src/app.mjs\n*** End Patch"
+    }
+  });
+  assert.equal(denied.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /execution approval/i);
+
+  const governance = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-lane-2-planning-plan",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: .codex-context/plan-progress.md\n*** End Patch"
+    }
+  });
+  assert.notEqual(governance.hookSpecificOutput?.permissionDecision, "deny");
+});
+
+test("Lane 0 and Lane 1 pre-execution phases block product mutations", () => {
+  for (const lane of ["lane-0", "lane-1"]) {
+    const project = tempProject();
+    git(project, ["init"]);
+    git(project, ["config", "user.email", "test@example.com"]);
+    git(project, ["config", "user.name", "Test User"]);
+    readyHealthFixture(project);
+    const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+    write(
+      stateFile,
+      fs.readFileSync(stateFile, "utf8")
+        .replace(/^work_lane:.*$/m, `work_lane: ${lane}`)
+        .replace(/^phase:.*$/m, "phase: brainstorming")
+        .replace(/^next_skill:.*$/m, "next_skill: brainstorming")
+        .replace(/^spec_status:.*$/m, "spec_status: living-draft")
+        .replace(/^plan_status:.*$/m, "plan_status: not-started")
+        .replace(/^execution_mode:.*$/m, "execution_mode: pending")
+        .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+    );
+    const specFile = path.join(project, ".codex-context", "spec.md");
+    write(
+      specFile,
+      fs.readFileSync(specFile, "utf8").replace(
+        /(## (?:Approval Status|审批状态)\s*\r?\n)[^\r\n]*/,
+        "$1Living Draft / Not Approved."
+      )
+    );
+    write(path.join(project, ".codex-context", "plan-progress.md"), `# Plan Progress
+
+## Spec Approval
+Pending written-spec approval.
+
+## Execution Approval
+Pending user choice.
+
+## Artifact Readiness
+requirements-only
+
+## Execution Mode
+Pending.
+
+## Current Step
+Continue brainstorming.
+`);
+    write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+    execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    git(project, ["add", "-A"]);
+    git(project, ["commit", "-m", "baseline"]);
+    execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    const denied = runHook(project, {
+      hook_event_name: "PreToolUse",
+      tool_name: "apply_patch",
+      tool_use_id: `tool-${lane}-brainstorming-code`,
+      tool_input: {
+        patch: "*** Begin Patch\n*** Update File: src/app.mjs\n*** End Patch"
+      }
+    });
+    assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
+    assert.match(denied.hookSpecificOutput.permissionDecisionReason, /execution phase|execution approval/i);
+  }
+});
+
+test("Lane 2 discovery permits canonical strategy, spec, and Wayfinder artifacts", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^work_lane:.*$/m, "work_lane: lane-2")
+      .replace(/^phase:.*$/m, "phase: brainstorming")
+      .replace(/^next_skill:.*$/m, "next_skill: brainstorming")
+      .replace(/^spec_status:.*$/m, "spec_status: living-draft")
+      .replace(/^plan_status:.*$/m, "plan_status: not-started")
+      .replace(/^execution_mode:.*$/m, "execution_mode: pending")
+      .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+  );
+
+  for (const target of [
+    "STRATEGY.md",
+    "docs/codex/specs/feature.md",
+    "docs/codex/wayfinder/feature.md",
+    "docs/codex/wayfinder/prototypes/feature-shape.md"
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "PreToolUse",
+      tool_name: "apply_patch",
+      tool_use_id: `scope-artifact-${target}`,
+      tool_input: {
+        patch: `*** Begin Patch\n*** Add File: ${target}\n+draft\n*** End Patch`
+      }
+    });
+    assert.notEqual(
+      output.hookSpecificOutput?.permissionDecision,
+      "deny",
+      `${target} should remain writable during scoped discovery`
+    );
+  }
+});
+
+test("review code fixes require an explicit return to implementation", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "review", "codex-review-panel");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  runHook(project, {
+    hook_event_name: "SessionStart",
+    session_id: "review-fix-session",
+    source: "resume"
+  });
+  acknowledgeSessionRecovery(project, "review-fix-session");
+
+  const edit = {
+    tool_name: "apply_patch",
+    tool_use_id: "review-code-fix",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: src/app.mjs\n*** End Patch"
+    }
+  };
+  const denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "review-fix-session",
+    ...edit
+  });
+  assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /review-changes-requested/i);
+  const shellDenied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "review-fix-session",
+    tool_name: "shell_command",
+    tool_use_id: "review-shell-fix",
+    tool_input: {
+      command: "Set-Content -LiteralPath src/app.mjs -Value 'changed'"
+    }
+  });
+  assert.equal(shellDenied.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(shellDenied.hookSpecificOutput.permissionDecisionReason, /review-changes-requested/i);
+
+  execFileSync(process.execPath, [workflowState, project, "transition", "review-changes-requested"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const allowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "review-fix-session",
+    ...edit
+  });
+  assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
+
+  execFileSync(process.execPath, [workflowState, project, "transition", "execution-complete"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const verificationDenied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "review-fix-session",
+    ...edit,
+    tool_use_id: "verification-code-fix"
+  });
+  assert.equal(verificationDenied.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(verificationDenied.hookSpecificOutput.permissionDecisionReason, /verification-fail/i);
+  for (const [toolUseId, command] of [
+    ["verification-shell-write", "Set-Content -LiteralPath src/app.mjs -Value 'changed'"],
+    ["verification-shell-delete", "Remove-Item -LiteralPath src/app.mjs"],
+    ["verification-node-inline-write", "node -e \"require('fs').writeFileSync('src/app.mjs','changed')\""],
+    ["verification-python-inline-write", "python -c \"from pathlib import Path; Path('src/app.mjs').write_text('changed')\""],
+    ["verification-dotnet-inline-write", "[System.IO.File]::WriteAllText('src/app.mjs','changed')"],
+    ["verification-git-restore", "git restore src/app.mjs"]
+  ]) {
+    const shellWriteDenied = runHook(project, {
+      hook_event_name: "PreToolUse",
+      session_id: "review-fix-session",
+      tool_name: "shell_command",
+      tool_use_id: toolUseId,
+      tool_input: { command }
+    });
+    assert.equal(shellWriteDenied.hookSpecificOutput?.permissionDecision, "deny");
+    assert.match(shellWriteDenied.hookSpecificOutput.permissionDecisionReason, /verification-fail/i);
+  }
+  const verificationCommandAllowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "review-fix-session",
+    tool_name: "shell_command",
+    tool_use_id: "verification-command",
+    tool_input: { command: "node --test" }
+  });
+  assert.notEqual(verificationCommandAllowed.hookSpecificOutput?.permissionDecision, "deny");
+  const governanceWriteAllowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "review-fix-session",
+    tool_name: "shell_command",
+    tool_use_id: "verification-evidence-write",
+    tool_input: {
+      command: "Set-Content -LiteralPath .codex-context/verification.md -Value 'evidence'"
+    }
+  });
+  assert.notEqual(governanceWriteAllowed.hookSpecificOutput?.permissionDecision, "deny");
+});
+
+test("recovery acknowledgements remain scoped to the session that ran recovery", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+
+  runHook(project, { hook_event_name: "SessionStart", session_id: "session-a", source: "resume" });
+  runHook(project, { hook_event_name: "SessionStart", session_id: "session-b", source: "resume" });
+  acknowledgeSessionRecovery(project, "session-b");
+
+  const sessionB = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "session-b",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-session-b",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work-b.txt\n*** End Patch" }
+  });
+  assert.notEqual(sessionB.hookSpecificOutput?.permissionDecision, "deny");
+
+  const sessionA = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "session-a",
+    tool_name: "apply_patch",
+    tool_use_id: "tool-session-a",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work-a.txt\n*** End Patch" }
+  });
+  assert.equal(sessionA.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(sessionA.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+});
+
+test("unknown hook events fail visibly and cannot create liveness evidence", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  assert.throws(
+    () => runHook(project, { hook_event_name: "BogusEvent" }),
+    /Unsupported hook event/i
+  );
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /Recent hook liveness: missing/);
+  assert.doesNotMatch(out, /Last event: BogusEvent/);
 });

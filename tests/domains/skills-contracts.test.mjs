@@ -68,6 +68,16 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(brainstorming, /## Blindspot Pass/);
   assert.match(brainstorming, /Separate verified facts from user decisions/);
 
+  const onboarding = readSkill("codex-codebase-onboarding");
+  assert.match(onboarding, /Do not edit `workflow-state\.yaml` directly/);
+  assert.match(onboarding, /workflow-state transition wayfinder-start/);
+  assert.match(onboarding, /workflow-state transition brainstorming-start/);
+  assert.match(onboarding, /preserve the current workflow phase/i);
+
+  const wayfinder = readSkill("codex-wayfinder");
+  assert.match(wayfinder, /workflow-state transition wayfinder-start/);
+  assert.match(wayfinder, /workflow-state transition wayfinder-complete/);
+
   const writing = readSkill("writing-plans");
   assert.match(writing, /## Scope Check/);
   assert.match(writing, /## Test-First Default/);
@@ -102,6 +112,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(writing, /Definition of Done/);
   assert.match(writing, /zero launch-blocking open questions/);
   assert.match(writing, /happy path, edge cases, error paths, and integration/);
+  assert.match(writing, /workflow-state transition spec-skipped/);
 
   const debugging = readSkill("systematic-debugging");
   assert.match(debugging, /Reproduction is the entry ticket to fixing/);
@@ -130,10 +141,16 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /Runtime Constraints/);
   assert.match(executing, /Checkpoint Cadence/);
   assert.match(executing, /## Stop Conditions/);
-  assert.match(executing, /create_goal/);
+  assert.match(executing, /goal or workflow mechanism/);
   assert.match(executing, /Do not simulate Goal mode/);
+  assert.match(executing, /narrating an internal loop/);
   assert.match(executing, /workflow-state check execution/);
   assert.match(executing, /workflow-state transition execution-complete/);
+  assert.match(executing, /workflow-state transition debugging-start/);
+  assert.match(executing, /workflow-state transition debugging-resolved/);
+  assert.match(executing, /scope, requirements, goals, acceptance criteria, or priority/);
+  assert.match(executing, /workflow-state transition blocked/);
+  assert.match(executing, /workflow-state transition resume/);
   assert.match(executing, /artifact readiness/i);
   assert.match(executing, /requirements-only/);
   assert.match(executing, /happy path, edge cases, error paths, and integration/);
@@ -144,12 +161,15 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /written spec is approved/);
   assert.match(router, /Workflow State Gate/);
   assert.match(router, /workflow-state next/);
+  assert.match(router, /TRANSITIONS/);
   assert.match(router, /workflow-state transition new-task/);
   assert.match(router, /resume_phase/);
   assert.match(router, /resume_skill/);
   assert.match(router, /Compaction And Session Recovery Gate/);
   assert.match(router, /handoff-summary\.md` first/);
   assert.match(router, /context-recovery-eval/);
+  assert.match(router, /session-scoped recovery receipt/);
+  assert.match(router, /receipt from another session/);
   assert.match(router, /Active Wayfinder.*not recovered context/s);
   assert.match(router, /codex-simplicity-review/);
   assert.match(router, /can avoid building, standard library, native platform/);
@@ -160,13 +180,20 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /Execution Mode/);
   assert.match(router, /Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution/);
   assert.match(router, /Codex Goal mode requires an explicit user choice/);
-  assert.match(router, /actual goal mechanism/);
+  assert.match(router, /actual goal or workflow mechanism/);
   assert.match(router, /working-notes\.md/);
   assert.match(router, /hidden chain-of-thought/);
+  assert.match(router, /review-changes-requested/);
+  assert.match(router, /Reopening brainstorming\/spec or restarting a plan invalidates downstream/);
   assert.match(router, /codex-skill-evolution/);
   assert.match(router, /codex-wayfinder/);
   assert.match(router, /codex-agent-architecture-audit/);
   assert.match(router, /codex-loop-design-check/);
+  assert.match(router, /workflow-state transition spec-skipped/);
+  assert.match(router, /workflow-state transition mechanical-exception/);
+  assert.match(router, /workflow-state transition debugging-start/);
+  assert.match(router, /workflow-state transition debugging-resolved/);
+  assert.match(router, /pure continuation or status question/);
 
   const governance = readSkill("codex-project-governance");
   assert.match(governance, /workflow-state\.yaml/);
@@ -176,6 +203,12 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /`spec\.md` is a current-task intent and acceptance record/);
   assert.match(governance, /lowest sufficient lane/);
   assert.match(governance, /Hook output includes a compact status line/);
+  assert.match(governance, /PreToolUse` protects supported mutating\/destructive paths/);
+  assert.match(governance, /pre-mutation intent with current Git evidence/);
+  assert.match(governance, /failed or no-op edits do not count/);
+  assert.match(governance, /does not enforce file-level delegated scope/);
+  assert.match(governance, /bounded continuation receipt/);
+  assert.match(governance, /static hook configuration, root\/bootstrap runtime parity, and recent liveness/);
   assert.match(governance, /discussion-state\.json/);
   assert.match(governance, /working-notes\.md/);
   assert.match(governance, /codex-skill-evolution/);
@@ -183,10 +216,42 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /codex-wayfinder/);
   assert.match(governance, /codex-agent-architecture-audit/);
   assert.match(governance, /codex-loop-design-check/);
+  assert.match(governance, /docs\/codex\/specs/);
+  assert.match(governance, /review-changes-requested/);
+  assert.match(governance, /workflow-state transition debugging-start/);
+  assert.match(governance, /Bare continuation, pure status inquiry, and learning-only future preferences/);
+
+  const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+  const agentsSnippet = fs.readFileSync(path.join(root, "AGENTS.project-ops.snippet.md"), "utf8");
+  const bootstrapAgentsSnippet = fs.readFileSync(
+    path.join(root, ".agents", "skills", "codex-codebase-onboarding", "assets", "project-ops", "AGENTS.project-ops.snippet.md"),
+    "utf8"
+  );
+  assert.equal(agentsSnippet, bootstrapAgentsSnippet);
+  for (const guidance of [readme, agentsSnippet]) {
+    assert.match(guidance, /session-scoped/);
+    assert.match(guidance, /failed or no-op/i);
+    assert.match(guidance, /bounded continuation/);
+    assert.match(guidance, /do not enforce file-level delegated scope/);
+    assert.match(guidance, /root\/bootstrap parity/);
+    assert.match(guidance, /review-changes-requested/);
+    assert.match(guidance, /docs\/codex\/wayfinder/);
+    assert.match(guidance, /spec-skipped/);
+    assert.match(guidance, /mechanical-exception/);
+    assert.match(guidance, /verification_evidence_hash/);
+    assert.match(guidance, /review_evidence_hash/);
+    assert.match(guidance, /debugging-start/);
+    assert.match(guidance, /debugging-resolved/);
+    assert.match(guidance, /pure status/i);
+  }
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
   assert.match(requestingReview, /record the low-risk reason/);
+  assert.match(requestingReview, /workflow-state transition review-complete/);
+  assert.match(requestingReview, /workflow-state transition review-skipped/);
+  assert.match(requestingReview, /Review Evidence/);
+  assert.match(requestingReview, /content hash/);
 
   const reviewPanel = readSkill("codex-review-panel");
   assert.match(reviewPanel, /## Mandatory Panel Triggers/);
@@ -199,6 +264,23 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(reviewPanel, /## Standards Verdict/);
   assert.match(reviewPanel, /## Spec Verdict/);
   assert.match(reviewPanel, /Do not merge, deduplicate, or rerank findings across these two axes/);
+  assert.match(reviewPanel, /review-changes-requested/);
+  assert.match(reviewPanel, /Review Evidence/);
+  assert.match(reviewPanel, /rejects delivery if it changes after review closure/);
+
+  const verificationEvidenceLoop = readSkill("codex-verification-loop");
+  assert.match(verificationEvidenceLoop, /verification-pass/);
+  assert.match(verificationEvidenceLoop, /verification-gap-recorded/);
+  assert.match(verificationEvidenceLoop, /SHA-256 hash/);
+
+  const completionVerification = readSkill("verification-before-completion");
+  assert.match(completionVerification, /verification_evidence_hash/);
+  assert.match(completionVerification, /review_evidence_hash/);
+
+  const receivingReview = readSkill("receiving-code-review");
+  assert.match(receivingReview, /## Workflow Gate/);
+  assert.match(receivingReview, /review-changes-requested/);
+  assert.match(receivingReview, /execution-complete/);
 
   const simplicity = readSkill("codex-simplicity-review");
   assert.match(simplicity, /## Simplicity Gate/);
@@ -218,6 +300,16 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const checkpoint = readSkill("codex-git-checkpoint");
   assert.match(checkpoint, /## Branch Completion Boundary/);
   assert.match(checkpoint, /fixed finishing menu/);
+  assert.match(checkpoint, /workflow-state transition delivery-complete/);
+
+  const verificationLoop = readSkill("codex-verification-loop");
+  assert.match(verificationLoop, /workflow-state transition verification-retry/);
+  assert.match(verificationLoop, /workflow-state transition verification-gap-accepted/);
+  assert.match(verificationLoop, /mutually exclusive/i);
+
+  const completion = readSkill("verification-before-completion");
+  assert.match(completion, /workflow-state transition checkpoint-ready/);
+  assert.match(completion, /workflow-state transition delivery-complete/);
 
   const evidence = readSkill("codex-evidence-capture");
   assert.match(evidence, /Direct product use can count as product evidence/);
@@ -243,16 +335,18 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(contextBudget, /next action and verification evidence/);
   assert.match(contextBudget, /repeated re-fetches/);
 
-  const wayfinder = readSkill("codex-wayfinder");
-  assert.match(wayfinder, /## Destination/);
-  assert.match(wayfinder, /## Decisions So Far/);
-  assert.match(wayfinder, /## Frontier/);
-  assert.match(wayfinder, /## Fog/);
-  assert.match(wayfinder, /## Out Of Scope/);
-  assert.match(wayfinder, /never resolve more than one frontier ticket per session/i);
-  assert.match(wayfinder, /Research|Prototype|Grilling|Task/);
-  assert.match(wayfinder, /HITL|AFK/);
-  assert.match(wayfinder, /local Markdown/);
+  const wayfinderSkill = readSkill("codex-wayfinder");
+  assert.match(wayfinderSkill, /## Destination/);
+  assert.match(wayfinderSkill, /## Decisions So Far/);
+  assert.match(wayfinderSkill, /## Frontier/);
+  assert.match(wayfinderSkill, /## Fog/);
+  assert.match(wayfinderSkill, /## Out Of Scope/);
+  assert.match(wayfinderSkill, /Default to resolving one frontier ticket per session/i);
+  assert.match(wayfinderSkill, /bounded parallel exploration/i);
+  assert.match(wayfinderSkill, /Research|Prototype|Grilling|Task/);
+  assert.match(wayfinderSkill, /HITL|AFK/);
+  assert.match(wayfinderSkill, /local Markdown/);
+  assert.match(wayfinderSkill, /docs\/codex\/wayfinder\/prototypes/);
 
   const agentAudit = readSkill("codex-agent-architecture-audit");
   assert.match(agentAudit, /wrapper regression/i);

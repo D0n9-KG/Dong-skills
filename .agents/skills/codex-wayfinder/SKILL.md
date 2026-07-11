@@ -18,9 +18,25 @@ Use this skill only when all are true:
 
 If the route is already clear enough to specify, use `brainstorming` and `writing-plans` instead.
 
+Before creating or resuming the active map, confirm the workflow is in the formal Wayfinder phase. When it is not already `wayfinding`, run:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start
+```
+
+Do not start Wayfinder by directly editing `workflow-state.yaml`.
+
 ## Canonical Map
 
-Create one local Markdown map at `docs/codex/wayfinder/<slug>.md`. Link it from `.codex-context/current-state.md` and `artifact-index.md`. The map is the canonical index; detailed research or prototypes live in linked files.
+Create one local Markdown map at `docs/codex/wayfinder/<slug>.md`. Record the active map in `.codex-context/current-state.md` with this exact machine-readable marker and link it from `artifact-index.md`:
+
+```markdown
+当前 Wayfinder: [<name>](docs/codex/wayfinder/<slug>.md)
+```
+
+The map is the canonical index; detailed research or prototypes live in linked files. The recovery evaluator accepts the equivalent `Active Wayfinder:` label and plain paths, but new records should use the Chinese marker above.
+
+Keep linked research and disposable prototype artifacts under `docs/codex/wayfinder/`, with prototypes under `docs/codex/wayfinder/prototypes/`. These paths remain writable as governance evidence before execution approval. Do not place prototype code in product source directories or treat a prototype artifact as approval to execute the destination.
 
 Use this shape:
 
@@ -62,26 +78,34 @@ The frontier contains open, unblocked tickets whose questions are precise now. F
 
 ## Session Rule
 
-Never resolve more than one frontier ticket per session. A session may update the map after resolving that ticket, but it must not silently start a second ticket.
+Default to resolving one frontier ticket per session so route decisions stay reviewable and recoverable. A stronger model may investigate multiple related tickets in parallel only when the tickets share one decision boundary, do not require separate human judgment, and all outputs are reconciled into one map update with explicit evidence and remaining fog. Do not silently start an unrelated second ticket.
 
 For each session:
 
 1. Read Destination, Decisions So Far, Frontier, Fog, and Out Of Scope.
-2. Select one unblocked frontier ticket, preferring the first listed unless the user names another.
+2. Select one unblocked frontier ticket, preferring the first listed unless the user names another. If using bounded parallel exploration, name the related tickets up front and state the single decision boundary they jointly unblock.
 3. Resolve only that question using the ticket's type and mode.
 4. Save evidence in a linked artifact when the result is larger than one paragraph.
 5. Move the resolved ticket into Decisions So Far with a one-line gist.
-6. Add newly precise frontier tickets and blocking edges.
+6. Add newly precise frontier tickets and blocking edges. For bounded parallel exploration, reconcile all parallel results into one Decisions So Far entry or a clearly linked cluster before ending the session.
 7. Promote Fog items only when their question is now precise; remove promoted text from Fog.
 8. Move discoveries beyond the destination into Out Of Scope instead of treating them as route decisions.
 9. Refresh `.codex-context/working-notes.md` and `handoff-summary.md`.
+10. Keep the map's existing `artifact-index.md` entry accurate when its path or role changes. A content-only map update does not require a no-op index edit.
+11. After the map and required context files are current, refresh the recovery hash before Stop or compaction:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state hash --write
+```
 
 ## Exit
 
 Wayfinding ends when no unresolved frontier or actionable Fog remains before the Destination. Then:
 
 1. summarize the stable decisions and evidence
-2. route to `brainstorming` to write and approve the spec
-3. route to `writing-plans` only after the written spec is approved
+2. replace the active marker in `current-state.md` and `handoff-summary.md` with `当前 Wayfinder: 无`
+3. run `node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-complete`
+4. route to `brainstorming` to write and approve the spec
+5. route to `writing-plans` only after the written spec is approved
 
 Do not keep the Wayfinder map alive as a second plan after implementation starts.

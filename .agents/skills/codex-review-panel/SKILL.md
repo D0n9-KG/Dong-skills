@@ -69,7 +69,7 @@ Add conditional lenses only when the diff or plan justifies them:
 6. For the Simplicity lens, use the same tags as `codex-simplicity-review` when applicable: `delete`, `stdlib`, `native`, `yagni`, `shrink`, or `dong-debt`.
 7. For user-content preservation, deletion, overwrite, migration, or cleanup changes, enumerate all destructive paths to the target. Prefer one guard at the shared choke point over per-caller patches, and verify sibling callers cannot bypass it.
 8. Separate actionable findings from residual risks and test gaps.
-9. If fixes are in scope, apply only scoped fixes, run targeted verification, and update `.codex-context/verification.md`.
+9. If accepted findings require project-file edits, run `workflow-state transition review-changes-requested` before editing and use `receiving-code-review` to evaluate and implement only scoped fixes. Then run `execution-complete`, verification, and review again; do not reuse the pre-fix verification result. Findings that change only review records or governance documents may remain in the review phase.
 
 If a finding requires scope, architecture, or UX changes beyond the approved spec/plan, stop implementation and route back to `brainstorming` or `writing-plans`. Do not silently expand scope during review cleanup.
 
@@ -133,5 +133,8 @@ After a meaningful review:
 - update `.codex-context/risks.md` with accepted residual risks
 - update `.codex-context/decisions.md` for accepted or rejected review decisions that affect future work
 - update `.codex-context/plan-progress.md` when review creates follow-up tasks
-- update `.codex-context/verification.md` when fixes or evidence are produced
+- always append a concise `## 审查证据` / `## Review Evidence` entry to `.codex-context/verification.md` with review scope, verdict, blocking findings or explicit none, residual risks, and whether fixes are required
+- use `workflow-state transition review-changes-requested` before project-file fixes, then re-enter verification and review
 - update `.codex-context/workflow-state.yaml` with `workflow-state transition review-complete` after meaningful review passes, or `review-skipped` when a low-risk skip is explicitly recorded
+
+`review-complete` and `review-skipped` require the review evidence to be added after the accepted verification evidence. The workflow hashes the resulting document and rejects delivery if it changes after review closure.

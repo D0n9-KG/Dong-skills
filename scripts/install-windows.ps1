@@ -33,8 +33,39 @@ if (!(Test-Path -LiteralPath $TargetProjectRoot)) {
 }
 
 $trimChars = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
-$resolvedTargetProjectRoot = ([System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $TargetProjectRoot).Path)).TrimEnd($trimChars)
-$resolvedKitRoot = ([System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $kitRoot).Path)).TrimEnd($trimChars)
+
+function Resolve-PhysicalPath {
+  param([string]$PathValue)
+
+  $full = [System.IO.Path]::GetFullPath($PathValue)
+  $root = [System.IO.Path]::GetPathRoot($full)
+  $current = $root.TrimEnd($trimChars)
+  if (!$current) {
+    $current = $root
+  }
+  $relative = $full.Substring($root.Length)
+  foreach ($segment in @($relative -split '[\\/]' | Where-Object { $_ })) {
+    $candidate = Join-Path $current $segment
+    if (Test-Path -LiteralPath $candidate) {
+      $item = Get-Item -LiteralPath $candidate -Force
+      $target = @($item.Target | Where-Object { $_ }) | Select-Object -First 1
+      if ($target) {
+        if (![System.IO.Path]::IsPathRooted([string]$target)) {
+          $target = Join-Path (Split-Path -Parent $candidate) ([string]$target)
+        }
+        $current = [System.IO.Path]::GetFullPath([string]$target).TrimEnd($trimChars)
+      } else {
+        $current = [System.IO.Path]::GetFullPath($candidate).TrimEnd($trimChars)
+      }
+    } else {
+      $current = [System.IO.Path]::GetFullPath($candidate).TrimEnd($trimChars)
+    }
+  }
+  return $current
+}
+
+$resolvedTargetProjectRoot = Resolve-PhysicalPath -PathValue $TargetProjectRoot
+$resolvedKitRoot = Resolve-PhysicalPath -PathValue $kitRoot
 $isKitSelfInstall = [System.String]::Equals($resolvedTargetProjectRoot, $resolvedKitRoot, [System.StringComparison]::OrdinalIgnoreCase)
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -73,6 +104,59 @@ function Get-TreeSha256 {
   $sorted = $entries.ToArray()
   [Array]::Sort($sorted, [System.StringComparer]::Ordinal)
   $payload = if ($sorted.Count -gt 0) { ($sorted -join "`n") + "`n" } else { "" }
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return (($sha.ComputeHash($utf8NoBom.GetBytes($payload)) | ForEach-Object { $_.ToString("x2") }) -join "")
+  } finally {
+    $sha.Dispose()
+  }
+}
+
+function Get-ProjectSkillTreeHashes {
+  param(
+    [string]$SkillsRoot,
+    [object]$Manifest
+  )
+
+  $hashes = [ordered]@{}
+  foreach ($name in @($Manifest.project_skills | Sort-Object)) {
+    $skillRoot = Join-Path $SkillsRoot $name
+    if (!(Test-Path -LiteralPath $skillRoot)) {
+      throw "Missing Dong Skills project skill source: $skillRoot"
+    }
+    $hashes[$name] = Get-TreeSha256 -Directory $skillRoot
+  }
+  return $hashes
+}
+
+function Get-DistributionId {
+  param(
+    [string]$RepositoryRoot,
+    [object]$Manifest
+  )
+
+  $repoRoot = Resolve-PhysicalPath -PathValue $RepositoryRoot
+  $repoManifest = Join-Path $repoRoot "dong-skills.manifest.json"
+  $repoSkills = Join-Path $repoRoot ".agents\skills"
+  $repoProjectOps = Join-Path $repoSkills "codex-codebase-onboarding\assets\project-ops"
+  foreach ($required in @($repoManifest, $repoSkills, $repoProjectOps)) {
+    if (!(Test-Path -LiteralPath $required)) {
+      throw "Cannot compute Dong Skills distribution; missing source: $required"
+    }
+  }
+
+  $entries = New-Object "System.Collections.Generic.List[string]"
+  $entries.Add("manifest`t$(Get-Sha256 -File $repoManifest)")
+  $entries.Add("project-ops`t$(Get-TreeSha256 -Directory $repoProjectOps)")
+  foreach ($name in @($Manifest.project_skills | Sort-Object)) {
+    $skillRoot = Join-Path $repoSkills $name
+    if (!(Test-Path -LiteralPath $skillRoot)) {
+      throw "Cannot compute Dong Skills distribution; missing project skill: $skillRoot"
+    }
+    $entries.Add("project-skill/$name`t$(Get-TreeSha256 -Directory $skillRoot)")
+  }
+
+  $payload = ($entries.ToArray() -join "`n") + "`n"
   $sha = [System.Security.Cryptography.SHA256]::Create()
   try {
     return (($sha.ComputeHash($utf8NoBom.GetBytes($payload)) | ForEach-Object { $_.ToString("x2") }) -join "")
@@ -125,14 +209,14 @@ function Get-NormalizedInstallResourcePaths {
   param([string[]]$ResourcePaths)
 
   return @($ResourcePaths | ForEach-Object {
-    ([System.IO.Path]::GetFullPath($_)).TrimEnd($trimChars).Replace('\', '/').ToLowerInvariant()
+    (Resolve-PhysicalPath -PathValue $_).Replace('\', '/').ToLowerInvariant()
   } | Sort-Object -Unique)
 }
 
 function Get-InstallLockPath {
   param([string]$ResourcePath)
 
-  $normalized = ([System.IO.Path]::GetFullPath($ResourcePath)).TrimEnd($trimChars).Replace('\', '/').ToLowerInvariant()
+  $normalized = (Resolve-PhysicalPath -PathValue $ResourcePath).Replace('\', '/').ToLowerInvariant()
   $sha = [System.Security.Cryptography.SHA256]::Create()
   try {
     $digest = (($sha.ComputeHash($utf8NoBom.GetBytes($normalized)) | ForEach-Object { $_.ToString("x2") }) -join "")
@@ -555,7 +639,8 @@ function Install-ProjectDongSkills {
   param(
     [string]$SourceRoot,
     [string]$ProjectRoot,
-    [object]$Manifest
+    [object]$Manifest,
+    [string]$DistributionId
   )
 
   $targetProjectSkillsRoot = Join-Path $ProjectRoot ".agents\skills"
@@ -617,6 +702,7 @@ function Install-ProjectDongSkills {
     global_entry_skills_required = @($Manifest.global_skills)
     global_bootstrap_skills_required = @($Manifest.global_bootstrap_skills)
     runtime_contract = "project-ops-v2"
+    distribution_id = $DistributionId
     content_receipt = [ordered]@{
       algorithm = "sha256-tree-v1"
       skill_trees = $skillHashes
@@ -624,6 +710,26 @@ function Install-ProjectDongSkills {
     note = "Only installed_skills are managed by Dong Skills in this project. This marker intentionally omits local source paths."
   }
   Write-Utf8Text -File (Join-Path $targetProjectSkillsRoot ".dong-skills-project.json") -Content (($projectMarker | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
+}
+
+function Install-ProjectSkillsSnapshot {
+  param(
+    [string]$SourceRoot,
+    [string]$SnapshotRoot,
+    [object]$Manifest
+  )
+
+  if (Test-Path -LiteralPath $SnapshotRoot) {
+    Remove-Item -LiteralPath $SnapshotRoot -Recurse -Force
+  }
+  New-Item -ItemType Directory -Force -Path $SnapshotRoot | Out-Null
+  foreach ($name in @($Manifest.project_skills)) {
+    $source = Join-Path $SourceRoot $name
+    if (!(Test-Path -LiteralPath $source)) {
+      throw "Missing Dong Skills project skill source: $source"
+    }
+    Copy-Item -LiteralPath $source -Destination (Join-Path $SnapshotRoot $name) -Recurse
+  }
 }
 
 function Get-ManagedRuntimeRelativeFiles {
@@ -683,11 +789,42 @@ function Complete-ProjectInstallReceipt {
   Write-Utf8Text -File $markerFile -Content (($marker | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
 }
 
+function Invoke-WorkflowStateMigration {
+  param([string]$ProjectRoot)
+
+  $workflowScript = Join-Path $ProjectRoot ".codex\scripts\workflow-state.mjs"
+  if (!(Test-Path -LiteralPath $workflowScript)) {
+    throw "Cannot migrate workflow state; helper is missing: $workflowScript"
+  }
+  & node $workflowScript $ProjectRoot migrate | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Dong Skills workflow-state migration failed for $ProjectRoot"
+  }
+}
+
+function Initialize-FreshProjectRecoveryContext {
+  param([string]$ProjectRoot)
+
+  $workflowScript = Join-Path $ProjectRoot ".codex\scripts\workflow-state.mjs"
+  & node $workflowScript $ProjectRoot hash --write | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Dong Skills failed to initialize the workflow handoff hash for $ProjectRoot"
+  }
+
+  $recoveryScript = Join-Path $ProjectRoot ".codex\scripts\context-recovery-eval.mjs"
+  & node $recoveryScript $ProjectRoot | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Dong Skills fresh project context failed recovery validation for $ProjectRoot"
+  }
+}
+
 $manifest = Read-DongSkillsManifest -File $manifestFile
 $globalSkillNames = @($manifest.global_skills)
 $globalBootstrapSkillNames = @($manifest.global_bootstrap_skills)
 $projectSkillNames = @($manifest.project_skills)
-$resolvedTargetSkillsRoot = ([System.IO.Path]::GetFullPath($TargetSkillsRoot)).TrimEnd($trimChars)
+$sourceProjectSkillTrees = Get-ProjectSkillTreeHashes -SkillsRoot $sourceSkillsRoot -Manifest $manifest
+$distributionId = Get-DistributionId -RepositoryRoot $resolvedKitRoot -Manifest $manifest
+$resolvedTargetSkillsRoot = Resolve-PhysicalPath -PathValue $TargetSkillsRoot
 
 foreach ($name in $globalSkillNames) {
   $source = Join-Path $sourceSkillsRoot $name
@@ -798,6 +935,9 @@ foreach ($name in $globalSkillNames) {
   Install-ManagedSkillDirectory -Source $source -DestinationRoot $TargetSkillsRoot -Scope "global-entry"
 }
 
+$projectSkillsSnapshot = Join-Path $resolvedTargetSkillsRoot "codex-codebase-onboarding\assets\project-skills"
+Install-ProjectSkillsSnapshot -SourceRoot $sourceSkillsRoot -SnapshotRoot $projectSkillsSnapshot -Manifest $manifest
+
 $globalSkillHashes = [ordered]@{}
 foreach ($name in $globalSkillNames) {
   $globalSkillHashes[$name] = Get-TreeSha256 -Directory (Join-Path $TargetSkillsRoot $name)
@@ -809,9 +949,11 @@ $sourceMarker = [pscustomobject]@{
   source_backlog = (Join-Path $resolvedKitRoot "docs\improvements\backlog.md")
   installed_at = (Get-Date).ToUniversalTime().ToString("o")
   source_manifest_sha256 = Get-Sha256 -File $manifestFile
+  distribution_id = $distributionId
   global_skills = $globalSkillNames
   global_bootstrap_skills = $globalBootstrapSkillNames
   project_skills = $projectSkillNames
+  project_skill_trees = $sourceProjectSkillTrees
   global_skill_trees = $globalSkillHashes
   note = "Generated by Dong Skills install-windows.ps1. Global install exposes bootstrap/router skills plus global maintenance entries; full workflow skills and hooks are installed per project. Installed skill copies are not the source repo."
 }
@@ -1051,10 +1193,11 @@ function Merge-HooksJson {
 }
 
 if (-not $isKitSelfInstall) {
-  Install-ProjectDongSkills -SourceRoot $sourceSkillsRoot -ProjectRoot $TargetProjectRoot -Manifest $manifest
+  Install-ProjectDongSkills -SourceRoot $sourceSkillsRoot -ProjectRoot $TargetProjectRoot -Manifest $manifest -DistributionId $distributionId
 }
 
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
+$workflowStateExisted = Test-Path -LiteralPath (Join-Path $targetContext "workflow-state.yaml")
 Copy-MissingTreeFiles -From $sourceContext -To $targetContext
 Update-ContextTemplateSections -From $sourceContext -To $targetContext
 Ensure-RuntimeGitignore -ProjectRoot $TargetProjectRoot
@@ -1096,6 +1239,10 @@ if ($isKitSelfInstall) {
 }
 Merge-HooksJson -SourceFile (Join-Path $sourceCodex "hooks.json") -TargetFile (Join-Path $targetCodex "hooks.json")
 if (-not $isKitSelfInstall) {
+  Invoke-WorkflowStateMigration -ProjectRoot $TargetProjectRoot
+  if (-not $workflowStateExisted) {
+    Initialize-FreshProjectRecoveryContext -ProjectRoot $TargetProjectRoot
+  }
   Complete-ProjectInstallReceipt -ProjectRoot $TargetProjectRoot
 }
 

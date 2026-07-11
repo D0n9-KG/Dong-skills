@@ -23,6 +23,8 @@ Use project evidence, not guesses:
 
 Append new entries to the end of `.codex-context/verification.md` under `已运行命令` and `产品证据` when the file uses Chinese headings. Existing English headings `Commands Run` and `Product Evidence` are still valid. `state-prune` keeps the newest entries by file order, so prepending fresh evidence can cause it to be archived by mistake.
 
+Before `verification-pass`, record at least one concrete command, product, or verification result and reduce `尚未验证` / `Not Yet Verified` to an explicit no-gap value. Before `verification-gap-recorded`, record the concrete remaining gap. The workflow stores a SHA-256 hash of the accepted verification document; old evidence from a previous cycle cannot be reused after implementation or review fixes reopen execution.
+
 ```markdown
 ## 已运行命令
 - `[command]`
@@ -47,6 +49,15 @@ When workflow state is available, update it after recording verification:
 - Passing verification: `node .codex/hooks/project-ops.mjs workflow-state transition verification-pass`
 - Explicit unverified gap recorded: `node .codex/hooks/project-ops.mjs workflow-state transition verification-gap-recorded`
 - Failed verification: `node .codex/hooks/project-ops.mjs workflow-state transition verification-fail`
+
+## Decision Closure
+
+`verification-gap-recorded` and `verification-fail` create blocking user decisions. Present mutually exclusive choices and do not continue modifying project files until the user chooses:
+
+- Accept the recorded gap and continue to review: after the matching user response, run `node .codex/hooks/project-ops.mjs workflow-state transition verification-gap-accepted`.
+- Reject the gap or choose another fix-and-verify cycle: after the matching user response, run `node .codex/hooks/project-ops.mjs workflow-state transition verification-retry`, then use `systematic-debugging`.
+
+Run `workflow-state next` after recording the result and follow its `TRANSITIONS` output. Do not treat a vague "continue" as gap acceptance.
 
 ## Completion Rule
 

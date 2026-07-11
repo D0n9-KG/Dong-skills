@@ -26,6 +26,7 @@ const {
   root,
   runHook,
   setWorkflowPhase,
+  syncApprovalHashes,
   skillEvolution,
   sleep,
   solutions,
@@ -37,6 +38,37 @@ const {
   write,
   writeDongProjectSkillsFixture
 } = support;
+
+function copySourceFixture(project) {
+  fs.cpSync(root, project, {
+    recursive: true,
+    filter(source) {
+      const rel = path.relative(root, source).replace(/\\/g, "/");
+      return rel !== ".git" &&
+        !rel.startsWith(".git/") &&
+        rel !== ".codex-context/raw" &&
+        !rel.startsWith(".codex-context/raw/");
+    }
+  });
+  const contextRoot = path.join(project, ".codex-context");
+  if (!fs.existsSync(contextRoot)) return;
+  const pending = [contextRoot];
+  while (pending.length) {
+    const current = pending.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(full);
+        continue;
+      }
+      if (!/\.(?:md|ya?ml|json|jsonl|txt)$/i.test(entry.name)) continue;
+      const text = fs.readFileSync(full, "utf8")
+        .replace(/C:\\Users\\D0n9/gi, "C:\\Users\\[redacted]")
+        .replace(/C:\/Users\/D0n9/gi, "C:/Users/[redacted]");
+      fs.writeFileSync(full, text, "utf8");
+    }
+  }
+}
 
 test("context-budget reports hot warm and cold context paths", () => {
   const project = tempProject();
@@ -169,6 +201,7 @@ Approved by fixture.
 ## Next Step
 Continue.
 `);
+  syncApprovalHashes(project);
 
   const out = execFileSync(process.execPath, [health, project], {
     cwd: root,
@@ -337,6 +370,7 @@ Continue.
 ## 优先重读文件
 - .codex-context/handoff-summary.md
 `);
+  syncApprovalHashes(project);
 
   const out = execFileSync(process.execPath, [health, project], {
     cwd: root,
@@ -349,6 +383,11 @@ Continue.
 test("health check accepts codex-simplicity-review as workflow next skill", () => {
   const project = tempProject();
   readyHealthFixture(project);
+  const verificationFile = path.join(project, ".codex-context", "verification.md");
+  write(verificationFile, "# Verification\n\n## Commands Run\n- Fixture verification passed.\n");
+  const verificationHash = createHash("sha256")
+    .update(fs.readFileSync(verificationFile))
+    .digest("hex");
   write(path.join(project, ".codex-context", "workflow-state.yaml"), `workflow: standard
 task_id: task-1
 task_generation: 1
@@ -363,12 +402,15 @@ execution_approval: approved-traditional
 verify_result: pass
 review_status: pending
 checkpoint_status: pending
+verification_evidence_hash: ${verificationHash}
+review_evidence_hash: none
 resume_phase: none
 resume_skill: none
 handoff_hash: null
 updated_at: fixture
 note: fixture
 `);
+  syncApprovalHashes(project);
 
   const out = execFileSync(process.execPath, [health, project], {
     cwd: root,
@@ -407,6 +449,42 @@ checkpoint_status: pending
     assert.match(String(error.stdout), /workflow-state\.yaml invalid phase: flying/);
     assert.match(String(error.stdout), /workflow-state\.yaml invalid next_skill: freestyle-agent/);
     assert.match(String(error.stdout), /workflow-state\.yaml invalid execution_mode: improvise/);
+  }
+  assert.equal(failed, true);
+});
+
+test("health rejects delivery state without bound verification and review evidence", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  fs.writeFileSync(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: delivery")
+      .replace(/^next_skill:.*$/m, "next_skill: verification-before-completion")
+      .replace(/^verify_result:.*$/m, "verify_result: pass")
+      .replace(/^review_status:.*$/m, "review_status: done")
+      .replace(/^checkpoint_status:.*$/m, "checkpoint_status: pending")
+      .replace(/^handoff_hash:.*$/m, "handoff_hash: null"),
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(project, ".codex-context", "verification.md"),
+    "# Verification\n\n## Commands Run\n- `node --test`: pass.\n\n## Not Yet Verified\n- None.\n\n## Review Evidence\n- Review completed with no blocking findings.\n",
+    "utf8"
+  );
+
+  let failed = false;
+  try {
+    execFileSync(process.execPath, [health, project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failed = true;
+    assert.match(String(error.stdout), /requires verification_evidence_hash/);
+    assert.match(String(error.stdout), /requires review_evidence_hash/);
   }
   assert.equal(failed, true);
 });
@@ -563,6 +641,85 @@ test("health check rejects Windows encoded commands that do not invoke project h
   assert.equal(failed, true);
 });
 
+test("health reports missing runtime support as a structured partial-upgrade failure", () => {
+  const project = tempProject();
+  copySourceFixture(project);
+  fs.rmSync(path.join(project, ".codex", "scripts", "lib", "runtime.mjs"), { force: true });
+
+  let output = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [path.join(project, "scripts", "project-ops-health.mjs"), project], {
+      cwd: project,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    output = String(error.stdout || "");
+    return /Result: fail/.test(output);
+  });
+  assert.match(output, /hook runtime support is missing/i);
+  assert.match(output, /Recent hook liveness: unavailable/i);
+});
+
+test("health reports workflow API mismatch as a structured partial-upgrade failure", () => {
+  const project = tempProject();
+  copySourceFixture(project);
+  const workflowFile = path.join(project, ".codex", "scripts", "lib", "workflow.mjs");
+  write(
+    workflowFile,
+    fs.readFileSync(workflowFile, "utf8").replace(
+      "export function planLoopReviewFromMarkdown",
+      "function planLoopReviewFromMarkdown"
+    )
+  );
+
+  let output = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [path.join(project, "scripts", "project-ops-health.mjs"), project], {
+      cwd: project,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    output = String(error.stdout || "");
+    return /Result: fail/.test(output);
+  });
+  assert.match(output, /workflow runtime|workflow API|export|parity/i);
+});
+
+test("source health detects bootstrap hooks configuration drift", () => {
+  const project = tempProject();
+  copySourceFixture(project);
+  git(project, ["init"]);
+  const assetHooks = path.join(
+    project,
+    ".agents",
+    "skills",
+    "codex-codebase-onboarding",
+    "assets",
+    "project-ops",
+    ".codex",
+    "hooks.json"
+  );
+  const config = readJson(assetHooks);
+  delete config.hooks.PreToolUse;
+  write(assetHooks, JSON.stringify(config, null, 2));
+
+  let output = "";
+  assert.throws(() => {
+    execFileSync(process.execPath, [path.join(project, "scripts", "project-ops-health.mjs"), project], {
+      cwd: project,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => {
+    output = String(error.stdout || "");
+    return /Result: fail/.test(output);
+  });
+  assert.match(output, /\.codex[\\/]hooks\.json/i);
+  assert.match(output, /parity/i);
+});
+
 test("source release check fails when the test suite is missing", () => {
   const project = tempProject();
   fs.cpSync(root, project, {
@@ -592,13 +749,7 @@ test("release check skips directory junctions without crashing", () => {
   if (process.platform !== "win32") return;
   const project = tempProject();
   const external = tempProject();
-  fs.cpSync(root, project, {
-    recursive: true,
-    filter(source) {
-      const rel = path.relative(root, source).replace(/\\/g, "/");
-      return rel !== ".git" && !rel.startsWith(".git/");
-    }
-  });
+  copySourceFixture(project);
   git(project, ["init"]);
   fs.symlinkSync(external, path.join(project, "linked-dir"), "junction");
   const out = execFileSync(process.execPath, [path.join(project, "scripts", "release-check.mjs"), project], {

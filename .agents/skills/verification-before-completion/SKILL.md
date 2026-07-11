@@ -71,3 +71,16 @@ Append fresh entries to `.codex-context/verification.md`:
 - If blocked: state the blocker and the next useful verification step.
 
 Never let confident wording exceed the evidence.
+
+## Workflow Closure
+
+Fresh evidence is necessary but does not by itself complete the workflow. When workflow state is installed:
+
+1. In `review`, finish review or return accepted fixes through `review-changes-requested`.
+2. In `delivery`, run `node .codex/hooks/project-ops.mjs workflow-state transition checkpoint-ready` only after verification and review evidence are valid.
+3. In `handoff`, complete or explicitly defer the checkpoint with `codex-git-checkpoint`.
+4. After checkpoint evidence is recorded, run `node .codex/hooks/project-ops.mjs workflow-state transition delivery-complete`.
+
+Do not claim final delivery while the workflow remains in `verification`, `review`, `delivery`, or `handoff`.
+
+Workflow closure checks `verification_evidence_hash` and `review_evidence_hash` against the current `.codex-context/verification.md`. Missing evidence, reused pre-review content, or edits after review closure must return to the appropriate verification/review phase instead of being waived in prose.

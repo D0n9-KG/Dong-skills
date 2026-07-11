@@ -7,6 +7,16 @@ description: Use when receiving review feedback before implementing suggestions,
 
 Treat review feedback as technical input to evaluate, not as orders to follow blindly.
 
+## Workflow Gate
+
+If review, delivery, or handoff findings require project-file edits, enter this skill through:
+
+```powershell
+node .codex/hooks/project-ops.mjs workflow-state transition review-changes-requested
+```
+
+This reopens implementation in `debugging`, resets stale verification/review/checkpoint evidence, and preserves the approved scope. Do not edit project files while workflow state still says `review`, `delivery`, or `handoff`.
+
 ## Response Pattern
 
 1. Read all feedback before changing code.
@@ -43,4 +53,5 @@ After addressing review:
 
 - Update `.codex-context/verification.md`.
 - Update `.codex-context/decisions.md` for accepted or rejected review decisions.
+- Run `workflow-state transition execution-complete`, then complete verification and review again.
 - Use `verification-before-completion` before claiming the review is resolved.

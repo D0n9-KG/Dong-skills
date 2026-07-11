@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { readText } from "./core.mjs";
 import { hasHeading, meaningful, sectionContent } from "./markdown.mjs";
+import { writeRecoveryReceipt } from "./runtime.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 import { workflowStatus } from "./workflow.mjs";
 
@@ -18,6 +19,27 @@ function firstMeaningfulSection(markdown, headings) {
   return "";
 }
 
+function meaningfulDocumentBody(markdown) {
+  const body = String(markdown || "")
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*#{1,6}\s+/.test(line))
+    .join("\n");
+  return meaningful(body);
+}
+
+function normalizeWayfinderReference(value) {
+  let reference = String(value || "").trim();
+  if (reference.startsWith("`") && reference.endsWith("`")) {
+    reference = reference.slice(1, -1).trim();
+  }
+  if (/^(?:none|not active|inactive|closed|无|暂无|未启用|已完成)[。.]?$/i.test(reference)) {
+    return "";
+  }
+  const markdownLink = reference.match(/^\[[^\]]+\]\(([^)]+)\)$/);
+  if (markdownLink) reference = markdownLink[1].trim();
+  return reference;
+}
+
 function activeWayfinderReference(ctx) {
   const sources = [
     readText(path.join(ctx, REQUIRED_FILES.current)),
@@ -25,7 +47,7 @@ function activeWayfinderReference(ctx) {
   ];
   for (const source of sources) {
     const match = source.match(/(?:^|\n)\s*(?:[-*]\s*)?(?:Active Wayfinder|当前 Wayfinder)\s*:\s*`?([^`\r\n]+)`?/i);
-    if (match) return match[1].trim();
+    if (match) return normalizeWayfinderReference(match[1]);
   }
   return "";
 }
@@ -44,10 +66,22 @@ export function activeWayfinderStatus(root, ctx) {
   if (issues.length === 0 && !meaningful(markdown)) {
     issues.push(`active Wayfinder file is empty: ${reference}`);
   } else {
+    const sections = {};
     for (const heading of ["Destination", "Decisions So Far", "Frontier", "Fog", "Out Of Scope"]) {
       if (!hasHeading(markdown, heading)) {
         issues.push(`active Wayfinder missing heading: ${heading}`);
+      } else {
+        sections[heading] = sectionContent(markdown, heading);
       }
+    }
+    for (const heading of ["Destination", "Decisions So Far", "Out Of Scope"]) {
+      if (hasHeading(markdown, heading) && !meaningful(sections[heading])) {
+        issues.push(`active Wayfinder section is empty: ${heading}`);
+      }
+    }
+    if (hasHeading(markdown, "Frontier") && hasHeading(markdown, "Fog") &&
+        !meaningful(sections.Frontier) && !meaningful(sections.Fog)) {
+      issues.push("active Wayfinder requires meaningful Frontier or Fog content");
     }
   }
   return {
@@ -100,6 +134,10 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
   const spec = readText(path.join(ctx, REQUIRED_FILES.spec));
   const verification = readText(path.join(ctx, REQUIRED_FILES.verification));
   const wayfinder = activeWayfinderStatus(root, ctx);
+  const wayfinderPhaseOk = wayfinder.active
+    ? state.phase === "wayfinding"
+    : state.phase !== "wayfinding";
+  const preImplementation = ["discovery", "wayfinding", "brainstorming", "spec", "planning"].includes(state.phase);
 
   const probes = [
     {
@@ -136,12 +174,12 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
     },
     {
       id: "decisions",
-      ok: meaningful(decisions),
+      ok: meaningfulDocumentBody(decisions),
       detail: "decisions.md"
     },
     {
       id: "risks-boundaries",
-      ok: meaningful(risks) || meaningful(firstMeaningfulSection(spec, ["Non-Goals", "Out Of Scope"])),
+      ok: meaningfulDocumentBody(risks) || meaningful(firstMeaningfulSection(spec, ["Non-Goals", "Out Of Scope"])),
       detail: "risks.md or spec boundaries"
     },
     {
@@ -154,12 +192,20 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
     {
       id: "verification-evidence",
       ok: meaningful(firstMeaningfulSection(verification, ["Commands Run", "Verification Evidence", "Not Yet Verified"])),
-      detail: "verification.md"
+      detail: preImplementation
+        ? "verification.md with explicit pre-implementation status"
+        : "verification.md"
     },
     {
       id: "active-wayfinder",
-      ok: wayfinder.ok,
-      detail: wayfinder.active ? (wayfinder.ok ? wayfinder.reference : wayfinder.issues.join("; ")) : "not active"
+      ok: wayfinder.ok && wayfinderPhaseOk,
+      detail: !wayfinder.ok
+        ? wayfinder.issues.join("; ")
+        : (!wayfinderPhaseOk
+            ? (wayfinder.active
+                ? `active Wayfinder requires phase=wayfinding, got ${state.phase}`
+                : "phase=wayfinding requires an active Wayfinder")
+            : (wayfinder.active ? wayfinder.reference : "not active"))
     }
   ];
 
@@ -184,4 +230,12 @@ export function formatRecoveryEvaluation(result) {
     "",
     result.ok ? "Result: pass" : "Result: fail"
   ].join("\n");
+}
+
+export function acknowledgeRecovery(root, ctx = path.join(root, ".codex-context"), sessionKey = "") {
+  const workflow = workflowStatus(root, ctx);
+  if (!workflow.ok) {
+    throw new Error(`Cannot acknowledge context recovery: ${workflow.issues.join("; ")}`);
+  }
+  return writeRecoveryReceipt(root, ctx, workflow.state, sessionKey);
 }

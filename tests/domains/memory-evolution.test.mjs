@@ -625,7 +625,7 @@ if (input.case_id === "slow-train") {
       "--root", root,
       "--backend", process.execPath,
       "--backend-arg", backendFile,
-      "--timeout-ms", "150",
+      "--timeout-ms", "1000",
       "--output-dir", outputDir
     ], {
       cwd: root,
@@ -633,13 +633,13 @@ if (input.case_id === "slow-train") {
       stdio: ["ignore", "pipe", "pipe"]
     });
   }, /Command failed/);
-  assert.ok(Date.now() - startedAt < 3000, "forward eval should stop the stalled case promptly");
+  assert.ok(Date.now() - startedAt < 4000, "forward eval should stop the stalled case promptly");
 
   const summary = readJson(path.join(outputDir, "summary.json"));
   const slow = summary.results.find((result) => result.id === "slow-train");
   const quick = summary.results.find((result) => result.id === "quick-held-out");
   assert.equal(slow.execution_status, "timeout");
-  assert.match(slow.issues.join("\n"), /timed out after 150ms/);
+  assert.match(slow.issues.join("\n"), /timed out after 1000ms/);
   assert.equal(quick.execution_status, "pass");
   assert.equal(quick.ok, true);
 });

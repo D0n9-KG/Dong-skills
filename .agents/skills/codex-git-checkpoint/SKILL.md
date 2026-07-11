@@ -133,6 +133,10 @@ If work is not ready to commit, record the reason instead of pretending the arch
 
 When workflow state is available, run `workflow-state transition checkpoint-done` after a successful checkpoint, or `workflow-state transition checkpoint-deferred` after recording a deferred reason.
 
+`workflow-state transition checkpoint-ready` is only the final delivery-to-handoff transition after verification and review are complete. Do not use it for execution-phase milestone commits; milestone checkpoints record `checkpoint-done` or `checkpoint-deferred` without changing the active phase.
+
+For final delivery, complete the state sequence instead of leaving the project in `handoff`: run `checkpoint-ready`, perform or intentionally defer the final checkpoint, record `checkpoint-done` or `checkpoint-deferred`, then run `node .codex/hooks/project-ops.mjs workflow-state transition delivery-complete`. `delivery-complete` is valid only after verification, review, and checkpoint evidence satisfy the workflow validator.
+
 ## Checkpoint Finalize Tail
 
 After a real commit, do not create an endless "commit changed handoff, then handoff changed because commit changed" loop.

@@ -184,7 +184,14 @@ Fixture investigation notes.
 - None.
 `);
   write(path.join(ctx, "learned-instincts.md"), "# Learned Instincts\n\n## Raw Observation Review\n- Last reviewed raw observations: now.\n");
+  const approvedSpecHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(ctx, "spec.md")))
+    .digest("hex");
+  const approvedPlanHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(ctx, "plan-progress.md")))
+    .digest("hex");
   write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
+work_lane: lane-1
 task_id: task-1
 task_generation: 1
 phase: execution
@@ -193,6 +200,8 @@ auto_next: true
 decision_required: none
 spec_status: approved
 plan_status: approved
+approved_spec_hash: ${approvedSpecHash}
+approved_plan_hash: ${approvedPlanHash}
 execution_mode: traditional
 execution_approval: approved-traditional
 verify_result: pending
@@ -254,7 +263,7 @@ function readyHealthFixture(projectRoot) {
   const ctx = path.join(projectRoot, ".codex-context");
   writeDongProjectSkillsFixture(projectRoot);
   const hooks = {};
-  for (const eventName of ["SessionStart", "UserPromptSubmit", "PostToolUse", "PreCompact", "PostCompact", "Stop"]) {
+  for (const eventName of ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PreCompact", "PostCompact", "SubagentStart", "SubagentStop", "Stop"]) {
     hooks[eventName] = [{ hooks: [{ command: "node .codex/hooks/project-ops.mjs" }] }];
   }
 
@@ -382,6 +391,18 @@ Fixture investigation notes.
 - None.
 `);
 
+  write(path.join(ctx, "decisions.md"), `# Decisions
+
+## Active Decisions
+- Use the fixture workflow state as the source of truth for this test.
+`);
+
+  write(path.join(ctx, "risks.md"), `# Risks
+
+## Active Risks
+- Keep fixture mutations isolated to the temporary project.
+`);
+
   write(path.join(ctx, "worktree-state.md"), `# Worktree State
 
 ## Current Workspace
@@ -403,7 +424,14 @@ Fixture investigation notes.
 - Re-detect before cleanup.
 `);
 
+  const approvedSpecHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(ctx, "spec.md")))
+    .digest("hex");
+  const approvedPlanHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(ctx, "plan-progress.md")))
+    .digest("hex");
   write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
+work_lane: lane-1
 task_id: task-1
 task_generation: 1
 phase: execution
@@ -412,6 +440,8 @@ auto_next: true
 decision_required: none
 spec_status: approved
 plan_status: approved
+approved_spec_hash: ${approvedSpecHash}
+approved_plan_hash: ${approvedPlanHash}
 execution_mode: traditional
 execution_approval: approved-traditional
 verify_result: pending
@@ -464,15 +494,26 @@ Continue.
 }
 
 function setWorkflowPhase(projectRoot, phase, nextSkill = "brainstorming") {
+  const ctx = path.join(projectRoot, ".codex-context");
+  const specStatus = phase === "brainstorming" || phase === "spec" ? "living-draft" : "approved";
+  const approvedSpecHash = specStatus === "approved"
+    ? createHash("sha256").update(fs.readFileSync(path.join(ctx, "spec.md"))).digest("hex")
+    : "none";
+  const approvedPlanHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(ctx, "plan-progress.md")))
+    .digest("hex");
   write(path.join(projectRoot, ".codex-context", "workflow-state.yaml"), `workflow: standard
+work_lane: lane-1
 task_id: task-1
 task_generation: 1
 phase: ${phase}
 next_skill: ${nextSkill}
 auto_next: true
 decision_required: none
-spec_status: ${phase === "brainstorming" || phase === "spec" ? "living-draft" : "approved"}
+spec_status: ${specStatus}
 plan_status: approved
+approved_spec_hash: ${approvedSpecHash}
+approved_plan_hash: ${approvedPlanHash}
 execution_mode: traditional
 execution_approval: approved-traditional
 verify_result: pending
@@ -495,6 +536,33 @@ note: fixture
     );
     write(specFile, spec);
   }
+}
+
+function syncApprovalHashes(projectRoot) {
+  const ctx = path.join(projectRoot, ".codex-context");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  let state = fs.readFileSync(stateFile, "utf8");
+  const specStatus = state.match(/^spec_status:\s*(.+)$/m)?.[1]?.trim() || "not-started";
+  const planStatus = state.match(/^plan_status:\s*(.+)$/m)?.[1]?.trim() || "not-started";
+  const executionApproval = state.match(/^execution_approval:\s*(.+)$/m)?.[1]?.trim() || "pending";
+  const specHash = specStatus === "approved"
+    ? createHash("sha256").update(fs.readFileSync(path.join(ctx, "spec.md"))).digest("hex")
+    : "none";
+  const planHash = planStatus === "approved" &&
+      ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(executionApproval)
+    ? createHash("sha256").update(fs.readFileSync(path.join(ctx, "plan-progress.md"))).digest("hex")
+    : "none";
+
+  for (const [field, value] of [
+    ["approved_spec_hash", specHash],
+    ["approved_plan_hash", planHash]
+  ]) {
+    const pattern = new RegExp(`^${field}:.*$`, "m");
+    state = pattern.test(state)
+      ? state.replace(pattern, `${field}: ${value}`)
+      : state.replace(/^plan_status:.*$/m, (line) => `${line}\n${field}: ${value}`);
+  }
+  write(stateFile, state);
 }
 
 function backdateContextFiles(projectRoot, names) {
@@ -533,6 +601,7 @@ export {
   root,
   runHook,
   setWorkflowPhase,
+  syncApprovalHashes,
   skillForwardEval,
   skillEvolution,
   sleep,

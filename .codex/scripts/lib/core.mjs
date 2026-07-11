@@ -7,13 +7,49 @@ export function readStdinJson() {
   if (!input) return {};
   try {
     return JSON.parse(input);
-  } catch {
-    return {};
+  } catch (error) {
+    throw new Error(`Invalid hook input JSON: ${error.message}`);
   }
+}
+
+export function validateHookInput(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("Hook input must be a JSON object");
+  }
+  const eventName = String(input.hook_event_name || "").trim();
+  if (!eventName) throw new Error("Hook input requires hook_event_name");
+
+  if (eventName === "PreToolUse") {
+    const name = String(input.tool_name || input.toolName || input.tool || input.name || "").trim();
+    if (!name) throw new Error("PreToolUse requires tool_name");
+  }
+  if (eventName === "SubagentStart" || eventName === "SubagentStop") {
+    const agentId = String(input.agent_id || input.agentId || "").trim();
+    if (!agentId) throw new Error(`${eventName} requires agent_id`);
+  }
+  return input;
 }
 
 export function writeJson(obj) {
   process.stdout.write(`${JSON.stringify(obj)}\n`);
+}
+
+export function writeTextAtomic(file, text) {
+  const directory = path.dirname(file);
+  const temp = path.join(
+    directory,
+    `.${path.basename(file)}.${process.pid}.${process.hrtime.bigint()}.tmp`
+  );
+  fs.mkdirSync(directory, { recursive: true });
+  try {
+    fs.writeFileSync(temp, String(text), "utf8");
+    fs.renameSync(temp, file);
+  } catch (error) {
+    try {
+      fs.rmSync(temp, { force: true });
+    } catch {}
+    throw error;
+  }
 }
 
 export function gitRoot(cwd) {
