@@ -1719,6 +1719,11 @@ export function workflowContextHash(root, ctx, write = false) {
   if (write) {
     withWorkflowStateLock(root, contextDir, () => {
       const state = loadWorkflowState(root, contextDir);
+      if (state.handoff_hash === combined &&
+          state.handoff_task_id === state.task_id &&
+          String(state.handoff_task_generation) === String(state.task_generation)) {
+        return;
+      }
       saveWorkflowStateUnlocked(root, contextDir, {
         ...state,
         handoff_hash: combined,

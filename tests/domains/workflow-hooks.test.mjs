@@ -303,7 +303,16 @@ test("workflow-state exposes deterministic transition, next, recover, and hash c
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /CONTEXT_HASH: [a-f0-9]{64}/);
-  assert.match(fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8"), /handoff_hash: [a-f0-9]{64}/);
+  const workflowFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  assert.match(fs.readFileSync(workflowFile, "utf8"), /handoff_hash: [a-f0-9]{64}/);
+  const firstHashMtime = fs.statSync(workflowFile).mtimeMs;
+  sleep(1200);
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.equal(fs.statSync(workflowFile).mtimeMs, firstHashMtime);
 });
 
 test("project hook forwards workflow-state commands", () => {
@@ -3096,6 +3105,213 @@ test("read-only workflow inspection and verification commands bypass mutation ap
     });
     assert.deepEqual(output, {}, `${command} should remain read-only without tool_use_id`);
   }
+});
+
+test("compound read-only diagnostics bypass recovery and mutation gates", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, { hook_event_name: "SessionStart", session_id: "compound-read", source: "resume" });
+
+  for (const command of [
+    "Get-Content .codex-context/handoff-summary.md; git status --short; node .codex/hooks/project-ops.mjs health-check",
+    "node .codex/hooks/project-ops.mjs context-recovery-eval; Get-Content .codex-context/workflow-state.yaml; git status --short"
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "PreToolUse",
+      session_id: "compound-read",
+      tool_name: "shell_command",
+      tool_input: { command }
+    });
+    assert.deepEqual(output, {}, `${command} should remain a read-only diagnostic compound`);
+  }
+
+  const nestedMutation = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "compound-read",
+    tool_name: "shell_command",
+    tool_use_id: "compound-nested-mutation",
+    tool_input: {
+      command: "Get-Content README.md $(Remove-Item work.txt); git status --short"
+    }
+  });
+  assert.equal(nestedMutation.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(nestedMutation.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+});
+
+test("closure maintenance does not create a second Stop freshness cycle", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project, `- Latest commit: baseline
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: user explicitly requested no commit and no push
+- Next checkpoint: only after a new user request
+`);
+  write(path.join(project, "work.txt"), "before\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const mutation = {
+    tool_name: "apply_patch",
+    tool_use_id: "closure-project-mutation",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...mutation });
+  write(path.join(project, "work.txt"), "after\n");
+  runHook(project, { hook_event_name: "PostToolUse", ...mutation, tool_response: { is_error: false } });
+
+  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+    const refresh = {
+      tool_name: "apply_patch",
+      tool_use_id: `closure-refresh-${name}`,
+      tool_input: { patch: `*** Begin Patch\n*** Update File: .codex-context/${name}\n*** End Patch` }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...refresh });
+    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Refreshed ${name}.\n`, "utf8");
+    runHook(project, { hook_event_name: "PostToolUse", ...refresh, tool_response: { is_error: false } });
+  }
+
+  sleep(1200);
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
+  sleep(1200);
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
+});
+
+test("workflow hash maintenance preserves completed freshness evidence", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project, `- Latest commit: baseline
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: user explicitly requested no commit and no push
+- Next checkpoint: only after a new user request
+`);
+  write(path.join(project, "work.txt"), "before\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], { cwd: root, stdio: "ignore" });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], { cwd: root, stdio: "ignore" });
+
+  const mutation = {
+    tool_name: "apply_patch",
+    tool_use_id: "hash-project-mutation",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...mutation });
+  write(path.join(project, "work.txt"), "after\n");
+  runHook(project, { hook_event_name: "PostToolUse", ...mutation, tool_response: { is_error: false } });
+
+  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+    const refresh = {
+      tool_name: "apply_patch",
+      tool_use_id: `hash-refresh-${name}`,
+      tool_input: { patch: `*** Begin Patch\n*** Update File: .codex-context/${name}\n*** End Patch` }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...refresh });
+    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Refreshed ${name}.\n`, "utf8");
+    runHook(project, { hook_event_name: "PostToolUse", ...refresh, tool_response: { is_error: false } });
+  }
+
+  const hashInput = {
+    tool_name: "shell_command",
+    tool_use_id: "hash-closure-action",
+    tool_input: { command: "node .codex/hooks/project-ops.mjs workflow-state hash --write" }
+  };
+  assert.deepEqual(runHook(project, { hook_event_name: "PreToolUse", ...hashInput }), {});
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], { cwd: root, stdio: "ignore" });
+  assert.deepEqual(runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...hashInput,
+    tool_response: { exit_code: 0 }
+  }), {});
+  sleep(1200);
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
+});
+
+test("governance-only refreshes do not reopen verification as project mutations", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: verification")
+      .replace(/^next_skill:.*$/m, "next_skill: codex-verification-loop")
+  );
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline verification"]);
+
+  const refresh = {
+    tool_name: "apply_patch",
+    tool_use_id: "verification-governance-refresh",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: .codex-context/current-state.md\n*** End Patch"
+    }
+  };
+  assert.deepEqual(runHook(project, { hook_event_name: "PreToolUse", ...refresh }), {});
+  fs.appendFileSync(
+    path.join(project, ".codex-context", "current-state.md"),
+    "\n- Verification state refreshed.\n",
+    "utf8"
+  );
+  assert.deepEqual(runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...refresh,
+    tool_response: { is_error: false }
+  }), {});
+
+  const state = fs.readFileSync(stateFile, "utf8");
+  assert.match(state, /^phase: verification$/m);
+  assert.match(state, /^next_skill: codex-verification-loop$/m);
+});
+
+test("deferred checkpoint freshness is measured against project mutations only", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  readyState(project, `- Latest commit: not requested
+- Push state: not pushed because the user explicitly deferred commit and push
+- Files included: none
+- Files intentionally left uncommitted: work.txt and .codex-context state files
+- Deferred reason: the user explicitly requested no commit and no push for this task
+- Next checkpoint: only after a new user request
+`);
+  write(path.join(project, "work.txt"), "dirty\n");
+  const handoffFile = path.join(project, ".codex-context", "handoff-summary.md");
+  const projectMutation = new Date(Date.now() - 5000);
+  fs.utimesSync(path.join(project, "work.txt"), projectMutation, projectMutation);
+  const handoffRefresh = new Date(Date.now() - 3000);
+  fs.utimesSync(handoffFile, handoffRefresh, handoffRefresh);
+  const workflowMaintenance = new Date(Date.now() - 1000);
+  fs.utimesSync(
+    path.join(project, ".codex-context", "workflow-state.yaml"),
+    workflowMaintenance,
+    workflowMaintenance
+  );
+
+  const output = runHook(project, { hook_event_name: "Stop" });
+  assert.deepEqual(output, {});
 });
 
 test("unknown tools record real project changes without a pre-execution block", () => {

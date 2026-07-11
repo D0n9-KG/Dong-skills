@@ -571,6 +571,26 @@ function controlPlaneOperation(input, root) {
   const name = normalizedToolName(input);
   if (!/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) return null;
   const command = shellCommandText(input);
+  if (!command) return null;
+  if (/\$\(|<\(|>\(/.test(command)) return null;
+
+  const syntax = shellSyntax(command);
+  if (syntax.redirections.length > 0) return null;
+  if (syntax.segments.length > 1) {
+    const operations = syntax.segments.map((segment) =>
+      readOnlyShellSegment(segment) ? { kind: "read-only" } : singleControlPlaneOperation(segment, root));
+    if (operations.some((operation) => !operation || !["read-only", "recovery"].includes(operation.kind))) {
+      return null;
+    }
+    return operations.some((operation) => operation.kind === "recovery")
+      ? { kind: "recovery", compound: true }
+      : { kind: "read-only", compound: true };
+  }
+
+  return singleControlPlaneOperation(command, root);
+}
+
+function singleControlPlaneOperation(command, root) {
   if (!command || /[;&|`\r\n]/.test(command)) return null;
 
   const match = command.match(/^\s*node(?:\.exe)?\s+(?:"([^"]+)"|'([^']+)'|(\S+))(?:\s+(.*))?\s*$/i);
@@ -824,6 +844,7 @@ function shellSegments(command) {
 }
 
 function readOnlyShellSegment(segment) {
+  if (/\$\(|<\(|>\(/.test(segment)) return false;
   return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
 }
 
@@ -877,7 +898,10 @@ function writeMutationIntent(root, ctx, input, state, controlClass, head) {
     control_class: controlClass,
     pre_head: head || "",
     pre_status_files: preStatusFiles,
-    pre_project_fingerprint: projectChangeFingerprint(root, preStatusFiles),
+    pre_project_fingerprint: projectChangeFingerprint(
+      root,
+      preStatusFiles.filter((file) => !isGovernancePath(file))
+    ),
     baseline_hashes: refreshFileHashes(ctx),
     created_at: new Date().toISOString()
   });
@@ -971,6 +995,9 @@ function toolControlClass(input, root = "") {
 
   if (/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) {
     const command = shellCommandText(input);
+    if (/\$\(\s*(?:rm|remove-item|ri|del|rmdir|drop|truncate)\b/i.test(command)) {
+      return "destructive";
+    }
     if (shellSegments(command).some((segment) =>
       /^(?:rm|remove-item|ri|del|rmdir|drop|truncate)\b|^git\s+(?:reset|clean)\b/i.test(segment))) {
       return "destructive";
@@ -1460,10 +1487,14 @@ export function postToolUse(input, root, ctx) {
     return;
   }
   const beforeFiles = Array.isArray(intent.value?.pre_status_files) ? intent.value.pre_status_files : [];
-  const statusUnchanged = JSON.stringify([...beforeFiles].sort()) === JSON.stringify([...statusResult.files].sort());
+  const beforeProjectFiles = beforeFiles.filter((file) => !isGovernancePath(file));
+  const afterProjectFiles = statusResult.files.filter((file) => !isGovernancePath(file));
+  const statusUnchanged = JSON.stringify([...beforeProjectFiles].sort()) === JSON.stringify([...afterProjectFiles].sort());
   const fingerprintUnchanged = intent.value?.pre_project_fingerprint ===
-    projectChangeFingerprint(root, statusResult.files);
-  const invocationChanged = intent.files.length > 0 || !statusUnchanged || !fingerprintUnchanged;
+    projectChangeFingerprint(root, afterProjectFiles);
+  const invocationChanged = intent.files.some((file) => !isGovernancePath(file)) ||
+    !statusUnchanged ||
+    !fingerprintUnchanged;
   if (["external", "unknown"].includes(controlClass)) {
     if (!intent.exists) {
       return;
@@ -1967,7 +1998,6 @@ export function stop(input, root, ctx) {
   const learning = learningStatus(ctx);
   const allStatusFiles = [...new Set([...changed, ...statusFiles])];
   const latest = latestChangedMtime(root, changed);
-  const checkpointLatest = latestChangedMtime(root, allStatusFiles);
   const assets = assetGovernanceStatus(root, ctx);
   const evidenceRequired = executionEvidenceRequired(state, allStatusFiles);
   const checkpointRequired = checkpointReviewRequired(state, allStatusFiles);
@@ -1977,7 +2007,7 @@ export function stop(input, root, ctx) {
   const checkpointEvidenceLatest = changeState.active &&
     receiptHasRefresh(changeState.value, ctx, REQUIRED_FILES.handoff)
     ? 0
-    : checkpointLatest;
+    : latest;
   const checkpoint = checkpointRequired ? gitCheckpointStatus(root, ctx, checkpointEvidenceLatest) : null;
   const discussion = discussionStateStatus(root, ctx, workflow);
   const statusLatest = Math.max(latest, discussion.latest);
