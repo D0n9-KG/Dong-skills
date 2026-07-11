@@ -82,6 +82,44 @@ test("Windows installer preserves existing UTF-8 Chinese AGENTS.md", () => {
   assert.ok(sourceMarker.global_skills.includes("codex-skill-evolution"));
 });
 
+test("Windows installer preserves existing context facts while restoring missing template files", () => {
+  const project = tempProject();
+  const skillsRoot = path.join(tempProject(), "skills");
+  const installArgs = [
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", installWindows,
+    "-TargetProjectRoot", project,
+    "-TargetSkillsRoot", skillsRoot
+  ];
+
+  execFileSync("powershell.exe", installArgs, {
+    cwd: root,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const verification = path.join(project, ".codex-context", "verification.md");
+  const preserved = [
+    "# 验证",
+    "",
+    "## 已验证",
+    "- 204/204 tests passed.",
+    "",
+    "## Review Evidence",
+    "- Ready; no blocking findings.",
+    ""
+  ].join("\n");
+  write(verification, preserved);
+  const missingTemplate = path.join(project, ".codex-context", "open-questions.md");
+  fs.rmSync(missingTemplate);
+
+  execFileSync("powershell.exe", installArgs, {
+    cwd: root,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.equal(fs.readFileSync(verification, "utf8"), preserved);
+  assert.equal(fs.existsSync(missingTemplate), true);
+});
+
 test("Windows installer removes only managed Dong global skills and preserves non-Dong local skills", () => {
   const project = tempProject();
   const skillsRoot = path.join(tempProject(), "skills");

@@ -990,76 +990,6 @@ function Copy-MissingTreeFiles {
   }
 }
 
-function Get-MarkdownSections {
-  param(
-    [string]$File
-  )
-
-  $content = Read-Utf8Text -File $File
-  $lines = $content -split "\r?\n"
-  $sections = @()
-  $heading = $null
-  $body = @()
-
-  foreach ($line in $lines) {
-    if ($line -match "^##\s+(.+?)\s*$") {
-      if ($heading) {
-        $sections += [pscustomobject]@{
-          Heading = $heading
-          Body = (($body -join [Environment]::NewLine).Trim())
-        }
-      }
-      $heading = $Matches[1]
-      $body = @()
-    } elseif ($heading) {
-      $body += $line
-    }
-  }
-
-  if ($heading) {
-    $sections += [pscustomobject]@{
-      Heading = $heading
-      Body = (($body -join [Environment]::NewLine).Trim())
-    }
-  }
-
-  return $sections
-}
-
-function Update-ContextTemplateSections {
-  param(
-    [string]$From,
-    [string]$To
-  )
-
-  Get-ChildItem -LiteralPath $From -File -Filter "*.md" | ForEach-Object {
-    $target = Join-Path $To $_.Name
-    if (!(Test-Path -LiteralPath $target)) {
-      return
-    }
-
-    $targetContent = Read-Utf8Text -File $target
-    $updated = $targetContent.TrimEnd()
-    $changed = $false
-
-    foreach ($section in Get-MarkdownSections -File $_.FullName) {
-      $pattern = "(?m)^##\s+" + [regex]::Escape($section.Heading) + "\s*$"
-      if (-not [regex]::IsMatch($targetContent, $pattern)) {
-        $updated += "`n`n## $($section.Heading)"
-        if ($section.Body) {
-          $updated += "`n$($section.Body)"
-        }
-        $updated += "`n"
-        $changed = $true
-      }
-    }
-
-    if ($changed) {
-      Write-Utf8Text -File $target -Content ($updated + [Environment]::NewLine)
-    }
-  }
-}
-
 function Ensure-RuntimeGitignore {
   param(
     [string]$ProjectRoot
@@ -1199,7 +1129,6 @@ if (-not $isKitSelfInstall) {
 $targetContext = Join-Path $TargetProjectRoot ".codex-context"
 $workflowStateExisted = Test-Path -LiteralPath (Join-Path $targetContext "workflow-state.yaml")
 Copy-MissingTreeFiles -From $sourceContext -To $targetContext
-Update-ContextTemplateSections -From $sourceContext -To $targetContext
 Ensure-RuntimeGitignore -ProjectRoot $TargetProjectRoot
 
 $targetCodex = Join-Path $TargetProjectRoot ".codex"
