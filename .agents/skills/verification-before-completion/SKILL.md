@@ -76,7 +76,7 @@ Never let confident wording exceed the evidence.
 
 Fresh evidence is necessary but does not by itself complete the workflow. When workflow state is installed:
 
-1. In `review`, finish review or return accepted fixes through `review-changes-requested`.
+1. In `review`, finish review or implement accepted scoped fixes; the first real project mutation automatically reopens old evidence.
 2. In `delivery`, run `node .codex/hooks/project-ops.mjs workflow-state transition checkpoint-ready` only after verification and review evidence are valid.
 3. In `handoff`, complete or explicitly defer the checkpoint with `codex-git-checkpoint`.
 4. After checkpoint evidence is recorded, run `node .codex/hooks/project-ops.mjs workflow-state transition delivery-complete`.

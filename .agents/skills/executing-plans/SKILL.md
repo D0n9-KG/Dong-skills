@@ -120,7 +120,7 @@ Goal mode runtime constraints:
 13. Run the task's verification command or record why it cannot be run.
     - If the command exposes an unexpected bug or regression while planned work remains, update `working-notes.md`, run `workflow-state transition debugging-start`, and use `systematic-debugging`. After the focused reproduction passes, run `workflow-state transition debugging-resolved` and resume the same active task. Do not use `execution-complete` to escape an execution-time debugging detour.
     - If the latest user instruction changes scope, requirements, goals, acceptance criteria, or priority, stop project mutations, run `workflow-state transition brainstorming-start`, and refresh/reapprove the spec and plan. A bare continuation, status question, or learning-only preference does not reopen scope.
-14. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` when workspace state matters.
+14. Update `.codex-context/plan-progress.md`, `.codex-context/artifact-index.md`, `.codex-context/verification.md`, `.codex-context/current-state.md`, and `.codex-context/worktree-state.md` at meaningful task/phase checkpoints, before compaction or pause, and before delivery. Do not interrupt every read, test, or small edit to rewrite all state files.
 15. After a verified meaningful task, use `codex-git-checkpoint` to commit/push a checkpoint or record why the checkpoint is deferred.
 16. Repeat until the plan is complete or a blocker is reached.
 17. When implementation tasks are complete and verification is next, run `node .codex/hooks/project-ops.mjs workflow-state transition execution-complete`.

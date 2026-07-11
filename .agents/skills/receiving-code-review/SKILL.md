@@ -9,13 +9,9 @@ Treat review feedback as technical input to evaluate, not as orders to follow bl
 
 ## Workflow Gate
 
-If review, delivery, or handoff findings require project-file edits, enter this skill through:
+Evaluate the feedback first. When an accepted finding needs a scoped project-file fix, the first real mutation automatically reopens the workflow in `debugging` and resets stale verification/review/checkpoint evidence.
 
-```powershell
-node .codex/hooks/project-ops.mjs workflow-state transition review-changes-requested
-```
-
-This reopens implementation in `debugging`, resets stale verification/review/checkpoint evidence, and preserves the approved scope. Do not edit project files while workflow state still says `review`, `delivery`, or `handoff`.
+Use `workflow-state transition review-changes-requested` only when the state needs to be reopened before any file mutation, for example to hand the fix to another session or agent. Do not use it as mandatory ceremony before every local fix.
 
 ## Response Pattern
 

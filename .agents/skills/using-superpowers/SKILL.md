@@ -100,7 +100,7 @@ For project work, keep this order:
 8. **Verify:** use `codex-verification-loop` or `verification-before-completion` before completion claims.
 9. **Simplicity review:** use `codex-simplicity-review` when a diff or plan may be overbuilt, adds dependencies/abstractions, or the user asks what can be deleted.
 10. **Review:** use `codex-review-panel` or review skills for meaningful implementation, plan, docs, or high-risk changes.
-    If accepted review findings require project-file edits, run `workflow-state transition review-changes-requested`, use `receiving-code-review`, then return through `execution-complete` -> verification -> review. Do not edit in review and reuse the earlier verification result.
+    If accepted review findings require project-file edits, use `receiving-code-review`. A real project mutation in review/delivery/handoff automatically reopens debugging and invalidates old verification/review evidence; then return through `execution-complete` -> verification -> review. Use `review-changes-requested` explicitly only when reopening must be recorded before mutation, such as a cross-session or delegated handoff.
 11. **Asset cleanup:** use `codex-asset-governance` before milestone handoff, compaction, release, or when docs/state/raw/code assets may be stale, duplicated, orphaned, or bloated.
 12. **Checkpoint / handoff:** use `codex-git-checkpoint` and refresh `.codex-context/handoff-summary.md` before long pauses, compaction, delivery, or archive/push.
 
@@ -168,7 +168,7 @@ At a decision point:
 - At phase boundaries: update `.codex-context/workflow-state.yaml` with the phase, `next_skill`, and `decision_required`.
 - During work: keep `plan-progress.md` and `current-state.md` current.
 - Reopening brainstorming/spec or restarting a plan invalidates downstream plan approval, execution approval, verification, review, and checkpoint state. Never carry old approvals or evidence into changed scope.
-- During discussion, discovery, planning, debugging, or substantial exploration: keep `working-notes.md` current with externalized findings, rejected paths, current hypothesis/conclusion, open investigation questions, and next verification step. Do not store hidden chain-of-thought or raw transcripts.
+- During discussion, discovery, planning, debugging, or substantial exploration: keep `working-notes.md` current at meaningful investigation checkpoints, before compaction, and before a pause when new findings would otherwise be lost. A normal read/search call does not by itself create state debt. Do not store hidden chain-of-thought, raw transcripts, secrets, or private reasoning.
 - During Goal mode work: periodically re-read `spec.md` and `plan-progress.md`, compare progress against acceptance criteria, and stop on ambiguity, scope change, repeated verification failure, destructive action, missing user decision, or state contradiction.
 - In or near a worktree: keep `worktree-state.md` current before execution, checkpoint, merge, PR, discard, or cleanup.
 - Before long pauses, compaction, or final response: refresh `handoff-summary.md`.

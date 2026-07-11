@@ -19,6 +19,10 @@
 - `licenses/MATT-POCOCK-SKILLS-LICENSE`: Matt Pocock Skills MIT 许可证。
 
 ## 已修改
+- `.codex/scripts/lib/{events,workflow,recovery-eval}.mjs` 与 bootstrap 镜像：修复 change-state receipt/fingerprint、shell/tool 分类、recovery hash 与 evidence 自动 reopen。
+- `tests/domains/{workflow-hooks,workflow-governance,skills-contracts}.test.mjs`：新增 no-op/commit/连续 mutation、quote-aware shell、PowerShell alias、opaque/unknown 工具、普通 Read、scoped fix 与恢复 hash 回归。
+- `.agents/skills/{codex-project-governance,codex-review-panel,executing-plans,receiving-code-review,requesting-code-review,systematic-debugging,using-superpowers,verification-before-completion}/SKILL.md`：把状态更新移到 meaningful checkpoint，移除每次本地 fix 的额外 ceremony，保留跨 session 显式 reopen。
+- `README.md`、`AGENTS.md`、根/bootstrap `AGENTS.project-ops.snippet.md`：同步 receipt 保留、普通探索无债务与 hooks 边界。
 - `.codex-context/{spec,plan-progress,current-state,working-notes,artifact-index}.md`: hooks 控制面规格、计划、已验证边界和当前执行状态。
 - `.codex/scripts/lib/{events,git,workflow,core,recovery-eval}.mjs`、hooks、health 与 bootstrap 镜像: 修改前门禁、mutation intent、Lane schema、恢复、Stop/Subagent continuation 和 liveness/parity。
 - `.agents/skills/{codex-project-governance,using-superpowers}/SKILL.md`、`README.md`、`AGENTS.md`、根/bootstrap `AGENTS.project-ops.snippet.md`: 当前 hooks 控制面语义和边界。
@@ -48,6 +52,9 @@
 - microsoft/SkillOpt `e4ea6a6`
 
 ## 验证产物
+- 当前完整领域测试：204/204，11 domains，concurrency 4，237.8 秒。
+- 最终 hooks/workflow 两域：104/104，153.2 秒。
+- 当前 release check、health、installer preview、root/bootstrap parity 和 diff check：pass。
 - 宏观修复前完整领域测试：189/189，11 domains，concurrency 4，183.2 秒。
 - 宏观修复后相关四域：112/112；最终完整领域测试待重跑。
 - 当前 source health：pass；static hook configuration 与 root/bootstrap runtime parity 通过，缺少近期 liveness 为 warning。
@@ -63,7 +70,7 @@
 - 临时 bootstrap、安装和错误场景 fixture 位于系统临时目录并已清理。
 
 ## 最新刷新
-2026-07-11：Task 1-7 完成；宏观 review 的三项衔接缺口已修复并通过相关回归，最终完整测试、release、真实安装/bootstrap 和最终 review 待完成。
+2026-07-11：Task 11 完成；hooks wrapper regression 与 receipt/fingerprint 问题已修复，完整测试、release、health、preview、parity 和最终两域复验通过；未提交、未执行真实安装。
 
 ## 已读取 / 已检查
 - 暂无。

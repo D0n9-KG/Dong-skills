@@ -61,7 +61,7 @@ Do not propose a patch until you can state:
 - For an unexpected failure during active plan execution, run `workflow-state transition debugging-start` before implementation edits. This records `systematic-debugging` as the recoverable next skill while preserving the return to `executing-plans`.
 - After the focused reproduction passes, run `workflow-state transition debugging-resolved` and continue the same active plan task.
 - If debugging is interrupted by an external blocker, `blocked` / `resume` returns to debugging without losing the execution return path.
-- Do not use `debugging-resolved` for verification-failure or review-change cycles; those paths return through their existing verification and review transitions.
+- Do not use `debugging-resolved` for verification-failure or review-change cycles; after a real fix, return through `execution-complete`, verification, and review.
 
 ## Evidence Discipline
 

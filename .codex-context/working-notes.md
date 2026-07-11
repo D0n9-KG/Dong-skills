@@ -4,16 +4,16 @@
 记录 hooks 控制面、复杂项目工作流与 GPT 5.6 SOL 适配审查的已验证事实、排除路径和下一步验证；不保存隐藏思维链、原始聊天、密钥或完整日志。
 
 ## Current Findings
-- Task 1-10 已完成并验证；完整领域测试 195/195 通过，health/release/diff/install 均通过。
-- GPT 5.6 SOL 适配已完成：subagent summary 从固定标题改为语义合同；Goal mode 从具体工具名改为真实 goal/workflow 机制；Wayfinder 支持 bounded parallel exploration。
-- 本轮适配没有削弱事实源、审批、恢复、验证、review 或 destructive/action hard gates。
+- 已确认并修复 receipt/fingerprint、连续 mutation 合并、未知执行结果、只读 shell 误判、PowerShell alias 漏判、opaque shell 前置绕过、未知工具后置漏记和探索债务文档漂移。
+- 独立审查提出的 scope 缩减重开、verification build 生成物、缺 `tool_use_id` fail-closed 经主线核实后保留为有意边界。
+- 普通探索、多智能体结果表达和 scoped review/verification fix 不再被旧模板或额外 transition 强制打断。
 
 ## Current Hypothesis
-- 当前 Dong Skills 已足够支撑较复杂项目主路径；继续增加机制的收益低于复杂度成本，除非后续真实项目暴露新反例。
+- 当前 hard gates 已集中在真实风险边界；剩余无法静态判定的任意 shell/MCP 行为由 Git 前后证据和 Stop 闭环补足。
 
 ## Current Conclusion
-- 可投入使用；Dong Skills 当前应作为辅助层，而不是替代 GPT 5.6 的多智能体或工作流能力。
-- 旧项目需要重新 bootstrap 才能获得项目级最新 hooks/runtime。
+- 本轮确认问题已修复并通过 204 项完整领域测试、release check 和最终 104 项 hooks/workflow 复验。
+- 未发现仍会系统性阻碍复杂项目推进的 P0/P1；hooks 仍不是完整安全沙箱。
 
 ## Rejected Paths
 - 不引入第二套多智能体调度器。
@@ -23,13 +23,13 @@
 - 不自动 commit/push。
 
 ## Open Investigation Questions
-- 是否现在提交并推送本轮变更。
+- 用户是否确认提交、推送并同步全局/旧项目安装。
 
 ## Next Verification Step
-提交前再跑 `git status --short` 和必要的轻量 health；如用户要求发布，再执行 commit/push。
+刷新 workflow context hash 后运行最终 health、parity、diff check 和 Git 状态检查。
 
 ## Promotion Notes
-- 2026-07-11: GPT 5.6 SOL 适配完成并验证；完整领域测试 195/195，release check、health、diff check、installer preview、真实安装均通过。
+- 2026-07-11: hooks wrapper regression 修复完成；204/204 domain tests、104/104 hooks/workflow、release check、health、installer preview、parity 和 diff check 通过。
 
 ## 用途
 记录需要跨压缩保留的紧凑外部化调查状态。不要在这里保存隐藏思维链、完整聊天记录、原始日志、密钥或私密推理。

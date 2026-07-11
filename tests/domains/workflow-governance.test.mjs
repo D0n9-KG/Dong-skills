@@ -1373,3 +1373,35 @@ Resolve the active Wayfinder frontier.
   });
   assert.notEqual(allowed.decision, "block");
 });
+
+test("active-session context updates do not invalidate workflow routing", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  fs.appendFileSync(
+    path.join(project, ".codex-context", "current-state.md"),
+    "\n- Same-session progress update.\n",
+    "utf8"
+  );
+
+  const next = execFileSync(process.execPath, [workflowState, project, "next"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.doesNotMatch(next, /saved handoff_hash does not match current workflow context/i);
+
+  assert.throws(
+    () => execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    }),
+    (error) => /saved handoff hash does not match current recovery context/i.test(String(error.stdout || ""))
+  );
+});

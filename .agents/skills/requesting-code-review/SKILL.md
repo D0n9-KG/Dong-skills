@@ -72,6 +72,6 @@ When no project fix remains, finish the review phase explicitly:
 - Normal completion: run `node .codex/hooks/project-ops.mjs workflow-state transition review-complete`.
 - Low-risk Lane 0/1 skip only: record the concrete low-risk reason, confirm verification passed, then run `node .codex/hooks/project-ops.mjs workflow-state transition review-skipped`.
 
-Lane 2/3 cannot use `review-skipped`. If review findings require edits, use `review-changes-requested` instead of either closure transition.
+Lane 2/3 cannot use `review-skipped`. If review findings require edits, implement the accepted scoped fix; the hook reopens old evidence on the first real project mutation.
 
 The closure transition records a content hash of `verification.md`; changing review or verification evidence afterward reopens the delivery gate.

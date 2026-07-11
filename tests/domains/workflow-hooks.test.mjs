@@ -1113,23 +1113,40 @@ test("liveness write failures do not replace the core hook result", () => {
   assert.match(output.hookSpecificOutput?.additionalContext || "", /Codex Project Ops hooks are active/);
 });
 
-test("PostToolUse blocks when artifact index is stale after project file changes", () => {
+test("PostToolUse reminds when artifact index is stale after project file changes", () => {
   const project = tempProject();
   git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project);
   const ctx = path.join(project, ".codex-context");
   const artifactIndex = path.join(ctx, "artifact-index.md");
   write(artifactIndex, "# Artifact Index\n\n## Modified\n- None yet.\n");
+  write(path.join(project, "work.txt"), "baseline\n");
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
   const old = new Date(Date.now() - 20_000);
   fs.utimesSync(artifactIndex, old, old);
+  const tool = {
+    tool_name: "mcp__filesystem__operate",
+    tool_use_id: "artifact-reminder-write",
+    tool_input: { path: "work.txt", content: "changed" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...tool });
   write(path.join(project, "work.txt"), "changed\n");
 
-  const output = runHook(project, { hook_event_name: "PostToolUse" });
-  assert.equal(output.decision, "block");
-  assert.match(output.reason, /artifact-index\.md is not fresh/);
-  assert.match(output.reason, /Hook status:/);
-  assert.match(output.reason, /Actual Git root:/);
-  assert.match(output.reason, /Latest changed file: work\.txt/);
-  assert.match(output.reason, /work\.txt/);
+  const output = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...tool,
+    tool_response: { status: "success" }
+  });
+  assert.notEqual(output.decision, "block");
+  assert.match(output.systemMessage, /artifact-index\.md is not fresh/);
+  assert.match(output.systemMessage, /Hook status:/);
+  assert.match(output.systemMessage, /Actual Git root:/);
+  assert.match(output.systemMessage, /Latest changed file: work\.txt/);
+  assert.match(output.systemMessage, /work\.txt/);
 });
 
 test("PostToolUse uses change receipts when code and artifact mtimes are identical", () => {
@@ -1178,8 +1195,8 @@ test("PostToolUse uses change receipts when code and artifact mtimes are identic
     ...codeInput,
     tool_response: { is_error: false }
   });
-  assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /artifact-index\.md is not fresh/i);
+  assert.notEqual(blocked.decision, "block");
+  assert.match(blocked.systemMessage, /artifact-index\.md is not fresh/i);
 
   const artifactInput = {
     tool_name: "apply_patch",
@@ -1371,7 +1388,7 @@ Ask the next question.
   assert.deepEqual(allowed, {});
 });
 
-test("PostToolUse exploration requires working notes before stopping", () => {
+test("PostToolUse exploration does not create mandatory Stop state debt", () => {
   const project = tempProject();
   readyHealthFixture(project);
   git(project, ["init"]);
@@ -1386,85 +1403,12 @@ test("PostToolUse exploration requires working notes before stopping", () => {
     tool_name: "Read",
     tool_input: { path: "src/runtime.mjs" }
   });
-  assert.match(post.hookSpecificOutput.additionalContext, /marked investigation notes dirty/);
-  assert.match(post.hookSpecificOutput.additionalContext, /working-notes\.md/);
-
-  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
-  assert.equal(marker.source, "PostToolUse");
-  assert.ok(marker.required_files.includes("working-notes.md"));
-  backdateContextFiles(project, ["working-notes.md", "current-state.md", "handoff-summary.md"]);
-
-  const blocked = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /working-notes\.md content has not changed since the latest discussion or investigation marker/);
-
-  write(path.join(project, ".codex-context", "working-notes.md"), `# Working Notes
-
-## Purpose
-Fixture.
-
-## Current Findings
-- Read src/runtime.mjs and found the relevant hook path.
-
-## Current Hypothesis
-- Working notes should unblock Stop.
-
-## Rejected Paths
-- None.
-
-## Open Investigation Questions
-- None.
-
-## Next Verification Step
-- Run Stop hook again.
-
-## Promotion Notes
-- Promote if durable.
-`);
-  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nContinue execution.\n");
-  write(path.join(project, ".codex-context", "handoff-summary.md"), `# Handoff Summary
-
-## Objective
-Working notes fixture.
-
-## Latest User Instruction
-Continue execution.
-
-## Approved Scope / Spec
-Approved.
-
-## Plan Status
-Execution.
-
-## Files Modified
-None.
-
-## Decisions Made
-- Working notes refreshed.
-
-## Verification Evidence
-Stop hook fixture.
-
-## Git Checkpoint
-- Latest commit: fixture
-- Push state: no remote
-- Files included: baseline fixture
-- Files intentionally left uncommitted: working-notes.md, current-state.md, and handoff-summary.md
-- Deferred reason: governance-only fixture refresh
-- Next checkpoint: after the fixture assertion
-
-## Next Action
-Continue.
-
-## Files To Re-read First
-- .codex-context/working-notes.md
-`);
-
-  const allowed = runHook(project, { hook_event_name: "Stop" });
-  assert.deepEqual(allowed, {});
+  assert.deepEqual(post, {});
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "discussion-state.json")), false);
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
 });
 
-test("PostToolUse shell exploration commands require working notes before stopping", () => {
+test("PostToolUse shell exploration commands remain lightweight", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setWorkflowPhase(project, "execution", "executing-plans");
@@ -1474,13 +1418,8 @@ test("PostToolUse shell exploration commands require working notes before stoppi
     tool_name: "functions.shell_command",
     tool_input: { command: "Get-ChildItem -Force" }
   });
-  assert.match(post.hookSpecificOutput.additionalContext, /marked investigation notes dirty/);
-  assert.match(post.hookSpecificOutput.additionalContext, /Required files: working-notes\.md, current-state\.md, handoff-summary\.md/);
-
-  const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
-  assert.equal(marker.source, "PostToolUse");
-  assert.equal(marker.tool_name, "functions.shell_command");
-  assert.ok(marker.required_files.includes("working-notes.md"));
+  assert.deepEqual(post, {});
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "discussion-state.json")), false);
 });
 
 test("workflow-state detects spec and plan approval mismatches", () => {
@@ -1867,7 +1806,7 @@ test("workflow-state rejects commented-out approval headings", () => {
   }, /Command failed/);
 });
 
-test("workflow-state detects a stale handoff hash", () => {
+test("recovery evaluation detects a stale handoff hash without breaking active workflow status", () => {
   const project = tempProject();
   readyHealthFixture(project);
   execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
@@ -1876,13 +1815,19 @@ test("workflow-state detects a stale handoff hash", () => {
     stdio: ["ignore", "pipe", "pipe"]
   });
   write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nChanged after hash.\n");
-  assert.throws(() => {
-    execFileSync(process.execPath, [workflowState, project, "status"], {
+  execFileSync(process.execPath, [workflowState, project, "status"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.throws(
+    () => execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
-    });
-  }, /Command failed/);
+    }),
+    (error) => /saved handoff hash does not match current recovery context/i.test(String(error.stdout || ""))
+  );
 });
 
 test("malformed hook stdin fails visibly instead of silently skipping the event", () => {
@@ -2196,7 +2141,7 @@ test("PreToolUse denies supported mutations until recovery is acknowledged", () 
       command: "node tools/project-ops.mjs workflow-state transition new-task"
     }
   });
-  assert.equal(fakeControlPlane.hookSpecificOutput.permissionDecision, "deny");
+  assert.equal(fakeControlPlane.hookSpecificOutput?.permissionDecision, "deny");
   assert.match(fakeControlPlane.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
 
   const remotePathMutation = runHook(project, {
@@ -2210,6 +2155,15 @@ test("PreToolUse denies supported mutations until recovery is acknowledged", () 
   });
   assert.equal(remotePathMutation.hookSpecificOutput.permissionDecision, "deny");
   assert.match(remotePathMutation.hookSpecificOutput.permissionDecisionReason, /workflow-state\.yaml/i);
+
+  const compoundWriteMutation = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "mcp__filesystem__writefile",
+    tool_use_id: "tool-compound-write",
+    tool_input: { path: "work.txt", content: "changed" }
+  });
+  assert.equal(compoundWriteMutation.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(compoundWriteMutation.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
 
   const readOnly = runHook(project, {
     hook_event_name: "PreToolUse",
@@ -2232,6 +2186,9 @@ test("PreToolUse denies supported mutations until recovery is acknowledged", () 
   for (const command of [
     "git status; Set-Content work.txt changed",
     "Get-Content work.txt | Set-Content copy.txt",
+    "sc work.txt changed",
+    "ni new.txt -ItemType File",
+    "node scripts/generate-output.mjs",
     "git worktree add ../other branch"
   ]) {
     const mutation = runHook(project, {
@@ -2799,7 +2756,21 @@ test("parallel mutation intents in one session remain isolated by tool invocatio
   assert.equal(intentFiles.length, 2);
 });
 
-test("SubagentStart injects lifecycle context and SubagentStop bounds missing summaries", () => {
+test("mutation hooks fail closed when tool_use_id is missing", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const output = runHook(project, {
+    hook_event_name: "PreToolUse",
+    tool_name: "apply_patch",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch"
+    }
+  });
+  assert.equal(output.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(output.hookSpecificOutput.permissionDecisionReason, /tool_use_id.*incomplete/i);
+});
+
+test("SubagentStart injects lifecycle context and SubagentStop grades summary evidence", () => {
   const project = tempProject();
   readyHealthFixture(project);
   git(project, ["init"]);
@@ -2825,8 +2796,9 @@ test("SubagentStart injects lifecycle context and SubagentStop bounds missing su
     stop_hook_active: false,
     last_assistant_message: ""
   });
-  assert.equal(firstStop.decision, "block");
-  assert.match(firstStop.reason, /concise result summary/i);
+  assert.notEqual(firstStop.decision, "block");
+  assert.match(firstStop.systemMessage, /quality warning/i);
+  assert.match(firstStop.systemMessage, /concise result summary/i);
 
   const retry = runHook(project, {
     hook_event_name: "SubagentStop",
@@ -2836,8 +2808,8 @@ test("SubagentStart injects lifecycle context and SubagentStop bounds missing su
     last_assistant_message: ""
   });
   assert.notEqual(retry.decision, "block");
-  assert.match(retry.systemMessage, /subagent result remains incomplete/i);
-  assert.match(retry.systemMessage, /must not be used as completion or verification evidence/i);
+  assert.match(retry.systemMessage, /quality warning/i);
+  assert.match(retry.systemMessage, /do not use it as completion or verification evidence/i);
 
   const meaningless = runHook(project, {
     hook_event_name: "SubagentStop",
@@ -2846,8 +2818,8 @@ test("SubagentStart injects lifecycle context and SubagentStop bounds missing su
     stop_hook_active: false,
     last_assistant_message: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   });
-  assert.equal(meaningless.decision, "block");
-  assert.match(meaningless.reason, /evidence|risks|next action/i);
+  assert.notEqual(meaningless.decision, "block");
+  assert.match(meaningless.systemMessage, /evidence|risks|next action/i);
 
   const valid = runHook(project, {
     hook_event_name: "SubagentStop",
@@ -2875,32 +2847,7 @@ test("SubagentStart injects lifecycle context and SubagentStop bounds missing su
   });
   assert.notEqual(narrative.decision, "block");
 
-  const markerFile = path.join(project, ".codex-context", "discussion-state.json");
-  const marker = JSON.parse(fs.readFileSync(markerFile, "utf8"));
-  assert.equal(marker.enforce_before_mutation, true);
-  assert.deepEqual(
-    [...marker.required_files].sort(),
-    ["current-state.md", "handoff-summary.md", "working-notes.md"].sort()
-  );
-
-  const parentBlocked = runHook(project, {
-    hook_event_name: "Stop",
-    session_id: "parent-session"
-  });
-  assert.equal(parentBlocked.decision, "block");
-  assert.match(parentBlocked.reason, /working-notes\.md/i);
-
-  for (const name of ["working-notes.md", "current-state.md", "handoff-summary.md"]) {
-    const file = path.join(project, ".codex-context", name);
-    write(file, `${fs.readFileSync(file, "utf8")}\n- Integrated subagent result.\n`);
-  }
-  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  git(project, ["add", "-A"]);
-  git(project, ["commit", "-m", "integrate subagent result"]);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "discussion-state.json")), false);
   const parentAllowed = runHook(project, {
     hook_event_name: "Stop",
     session_id: "parent-session"
@@ -2949,8 +2896,8 @@ test("PostToolUse and Stop preserve governance after a tool commits its own chan
     hook_event_name: "PostToolUse",
     tool_response: { is_error: false, exit_code: 0 }
   });
-  assert.equal(post.decision, "block");
-  assert.match(post.reason || post.hookSpecificOutput?.additionalContext || "", /artifact-index/i);
+  assert.notEqual(post.decision, "block");
+  assert.match(post.systemMessage || post.hookSpecificOutput?.additionalContext || "", /artifact-index/i);
 
   const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
   assert.deepEqual(receipt.changed_files, ["work.txt"]);
@@ -3021,10 +2968,11 @@ test("shell governance refresh satisfies a clean committed change receipt", () =
   assert.ok(receipt.refreshed_hashes["verification.md"]);
 });
 
-test("failed or no-op governance edits cannot satisfy change-state refresh requirements", () => {
-  for (const response of [
-    { is_error: true, exit_code: 1 },
-    { is_error: false, exit_code: 0 }
+test("failed, unknown-result, or no-op governance edits cannot satisfy change-state refresh requirements", () => {
+  for (const { response, writesPartialOutput } of [
+    { response: { is_error: true, exit_code: 1 }, writesPartialOutput: false },
+    { response: {}, writesPartialOutput: true },
+    { response: { is_error: false, exit_code: 0 }, writesPartialOutput: false }
   ]) {
     const project = tempProject();
     git(project, ["init"]);
@@ -3076,6 +3024,10 @@ test("failed or no-op governance edits cannot satisfy change-state refresh requi
         }
       };
       runHook(project, { hook_event_name: "PreToolUse", ...governanceInput });
+      if (writesPartialOutput) {
+        const target = path.join(project, ".codex-context", name);
+        write(target, `${fs.readFileSync(target, "utf8")}\nPartial output.\n`);
+      }
       runHook(project, {
         hook_event_name: "PostToolUse",
         ...governanceInput,
@@ -3086,6 +3038,342 @@ test("failed or no-op governance edits cannot satisfy change-state refresh requi
     const stopped = runHook(project, { hook_event_name: "Stop" });
     assert.equal(stopped.decision, "block");
   }
+});
+
+test("read-only workflow inspection and verification commands bypass mutation approval gates", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: planning")
+      .replace(/^next_skill:.*$/m, "next_skill: writing-plans")
+      .replace(/^work_lane:.*$/m, "work_lane: lane-3")
+      .replace(/^plan_status:.*$/m, "plan_status: drafted")
+      .replace(/^execution_mode:.*$/m, "execution_mode: pending")
+      .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+  );
+
+  for (const [toolUseId, toolName, toolInput] of [
+    ["read-workflow-shell", "shell_command", { command: "Get-Content .codex-context/workflow-state.yaml" }],
+    ["read-workflow-mcp", "mcp__filesystem__read_file", { path: ".codex-context/workflow-state.yaml" }],
+    ["read-pipeline", "shell_command", { command: "Get-Content README.md | Select-String -Pattern Project" }],
+    ["read-quoted-redirect", "shell_command", { command: "rg \"a > b\" README.md" }],
+    ["read-quoted-pipe", "shell_command", { command: "rg \"foo|bar\" README.md" }],
+    ["node-tests", "shell_command", { command: "node --test tests/domains/core.test.mjs" }],
+    ["npm-lint", "shell_command", { command: "npm run lint" }],
+    ["pytest", "shell_command", { command: "pytest -q" }]
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "PreToolUse",
+      tool_name: toolName,
+      tool_use_id: toolUseId,
+      tool_input: toolInput
+    });
+    assert.notEqual(
+      output.hookSpecificOutput?.permissionDecision,
+      "deny",
+      `${toolUseId} should not be treated as a project mutation`
+    );
+  }
+
+  for (const command of [
+    "rg \"a > b\" README.md",
+    "rg \"foo|bar\" README.md",
+    "rg \"foo|rm work.txt\" README.md",
+    "rg \"foo|sc work.txt changed\" README.md",
+    "rg \"node -e writeFileSync('work.txt', 'x')\" README.md",
+    "rg \"[System.IO.File]::WriteAllText\" README.md",
+    "git status 2>$null",
+    "git status 2>&1",
+    "git status >/dev/null"
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "PreToolUse",
+      tool_name: "shell_command",
+      tool_input: { command }
+    });
+    assert.deepEqual(output, {}, `${command} should remain read-only without tool_use_id`);
+  }
+});
+
+test("unknown tools record real project changes without a pre-execution block", () => {
+  for (const [toolName, toolUseId] of [
+    ["mcp__filesystem__operate", "external-operate"],
+    ["custom_operator", "unknown-operate"]
+  ]) {
+    const project = tempProject();
+    git(project, ["init"]);
+    git(project, ["config", "user.email", "test@example.com"]);
+    git(project, ["config", "user.name", "Test User"]);
+    readyHealthFixture(project);
+    readyState(project);
+    write(path.join(project, "work.txt"), "before\n");
+    git(project, ["add", "-A"]);
+    git(project, ["commit", "-m", "baseline"]);
+
+    const input = {
+      tool_name: toolName,
+      tool_use_id: toolUseId,
+      tool_input: { path: "work.txt", content: "after" }
+    };
+    const pre = runHook(project, { hook_event_name: "PreToolUse", ...input });
+    assert.notEqual(pre.hookSpecificOutput?.permissionDecision, "deny");
+    write(path.join(project, "work.txt"), "after\n");
+    runHook(project, {
+      hook_event_name: "PostToolUse",
+      ...input,
+      tool_response: { status: "success" }
+    });
+
+    const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+    assert.deepEqual(receipt.changed_files, ["work.txt"]);
+  }
+});
+
+test("ordinary source reads do not create mandatory Stop state debt", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    tool_name: "Read",
+    tool_use_id: "ordinary-read",
+    tool_input: { path: "README.md" },
+    tool_response: { content: "fixture" }
+  });
+  assert.notEqual(post.decision, "block");
+
+  const stopped = runHook(project, { hook_event_name: "Stop" });
+  assert.notEqual(stopped.decision, "block", JSON.stringify(stopped));
+});
+
+test("no-change verification commands preserve completed change-state refreshes", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "before\n");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline fixture passed.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const codeInput = {
+    tool_name: "apply_patch",
+    tool_use_id: "receipt-code-change",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...codeInput });
+  write(path.join(project, "work.txt"), "after\n");
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...codeInput,
+    tool_response: { is_error: false }
+  });
+
+  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+    const refreshInput = {
+      tool_name: "apply_patch",
+      tool_use_id: `receipt-refresh-${name}`,
+      tool_input: {
+        patch: `*** Begin Patch\n*** Update File: .codex-context/${name}\n*** End Patch`
+      }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...refreshInput });
+    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Refreshed for ${name}.\n`, "utf8");
+    runHook(project, {
+      hook_event_name: "PostToolUse",
+      ...refreshInput,
+      tool_response: { is_error: false }
+    });
+  }
+
+  const before = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(Object.keys(before.refreshed_hashes).sort(), [
+    "artifact-index.md",
+    "current-state.md",
+    "handoff-summary.md",
+    "verification.md"
+  ]);
+
+  const verifyInput = {
+    tool_name: "shell_command",
+    tool_use_id: "receipt-no-change-test",
+    tool_input: { command: "node --test tests/domains/core.test.mjs" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...verifyInput });
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...verifyInput,
+    tool_response: { exit_code: 0 }
+  });
+
+  const after = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(after.refreshed_hashes, before.refreshed_hashes);
+});
+
+test("verification commands record generated project changes without a pre-execution block", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: planning")
+      .replace(/^next_skill:.*$/m, "next_skill: writing-plans")
+      .replace(/^work_lane:.*$/m, "work_lane: lane-3")
+      .replace(/^execution_approval:.*$/m, "execution_approval: pending")
+  );
+  const input = {
+    tool_name: "shell_command",
+    tool_use_id: "build-generated-output",
+    tool_input: { command: "npm run build" }
+  };
+  const pre = runHook(project, { hook_event_name: "PreToolUse", ...input });
+  assert.notEqual(pre.hookSpecificOutput?.permissionDecision, "deny");
+
+  write(path.join(project, "dist", "bundle.js"), "generated\n");
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...input,
+    tool_response: { exit_code: 0 }
+  });
+  assert.notEqual(post.decision, "block");
+  assert.match(post.systemMessage, /artifact-index/i);
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(receipt.changed_files, ["dist/bundle.js"]);
+});
+
+test("checkpoint commit preserves pre-commit governance refresh evidence", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "before\n");
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline fixture passed.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const codeInput = {
+    tool_name: "apply_patch",
+    tool_use_id: "checkpoint-code",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...codeInput });
+  write(path.join(project, "work.txt"), "after\n");
+  runHook(project, { hook_event_name: "PostToolUse", ...codeInput, tool_response: { is_error: false } });
+
+  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+    const refreshInput = {
+      tool_name: "apply_patch",
+      tool_use_id: `checkpoint-refresh-${name}`,
+      tool_input: { patch: `*** Begin Patch\n*** Update File: .codex-context/${name}\n*** End Patch` }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...refreshInput });
+    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Checkpoint refresh for ${name}.\n`, "utf8");
+    runHook(project, { hook_event_name: "PostToolUse", ...refreshInput, tool_response: { is_error: false } });
+  }
+
+  const commitInput = {
+    tool_name: "shell_command",
+    tool_use_id: "checkpoint-commit",
+    tool_input: { command: "git add -A; git commit -m checkpoint" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...commitInput });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "checkpoint"]);
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...commitInput,
+    tool_response: { exit_code: 0 }
+  });
+  assert.notEqual(post.decision, "block", JSON.stringify(post));
+
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(Object.keys(receipt.refreshed_hashes).sort(), [
+    "artifact-index.md",
+    "current-state.md",
+    "handoff-summary.md",
+    "verification.md"
+  ]);
+});
+
+test("change-state accumulates multiple committed mutations until governance closure", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline fixture passed.\n");
+  write(path.join(project, "work-a.txt"), "before a\n");
+  write(path.join(project, "work-b.txt"), "before b\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  for (const [name, value] of [["work-a.txt", "after a\n"], ["work-b.txt", "after b\n"]]) {
+    const input = {
+      tool_name: "shell_command",
+      tool_use_id: `commit-${name}`,
+      tool_input: { command: `Set-Content ${name} changed; git add ${name}; git commit -m ${name}` }
+    };
+    runHook(project, { hook_event_name: "PreToolUse", ...input });
+    write(path.join(project, name), value);
+    git(project, ["add", name]);
+    git(project, ["commit", "-m", name]);
+    runHook(project, {
+      hook_event_name: "PostToolUse",
+      ...input,
+      tool_response: { exit_code: 0 }
+    });
+  }
+
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(receipt.changed_files.sort(), ["work-a.txt", "work-b.txt"]);
+  assert.deepEqual(receipt.refreshed_hashes, {});
 });
 
 test("Lane 2 planning blocks project mutations until execution approval", () => {
@@ -3267,7 +3555,7 @@ test("Lane 2 discovery permits canonical strategy, spec, and Wayfinder artifacts
   }
 });
 
-test("review code fixes require an explicit return to implementation", () => {
+test("review and verification fixes automatically reopen stale evidence after a real mutation", () => {
   const project = tempProject();
   git(project, ["init"]);
   git(project, ["config", "user.email", "test@example.com"]);
@@ -3296,68 +3584,48 @@ test("review code fixes require an explicit return to implementation", () => {
       patch: "*** Begin Patch\n*** Update File: src/app.mjs\n*** End Patch"
     }
   };
-  const denied = runHook(project, {
+  const allowedReviewEdit = runHook(project, {
     hook_event_name: "PreToolUse",
     session_id: "review-fix-session",
     ...edit
   });
-  assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /review-changes-requested/i);
-  const shellDenied = runHook(project, {
-    hook_event_name: "PreToolUse",
+  assert.notEqual(allowedReviewEdit.hookSpecificOutput?.permissionDecision, "deny");
+  write(path.join(project, "src", "app.mjs"), "changed in review\n");
+  runHook(project, {
+    hook_event_name: "PostToolUse",
     session_id: "review-fix-session",
-    tool_name: "shell_command",
-    tool_use_id: "review-shell-fix",
-    tool_input: {
-      command: "Set-Content -LiteralPath src/app.mjs -Value 'changed'"
-    }
+    ...edit,
+    tool_response: { is_error: false }
   });
-  assert.equal(shellDenied.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(shellDenied.hookSpecificOutput.permissionDecisionReason, /review-changes-requested/i);
-
-  execFileSync(process.execPath, [workflowState, project, "transition", "review-changes-requested"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  const allowed = runHook(project, {
-    hook_event_name: "PreToolUse",
-    session_id: "review-fix-session",
-    ...edit
-  });
-  assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
+  let reopened = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  assert.match(reopened, /^phase: debugging$/m);
+  assert.match(reopened, /^next_skill: receiving-code-review$/m);
+  assert.match(reopened, /^verification_evidence_hash: none$/m);
+  assert.match(reopened, /^review_evidence_hash: none$/m);
 
   execFileSync(process.execPath, [workflowState, project, "transition", "execution-complete"], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
-  const verificationDenied = runHook(project, {
+  const verificationAllowed = runHook(project, {
     hook_event_name: "PreToolUse",
     session_id: "review-fix-session",
     ...edit,
     tool_use_id: "verification-code-fix"
   });
-  assert.equal(verificationDenied.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(verificationDenied.hookSpecificOutput.permissionDecisionReason, /verification-fail/i);
-  for (const [toolUseId, command] of [
-    ["verification-shell-write", "Set-Content -LiteralPath src/app.mjs -Value 'changed'"],
-    ["verification-shell-delete", "Remove-Item -LiteralPath src/app.mjs"],
-    ["verification-node-inline-write", "node -e \"require('fs').writeFileSync('src/app.mjs','changed')\""],
-    ["verification-python-inline-write", "python -c \"from pathlib import Path; Path('src/app.mjs').write_text('changed')\""],
-    ["verification-dotnet-inline-write", "[System.IO.File]::WriteAllText('src/app.mjs','changed')"],
-    ["verification-git-restore", "git restore src/app.mjs"]
-  ]) {
-    const shellWriteDenied = runHook(project, {
-      hook_event_name: "PreToolUse",
-      session_id: "review-fix-session",
-      tool_name: "shell_command",
-      tool_use_id: toolUseId,
-      tool_input: { command }
-    });
-    assert.equal(shellWriteDenied.hookSpecificOutput?.permissionDecision, "deny");
-    assert.match(shellWriteDenied.hookSpecificOutput.permissionDecisionReason, /verification-fail/i);
-  }
+  assert.notEqual(verificationAllowed.hookSpecificOutput?.permissionDecision, "deny");
+  write(path.join(project, "src", "app.mjs"), "changed in verification\n");
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    session_id: "review-fix-session",
+    ...edit,
+    tool_use_id: "verification-code-fix",
+    tool_response: { is_error: false }
+  });
+  reopened = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  assert.match(reopened, /^phase: debugging$/m);
+  assert.match(reopened, /^next_skill: systematic-debugging$/m);
   const verificationCommandAllowed = runHook(project, {
     hook_event_name: "PreToolUse",
     session_id: "review-fix-session",

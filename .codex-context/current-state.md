@@ -1,34 +1,32 @@
 # 当前状态
 
 ## 目标
-从 GPT 5.6 SOL 适配角度优化 Dong Skills，使它作为事实源、恢复层、风险门禁和证据账本辅助新一代模型，而不是限制模型自带的多智能体、工作流和探索能力。
+修复 Dong Skills hooks 的 change-state receipt/fingerprint、命令分类和误阻断问题，并审查治理层是否会干扰 Codex 的正常探索、调试、验证、review、多智能体与跨 session 推进。
 
 ## 最新用户指令
-从 GPT 5.6 SOL 适配角度继续审查和优化 Dong Skills；GPT 5.6 自带多智能体、工作流等能力，Dong Skills 应该辅助而不能限制这些能力。
+整体仔细审查近期 hooks 优化，重点核实 change-state receipt 的 fingerprint/刷新判断，并修复会干扰模型或阻碍项目推进的问题。
 
 ## 当前阶段
 verified / not committed
 
 ## 当前假设
-- 用户已批准本轮 Dong Skills 优化方向，可直接修复有证据和收益的问题。
 - 当前工作继续沿用 Lane 3、Traditional task-by-task execution。
-- Dong Skills 的硬门禁应保护事实源、审批、恢复、验证、review 和 destructive/action boundaries；不应要求 GPT 5.6 按旧模板表达自然能力。
-- hooks 是支持路径 guardrail，不是完整安全沙箱。
+- 硬门只保护批准范围、恢复、破坏性操作、真实本地 mutation 和交付证据；普通读取、搜索、测试和原生多智能体完成不应产生额外债务。
+- hooks 是支持路径 guardrail，不是完整 shell 或 MCP 安全沙箱。
 
 ## 当前结果
-- 已完成 GPT 5.6 SOL 适配优化：
-  - SubagentStop 不再要求固定 `Evidence` / `Risks` / `Next action` 标题；改为识别可吸收的 evidence/findings、risks/open gaps 和 parent next action 语义。固定标题仍推荐，但不是硬格式。
-  - Goal mode 文档不再绑定 `create_goal` / `update_goal` 这组具体工具名；改为要求任何真实、session-native、可记录目标、可展示进度、可显式 complete/blocked 的 goal/workflow 机制。
-  - Wayfinder 从“一 session 只能一个 frontier”的绝对表述，调整为默认一个 frontier；允许 GPT 5.6 做 bounded parallel exploration，但必须共享一个 decision boundary，并在停止前归并回 Wayfinder map。
-  - README、AGENTS snippet、project governance、using-superpowers、writing-plans、executing-plans、Wayfinder skill、root runtime 与 onboarding bootstrap 镜像已同步。
-- 保留的硬边界：用户审批、scope 变更重开、execution approval、verification/review evidence hash、context recovery receipt、workflow-state validated transitions、review/verification 阶段项目文件写入阻断、Git/status/Stop 后置收口、安装 source/bootstrap/runtime parity。
-- 完整验证已通过：195/195 tests across 11 domains，health pass，release check pass，git diff --check pass，installer preview pass，真实安装同步 pass。
-- 本机全局 Dong Skills entry skills 和当前源码项目安装副本已同步到本轮版本。
+- change-state receipt 已修复：同任务连续 mutation 累积；无变化测试和仅提交操作不清空已完成刷新；未知/失败结果不授予刷新；intent 绑定 session、task 与 `tool_use_id`。
+- shell 分类已修复：只读管道、引号内 `>`/`|`/写命令文本、`$null`/`/dev/null`/流合并保持只读；PowerShell 文件写入别名和明确复合写工具受前置门禁；任意本地 opaque shell 必须通过 workflow/recovery/approval。
+- 未知外部/自定义工具不默认阻断；有 `tool_use_id` 时记录调用前 Git 基线，只有真实调用后变化才进入 change-state。
+- 普通 Read/Search 不制造 working-notes/Stop 债务；PostToolUse 只提醒 artifact freshness，不中断下一工具；SubagentStop 只产生质量警告。
+- verification/review/delivery/handoff 的真实项目 mutation 自动回到 debugging 并失效旧 verification/review evidence。
+- root runtime、bootstrap 镜像、README、AGENTS/snippet 和 skills 合同已同步。
+- 完整验证：204/204 tests across 11 domains；最终 hooks/workflow 104/104；health、release check、installer preview、runtime parity、`git diff --check` 均通过。
 
 ## 下一步动作
-1. 用户确认后提交并推送本轮未提交变更。
-2. 对旧项目运行 onboarding/bootstrap 更新项目级 Dong Skills。
-3. 新项目使用前运行 health；hook liveness warning 只说明当前会话未触发/信任对应 hook，不代表静态安装失败。
+1. 等待用户审阅本轮结果；本轮未自动 commit/push，也未覆盖全局安装副本。
+2. 用户确认后可提交、推送并运行真实安装同步。
+3. 旧项目仍需重新 bootstrap 才能获得最新项目级 hooks/runtime。
 
 ## 最后更新
 2026-07-11。

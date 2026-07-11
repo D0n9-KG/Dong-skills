@@ -34,14 +34,9 @@ import {
 } from "./runtime.mjs";
 import { activeWayfinderStatus, evaluateRecovery } from "./recovery-eval.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
-import { DECISION_TRANSITIONS, workflowStatus } from "./workflow.mjs";
+import { DECISION_TRANSITIONS, reopenWorkflowAfterProjectMutation, workflowContextHash, workflowStatus } from "./workflow.mjs";
 
 const DISCUSSION_STATE_FILE = "discussion-state.json";
-const WORKING_NOTES_REFRESH_FILES = [
-  REQUIRED_FILES.workingNotes,
-  REQUIRED_FILES.current,
-  REQUIRED_FILES.handoff
-];
 const CHANGE_REFRESH_FILES = [
   REQUIRED_FILES.artifacts,
   REQUIRED_FILES.current,
@@ -186,9 +181,8 @@ function promptLooksLikeQuestionOrReview(prompt) {
 
 function promptChangesApprovedScope(prompt) {
   const text = String(prompt || "");
-  return /(?:改成|改为|换成|新增|增加|删除|移除|取消|停止|暂停|重构|优化|扩展|缩减|instead|change|switch|add|remove|delete|drop|cancel|stop|pause|refactor|optimi[sz]e)/i.test(text) ||
-    /(?:调整|修改|变更|扩大|缩小|提高|降低).{0,12}(?:范围|需求|目标|验收标准|优先级)|(?:范围|需求|目标|验收标准|优先级).{0,12}(?:调整|修改|变更|扩大|缩小|提高|降低)/i.test(text) ||
-    /(?:api|接口|函数|方法|命令|cli|页面|组件|字段|格式|endpoint|function|command|page|component|field|format).{0,28}(?:返回|输出|使用|采用|支持|禁用|不再|必须|只允许|return|output|use|support|disable|must)/i.test(text) ||
+  return /(?:调整|修改|变更|扩大|缩小|提高|降低|新增|增加|删除|移除|取消).{0,12}(?:范围|需求|目标|验收标准|优先级|非目标)|(?:范围|需求|目标|验收标准|优先级|非目标).{0,12}(?:调整|修改|变更|扩大|缩小|提高|降低|新增|增加|删除|移除|取消)/i.test(text) ||
+    /(?:api|接口|函数|方法|命令|cli|页面|组件|字段|格式|输出|返回|endpoint|function|command|page|component|field|format|output|return).{0,28}(?:改成|改为|换成|新增|增加|删除|移除|支持|禁用|不再|必须|只允许|change|switch|add|remove|delete|support|disable|must)/i.test(text) ||
     /(?:这轮|本轮|当前|现在|暂时).{0,16}(?:不用|不需要|不做|不实现|不支持|不考虑)|(?:不用|不需要|不做|不实现|不支持|不考虑).{0,16}(?:这轮|本轮|当前|现在|暂时|了)/i.test(text) ||
     /(?:先|暂时).{0,8}(?:不做|不实现|不支持|不考虑)|(?:先)?只做|仅做/i.test(text) ||
     /(?:放到|留到|推迟到|延后到).{0,20}(?:下一轮|下轮|下个|后续|以后)|(?:下一轮|下轮|下个|后续|以后).{0,20}(?:再做|再实现|再支持|再考虑)/i.test(text) ||
@@ -369,11 +363,11 @@ function writeDiscussionMarker(root, ctx, input, patch) {
       tool_name: patch.tool_name || previous.tool_name || undefined,
       enforce_before_mutation: Boolean(
         patch.enforce_before_mutation ||
-        (preservePreviousRequirements && previous.enforce_before_mutation)
+        (previous.status === "dirty" && previous.enforce_before_mutation)
       ),
       requires_scope_reopen: Boolean(
         patch.requires_scope_reopen ||
-        (preservePreviousRequirements && previous.requires_scope_reopen)
+        (previous.status === "dirty" && previous.requires_scope_reopen)
       ),
       scope_reopened_at: patch.scope_reopened_at || previous.scope_reopened_at || undefined,
       cwd_relative: input?.cwd ? path.relative(root, path.resolve(input.cwd)).replace(/\\/g, "/") || "." : previous.cwd_relative || ".",
@@ -494,7 +488,7 @@ export function userPromptSubmit(input, root, ctx) {
       decision_required: state.decision_required,
       prompt_excerpt: sanitizeLearningExcerpt(prompt),
       required_files: requiredFiles,
-      enforce_before_mutation: true,
+      enforce_before_mutation: scopeChange,
       requires_scope_reopen: scopeChange
     });
     executionDirectiveRecorded = true;
@@ -667,15 +661,18 @@ function shellFileMutation(input) {
     return { mutates: false, targets: [], opaque: false };
   }
   const command = shellCommandText(input);
-  const powerShellMutation =
-    /\b(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item)\b/i.test(command) ||
-    /\[System\.IO\.(?:File|Directory)\]::(?:WriteAllText|WriteAllBytes|AppendAllText|Create|Delete|Move|Copy|CreateDirectory|Delete)\b/i.test(command);
-  const portableMutation =
-    /(?:^|[;&|]\s*)(?:rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i.test(command) ||
-    /\bsed\s+-i\b|\bgit\s+(?:apply|restore|checkout|switch)\b|>{1,2}/i.test(command);
-  const inlineCodeMutation =
-    /\bnode(?:\.exe)?\s+(?:--eval|-e)\b[\s\S]*\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|copyFile(?:Sync)?|rename(?:Sync)?|unlink(?:Sync)?|rmSync|mkdirSync|rmdirSync)\s*\(/i.test(command) ||
-    /\bpython(?:\.exe)?\s+-c\b[\s\S]*(?:\bopen\s*\([^)]*["'][wa+]|write_(?:text|bytes)\s*\(|unlink\s*\(|rename\s*\(|mkdir\s*\(|rmdir\s*\(|shutil\.(?:copy|copyfile|copytree|move|rmtree))/i.test(command);
+  const syntax = shellSyntax(command);
+  const powerShellMutation = syntax.segments.some((segment) =>
+    /^(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni)\b/i.test(segment) ||
+    /^\[System\.IO\.(?:File|Directory)\]::(?:WriteAllText|WriteAllBytes|AppendAllText|Create|Delete|Move|Copy|CreateDirectory|Delete)\b/i.test(segment));
+  const portableMutation = syntax.segments.some((segment) =>
+    /^(?:rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i.test(segment) ||
+    /^sed\s+-i\b/i.test(segment) ||
+    /^git\s+(?:apply|restore|checkout|switch)\b/i.test(segment)) ||
+    syntax.redirections.length > 0;
+  const inlineCodeMutation = syntax.segments.some((segment) =>
+    /^node(?:\.exe)?\s+(?:--eval|-e)\b[\s\S]*\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|copyFile(?:Sync)?|rename(?:Sync)?|unlink(?:Sync)?|rmSync|mkdirSync|rmdirSync)\s*\(/i.test(segment) ||
+    /^python(?:\.exe)?\s+-c\b[\s\S]*(?:\bopen\s*\([^)]*["'][wa+]|write_(?:text|bytes)\s*\(|unlink\s*\(|rename\s*\(|mkdir\s*\(|rmdir\s*\(|shutil\.(?:copy|copyfile|copytree|move|rmtree))/i.test(segment));
   if (!powerShellMutation && !portableMutation && !inlineCodeMutation) {
     return { mutates: false, targets: [], opaque: false };
   }
@@ -686,12 +683,10 @@ function shellFileMutation(input) {
   )) {
     targets.push(match[1] || match[2] || match[3]);
   }
-  for (const match of command.matchAll(/>{1,2}\s*(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/g)) {
-    targets.push(match[1] || match[2] || match[3]);
-  }
+  targets.push(...syntax.redirections);
   if (targets.length === 0) {
     const positional = command.match(
-      /^\s*(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/i
+      /^\s*(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni|rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/i
     );
     if (positional) targets.push(positional[1] || positional[2] || positional[3]);
   }
@@ -754,31 +749,12 @@ function governanceRepairMutation(input, root) {
       shellMutation.targets.length > 0 &&
       shellMutation.targets.every((target) => governanceArtifactPath(projectRelativeTarget(target, root)));
   }
-  if (!/apply_patch/.test(name) &&
-      !/(^|[._:])(?:edit|write)(?:$|[._:])/.test(name)) {
+  if (!/apply_patch/.test(name) && !explicitWriteToolName(name)) {
     return false;
   }
   const targets = explicitToolTargets(input);
   if (targets.length === 0) return false;
   return targets.every((target) => governanceArtifactPath(projectRelativeTarget(target, root)));
-}
-
-function explicitProjectEditMutation(input, root) {
-  const name = normalizedToolName(input);
-  if (/apply_patch/.test(name) ||
-      /(^|[._:])(?:edit|write)(?:$|[._:])/.test(name)) {
-    return explicitToolTargets(input).some((target) => {
-      const relative = projectRelativeTarget(target, root);
-      return Boolean(relative) && !governanceArtifactPath(relative);
-    });
-  }
-  const shellMutation = shellFileMutation(input);
-  if (!shellMutation.mutates) return false;
-  if (shellMutation.opaque) return true;
-  return shellMutation.targets.some((target) => {
-    const relative = projectRelativeTarget(target, root);
-    return Boolean(relative) && !governanceArtifactPath(relative);
-  });
 }
 
 function protectedWorkflowStateMutation(input, root) {
@@ -795,8 +771,91 @@ function protectedWorkflowStateMutation(input, root) {
     /(?:^|[\s"'`])\.codex-context[\\/]workflow-state\.yaml(?:[\s"'`]|$)/i.test(shellCommandText(input));
 }
 
+function shellSyntax(command) {
+  const text = String(command || "");
+  const segments = [];
+  const redirections = [];
+  let start = 0;
+  let quote = "";
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quote) {
+      if ((char === "\\" || char === "`") && quote === '"') {
+        index += 1;
+      } else if (char === quote) {
+        if (quote === "'" && text[index + 1] === "'") index += 1;
+        else quote = "";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === ">") {
+      const tail = text.slice(index + (text[index + 1] === ">" ? 2 : 1));
+      const target = tail.match(/^\s*(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/);
+      if (target) {
+        const destination = target[1] || target[2] || target[3];
+        if (!/^(?:\$null|nul|\/dev\/null|&[012])$/i.test(destination)) {
+          redirections.push(destination);
+        }
+      }
+      continue;
+    }
+    const paired = (char === "&" && text[index + 1] === "&") ||
+      (char === "|" && text[index + 1] === "|");
+    if (char === ";" || char === "|" || char === "\r" || char === "\n" || paired) {
+      segments.push(text.slice(start, index).trim());
+      if (paired) index += 1;
+      start = index + 1;
+    }
+  }
+  segments.push(text.slice(start).trim());
+  return {
+    segments: segments.filter(Boolean),
+    redirections: unique(redirections.filter(Boolean))
+  };
+}
+
+function shellSegments(command) {
+  return shellSyntax(command).segments;
+}
+
+function readOnlyShellSegment(segment) {
+  return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
+}
+
+function verificationShellSegment(segment) {
+  return /^(?:node(?:\.exe)?\s+--test|npm(?:\.cmd)?\s+(?:test|run\s+(?:test|lint|typecheck|check|build|format:check|format-check))|npx(?:\.cmd)?\s+(?:eslint|tsc|prettier\s+--check)|pnpm\s+(?:test|lint|typecheck|check|build)|yarn\s+(?:test|lint|typecheck|check|build)|pytest|python(?:\.exe)?\s+-m\s+pytest|go\s+test|cargo\s+(?:test|check|clippy|build)|dotnet\s+(?:test|build)|mvn\s+(?:test|verify)|gradle\s+(?:test|check|build)|\.\/gradlew\s+(?:test|check|build))(?:\s|$)/i.test(segment);
+}
+
+function shellCommandClass(input) {
+  const command = shellCommandText(input);
+  if (!command || shellFileMutation(input).mutates) return "";
+  const segments = shellSegments(command);
+  if (!segments.length) return "";
+  if (segments.every((segment) => readOnlyShellSegment(segment))) return "read-only";
+  if (segments.every((segment) => readOnlyShellSegment(segment) || verificationShellSegment(segment)) &&
+      segments.some((segment) => verificationShellSegment(segment))) {
+    return "verification";
+  }
+  return "";
+}
+
 function mutationToolUseId(input) {
   return String(input?.tool_use_id || input?.toolUseId || "").trim();
+}
+
+function explicitWriteToolName(name) {
+  return /(^|[._:])(?:add|append|apply|clear|commit|copy|create|dispatch|edit|insert|install|invoke|merge|move|patch|publish|push|rename|replace|save|send|set|submit|trigger|update|upload|upsert|write)(?:$|[._:])/i.test(name) ||
+    /(^|[._:])(?:add|append|copy|create|edit|move|patch|rename|replace|save|update|upload|write)(?:file|files|document|documents|path|paths|record|records|resource|resources)(?:$|[._:])/i.test(name);
+}
+
+function explicitDestructiveToolName(name) {
+  return /(^|[._:])(?:delete|remove|reset|drop|truncate|destroy|purge|prune)(?:$|[._:])/i.test(name) ||
+    /(^|[._:])(?:delete|remove|truncate|destroy|purge)(?:file|files|document|documents|path|paths|record|records|resource|resources)(?:$|[._:])/i.test(name);
 }
 
 function mutationIntentReceiptName(input) {
@@ -808,6 +867,8 @@ function mutationIntentReceiptName(input) {
 
 function writeMutationIntent(root, ctx, input, state, controlClass, head) {
   const toolUseId = mutationToolUseId(input);
+  const status = gitStatusResult(root);
+  const preStatusFiles = status.ok ? status.files : [];
   return writeRuntimeReceipt(ctx, mutationIntentReceiptName(input), {
     schema: "dong-skills.mutation-intent.v1",
     task_id: state.task_id || "missing",
@@ -815,6 +876,8 @@ function writeMutationIntent(root, ctx, input, state, controlClass, head) {
     tool_use_id_hash: toolUseId ? stableFingerprint(toolUseId) : "",
     control_class: controlClass,
     pre_head: head || "",
+    pre_status_files: preStatusFiles,
+    pre_project_fingerprint: projectChangeFingerprint(root, preStatusFiles),
     baseline_hashes: refreshFileHashes(ctx),
     created_at: new Date().toISOString()
   });
@@ -881,14 +944,19 @@ function removeMutationIntent(ctx, input) {
 
 function toolExecutionStatus(input) {
   const response = input?.tool_response || input?.toolResponse || input?.tool_result || input?.toolResult;
-  if (!response || typeof response !== "object") return { known: false, ok: true };
+  if (!response || typeof response !== "object") return { known: false, ok: false };
   const status = String(response.status || response.state || "").toLowerCase();
   const exitCode = response.exit_code ?? response.exitCode ?? response.code;
+  const successStatus = ["ok", "success", "succeeded", "complete", "completed"].includes(status);
+  const failureStatus = ["error", "failed", "failure"].includes(status);
+  const known = response.is_error !== undefined || response.isError !== undefined ||
+    response.ok !== undefined || response.success !== undefined || successStatus || failureStatus || exitCode !== undefined;
+  if (!known) return { known: false, ok: false };
   const failed = response.is_error === true ||
     response.isError === true ||
     response.ok === false ||
     response.success === false ||
-    ["error", "failed", "failure"].includes(status) ||
+    failureStatus ||
     (exitCode !== undefined && Number(exitCode) !== 0);
   return { known: true, ok: !failed };
 }
@@ -903,22 +971,26 @@ function toolControlClass(input, root = "") {
 
   if (/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) {
     const command = shellCommandText(input);
-    if (/\b(?:rm|remove-item|del|rmdir|git\s+reset|git\s+clean|drop|truncate)\b/i.test(command)) {
+    if (shellSegments(command).some((segment) =>
+      /^(?:rm|remove-item|ri|del|rmdir|drop|truncate)\b|^git\s+(?:reset|clean)\b/i.test(segment))) {
       return "destructive";
     }
-    if (/[;&|><`\r\n]/.test(command)) {
+    const shellClass = shellCommandClass(input);
+    if (shellClass) return shellClass;
+    if (shellFileMutation(input).mutates ||
+        /\bgit\s+(?:add|commit|merge|rebase|cherry-pick|push|pull|fetch|tag|stash|switch|checkout|restore|apply)\b/i.test(command) ||
+        /\bgit\s+worktree\s+(?:add|remove|move|prune|lock|unlock)\b/i.test(command) ||
+        /\bgit\s+branch\s+(?:-[dDmM]|--delete|--move|--copy|--edit-description)\b/i.test(command) ||
+        /\b(?:npm|pnpm|yarn)\s+(?:install|add|remove|publish)\b/i.test(command)) {
       return "mutating";
     }
-    if (/^\s*(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(command)) {
-      return "read-only";
-    }
-    return "mutating";
+    return "opaque";
   }
 
-  if (/(^|[._:])(?:delete|remove|reset|drop|truncate|destroy|purge|prune)(?:$|[._:])/.test(name)) {
+  if (explicitDestructiveToolName(name)) {
     return "destructive";
   }
-  if (/apply_patch|(^|[._:])(?:add|append|apply|clear|commit|create|dispatch|edit|insert|install|invoke|merge|move|patch|publish|push|rename|replace|save|send|set|submit|trigger|update|upload|upsert|write)(?:$|[._:])/.test(name)) {
+  if (/apply_patch/.test(name) || explicitWriteToolName(name)) {
     return "mutating";
   }
   if (/^(?:mcp__|ext__)/.test(name) &&
@@ -928,7 +1000,7 @@ function toolControlClass(input, root = "") {
   if (/(^|[._:])(?:describe|fetch|find|get|glob|grep|inspect|list|lookup|open|query|read|resolve|search|show|status|view)(?:$|[._:])/.test(name)) {
     return "read-only";
   }
-  if (/^(?:mcp__|ext__)/.test(name)) return "mutating";
+  if (/^(?:mcp__|ext__)/.test(name)) return "external";
   return "unknown";
 }
 
@@ -944,7 +1016,8 @@ function denyPreToolUse(reason) {
 
 export function preToolUse(input, root, ctx) {
   const controlClass = toolControlClass(input, root);
-  if (protectedWorkflowStateMutation(input, root)) {
+  if (["mutating", "destructive", "opaque"].includes(controlClass) &&
+      protectedWorkflowStateMutation(input, root)) {
     denyPreToolUse("Direct edits to .codex-context/workflow-state.yaml are not allowed. Use a validated workflow-state transition.");
     return;
   }
@@ -1032,7 +1105,28 @@ export function preToolUse(input, root, ctx) {
     }
     return;
   }
-  if (!["mutating", "destructive"].includes(controlClass)) return;
+  if (controlClass === "verification") {
+    if (!mutationToolUseId(input)) {
+      denyPreToolUse("Verification shell tracking requires tool_use_id; the hook payload is incomplete.");
+      return;
+    }
+    const state = workflowStateFor(root, ctx);
+    const head = gitHeadResult(root);
+    if (head.ok) writeMutationIntent(root, ctx, input, state, controlClass, head.head);
+    return;
+  }
+  if (["external", "unknown"].includes(controlClass)) {
+    const toolUseId = mutationToolUseId(input);
+    const state = workflowStateFor(root, ctx);
+    const head = gitHeadResult(root);
+    if (toolUseId && head.ok) writeMutationIntent(root, ctx, input, state, controlClass, head.head);
+    return;
+  }
+  if (!["mutating", "destructive", "opaque"].includes(controlClass)) return;
+  if (!mutationToolUseId(input)) {
+    denyPreToolUse("Project mutation tracking requires tool_use_id; the hook payload is incomplete.");
+    return;
+  }
   if (governanceRepairMutation(input, root)) {
     const repairState = workflowStateFor(root, ctx);
     const repairHead = gitHeadResult(root);
@@ -1070,15 +1164,6 @@ export function preToolUse(input, root, ctx) {
       denyPreToolUse(`The latest user directive is not externalized yet: ${discussion.issues.join("; ")}.`);
       return;
     }
-  }
-  if (explicitProjectEditMutation(input, root) && state.phase === "verification") {
-    denyPreToolUse("Verification is an evidence-only phase. Record the failure with workflow-state transition verification-fail, resolve the user choice, then return to debugging before editing project files.");
-    return;
-  }
-  if (explicitProjectEditMutation(input, root) &&
-      ["review", "delivery", "handoff"].includes(state.phase)) {
-    denyPreToolUse("Project fixes after review require workflow-state transition review-changes-requested so implementation, verification, and review are reopened.");
-    return;
   }
   if (["discovery", "wayfinding", "brainstorming", "spec", "planning"].includes(state.phase)) {
     const laneLabel = `Lane ${String(state.work_lane || "lane-1").slice(-1)}`;
@@ -1198,17 +1283,6 @@ export function subagentStop(input, root, ctx) {
   }
   issues.push(...subagentSummaryIssues(summary));
 
-  if (issues.length && !input?.stop_hook_active) {
-    writeRuntimeReceipt(ctx, `${name}-stop`, {
-      schema: "dong-skills.subagent-stop.v1",
-      issues,
-      continued: false,
-      updated_at: new Date().toISOString()
-    });
-    blockStop(`Subagent result is incomplete: ${issues.join("; ")}.`);
-    return;
-  }
-
   writeRuntimeReceipt(ctx, `${name}-result`, {
     schema: "dong-skills.subagent-result.v1",
     agent_id_hash: stableFingerprint(agentId),
@@ -1218,75 +1292,12 @@ export function subagentStop(input, root, ctx) {
     summary_hash: stableFingerprint(summary),
     summary_length: summary.length,
     issues,
-    continuation_exhausted: Boolean(issues.length),
+    usable_as_completion_evidence: issues.length === 0,
     completed_at: new Date().toISOString()
   });
-  if (issues.length === 0 && state.phase !== "complete") {
-    writeDiscussionMarker(root, ctx, input, {
-      source: "SubagentStop",
-      reason: "a completed subagent result has not yet been externalized into parent task state",
-      phase: state.phase,
-      spec_status: state.spec_status,
-      decision_required: state.decision_required,
-      tool_name: "SubagentStop",
-      required_files: state.phase === "wayfinding"
-        ? discussionRefreshFiles(root, ctx, state)
-        : WORKING_NOTES_REFRESH_FILES,
-      enforce_before_mutation: true
-    });
-  }
   allowStop(issues.length
-    ? `Subagent result remains incomplete after the bounded continuation: ${issues.join("; ")}. It must not be used as completion or verification evidence.`
-    : "Subagent result is complete. The parent must externalize accepted evidence, risks, and next action into the listed project state files before further mutation, Stop, or compaction.");
-}
-
-function explorationTool(input) {
-  const name = toolName(input);
-  const text = toolInputText(input);
-  if (/read|grep|glob|search|find|open|web|browser|codegraph/i.test(name)) return true;
-  if (/shell|bash|powershell|cmd|exec/i.test(name)) {
-    return /\b(rg|grep|findstr|select-string|get-content|get-childitem|cat|type|git\s+(show|diff|log|status|ls-files|rev-parse|branch|worktree)|ls|dir|tree|sed|head|tail|wc)\b/i.test(text);
-  }
-  return false;
-}
-
-function closureEvidenceTool(input) {
-  const name = toolName(input);
-  if (!/shell|bash|powershell|cmd|exec/i.test(name)) return false;
-  const payload = input?.tool_input || input?.toolInput || input?.input || input?.arguments || input?.payload || {};
-  const text = typeof payload === "string"
-    ? payload.trim()
-    : String(payload.command || payload.cmd || payload.script || "").trim();
-  return /^git\s+(status|diff|log|show|rev-parse|branch|worktree)(?:\s|$)/i.test(text);
-}
-
-function markWorkingNotesDirty(input, root, ctx) {
-  const state = workflowStateFor(root, ctx);
-  if (!investigationWorkflowActive(state) || !explorationTool(input) || closureEvidenceTool(input)) return null;
-  return writeDiscussionMarker(root, ctx, input, {
-    source: "PostToolUse",
-    reason: "agent exploration or investigation happened after the last working notes checkpoint",
-    phase: state.phase,
-    spec_status: state.spec_status,
-    decision_required: state.decision_required,
-    tool_name: toolName(input) || "unknown",
-    required_files: WORKING_NOTES_REFRESH_FILES
-  });
-}
-
-function emitWorkingNotesMarker(marker) {
-  if (!marker) return;
-  const message = [
-    "Codex Project Ops marked investigation notes dirty.",
-    "Before stopping or compacting, refresh working-notes.md with checked findings, rejected paths, current hypothesis/conclusion, and next verification step.",
-    `Required files: ${shortList(marker.required_files || [])}.`
-  ].join("\n");
-  writeJson({
-    hookSpecificOutput: {
-      hookEventName: "PostToolUse",
-      additionalContext: message
-    }
-  });
+    ? `Subagent result quality warning: ${issues.join("; ")}. Do not use it as completion or verification evidence without independent parent review.`
+    : "Subagent result is usable after parent review. Externalize only accepted evidence, risks, and next action when they materially affect project state.");
 }
 
 function fileContentHash(file) {
@@ -1360,7 +1371,7 @@ function mentionedRefreshFiles(input) {
   });
 }
 
-function writeArtifactBlock(root, ctx, changed, latest) {
+function writeArtifactReminder(root, ctx, changed, latest) {
   const reason = [
     "Codex Project Ops: non-context files changed, but .codex-context/artifact-index.md is not fresh.",
     hookStatusText(root, ctx, latest, changed, { assets: false, checkpoint: false, eventName: "PostToolUse" }),
@@ -1370,8 +1381,7 @@ function writeArtifactBlock(root, ctx, changed, latest) {
   ].join("\n");
 
   writeJson({
-    decision: "block",
-    reason,
+    systemMessage: reason,
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
       additionalContext: reason
@@ -1380,7 +1390,6 @@ function writeArtifactBlock(root, ctx, changed, latest) {
 }
 
 export function postToolUse(input, root, ctx) {
-  const marker = markWorkingNotesDirty(input, root, ctx);
   const controlClass = toolControlClass(input, root);
   const operation = controlPlaneOperation(input, root);
 
@@ -1399,7 +1408,6 @@ export function postToolUse(input, root, ctx) {
         ["brainstorming-start", "spec-living"].includes(operation?.event)) {
       acknowledgeScopeReopen(ctx);
     }
-    emitWorkingNotesMarker(marker);
     return;
   }
 
@@ -1411,32 +1419,31 @@ export function postToolUse(input, root, ctx) {
         writeRecoveryReceipt(root, ctx, workflow.state, hookSessionKey(input));
       }
     }
-    emitWorkingNotesMarker(marker);
     return;
   }
-  if (controlClass === "read-only" || (controlClass === "unknown" && toolName(input))) {
-    emitWorkingNotesMarker(marker);
+  if (controlClass === "read-only") {
+    return;
+  }
+
+  if (["external", "unknown"].includes(controlClass) && !mutationToolUseId(input)) {
     return;
   }
 
   const state = workflowStateFor(root, ctx);
-  const intent = ["mutating", "destructive"].includes(controlClass)
+  const intent = ["mutating", "destructive", "opaque", "verification", "external", "unknown"].includes(controlClass)
     ? mutationIntentStatus(root, ctx, input, state)
     : { ok: true, exists: false, files: [], issue: "", value: null };
   const statusResult = gitStatusResult(root);
   if (!statusResult.ok) {
-    if (["mutating", "destructive"].includes(controlClass)) {
+    if (["mutating", "destructive", "opaque", "verification", "external", "unknown"].includes(controlClass)) {
       const reason = `Codex Project Ops could not inspect project changes after a mutation. Git status unavailable: ${statusResult.error || "unknown error"}.`;
       writeJson({
-        decision: "block",
-        reason,
+        systemMessage: reason,
         hookSpecificOutput: {
           hookEventName: "PostToolUse",
           additionalContext: reason
         }
       });
-    } else {
-      emitWorkingNotesMarker(marker);
     }
     return;
   }
@@ -1444,8 +1451,7 @@ export function postToolUse(input, root, ctx) {
   if (!intent.ok) {
     const reason = `Codex Project Ops could not validate the mutation intent: ${intent.issue}.`;
     writeJson({
-      decision: "block",
-      reason,
+      systemMessage: reason,
       hookSpecificOutput: {
         hookEventName: "PostToolUse",
         additionalContext: reason
@@ -1453,15 +1459,25 @@ export function postToolUse(input, root, ctx) {
     });
     return;
   }
+  const beforeFiles = Array.isArray(intent.value?.pre_status_files) ? intent.value.pre_status_files : [];
+  const statusUnchanged = JSON.stringify([...beforeFiles].sort()) === JSON.stringify([...statusResult.files].sort());
+  const fingerprintUnchanged = intent.value?.pre_project_fingerprint ===
+    projectChangeFingerprint(root, statusResult.files);
+  const invocationChanged = intent.files.length > 0 || !statusUnchanged || !fingerprintUnchanged;
+  if (["external", "unknown"].includes(controlClass)) {
+    if (!intent.exists) {
+      return;
+    }
+    if (!invocationChanged) {
+      removeMutationIntent(ctx, input);
+      return;
+    }
+  }
 
   const touched = mentionedRefreshFiles(input);
-  const governanceOnlyMutation = ["mutating", "destructive"].includes(controlClass) &&
-    touched.length > 0 &&
-    governanceRepairMutation(input, root);
   const pendingChange = readRuntimeReceipt(ctx, "change-state");
   const pendingChangeValue = pendingChange.ok ? pendingChange.value : null;
-  const pendingChangeFiles = governanceOnlyMutation &&
-    pendingChangeValue?.task_id === state.task_id &&
+  const pendingChangeFiles = pendingChangeValue?.task_id === state.task_id &&
     String(pendingChangeValue?.task_generation) === String(state.task_generation) &&
     Array.isArray(pendingChangeValue?.changed_files)
     ? pendingChangeValue.changed_files
@@ -1474,25 +1490,28 @@ export function postToolUse(input, root, ctx) {
   ]).filter((file) => !isGovernancePath(file));
   if (changed.length === 0) {
     removeMutationIntent(ctx, input);
-    emitWorkingNotesMarker(marker);
     return;
   }
 
   const latest = latestChangedMtime(root, changed);
   const indexedWayfinderOnly = indexedActiveWayfinderOnlyChange(root, ctx, state, changed);
-  if (["mutating", "destructive"].includes(controlClass)) {
+  if (["mutating", "destructive", "opaque", "verification", "external", "unknown"].includes(controlClass)) {
+    if (invocationChanged &&
+        ["verification", "review", "delivery", "handoff"].includes(state.phase)) {
+      reopenWorkflowAfterProjectMutation(root, ctx, state.phase);
+    }
     const fingerprint = projectChangeFingerprint(root, changed);
     const execution = toolExecutionStatus(input);
     const currentHashes = refreshFileHashes(ctx);
     const baselineHashes = intent.value?.baseline_hashes || {};
-    const refreshedTouched = execution.ok
+    const refreshedTouched = execution.known && execution.ok
       ? touched.filter((name) => baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
       : [];
     const nextValue = updateRuntimeReceipt(ctx, "change-state", (existing) => {
       const existingValue = existing.ok ? existing.value : null;
       const sameTask = existingValue?.task_id === state.task_id &&
         String(existingValue?.task_generation) === String(state.task_generation);
-      if (governanceOnlyMutation && sameTask && existingValue?.project_fingerprint === fingerprint) {
+      if (sameTask && existingValue?.project_fingerprint === fingerprint) {
         const refreshedHashes = {
           ...(existingValue.refreshed_hashes || {})
         };
@@ -1521,16 +1540,15 @@ export function postToolUse(input, root, ctx) {
     });
     removeMutationIntent(ctx, input);
     if (receiptHasRefresh(nextValue, ctx, REQUIRED_FILES.artifacts) || indexedWayfinderOnly) {
-      emitWorkingNotesMarker(marker);
       return;
     }
 
-    writeArtifactBlock(root, ctx, changed, latest);
+    writeArtifactReminder(root, ctx, changed, latest);
     return;
   }
 
   if (indexedWayfinderOnly || fileFresh(ctx, REQUIRED_FILES.artifacts, latest)) return;
-  writeArtifactBlock(root, ctx, changed, latest);
+  writeArtifactReminder(root, ctx, changed, latest);
 }
 
 function compactTrigger(input) {
@@ -1965,6 +1983,7 @@ export function stop(input, root, ctx) {
   const statusLatest = Math.max(latest, discussion.latest);
 
   if (statusResult.ok && changed.length === 0 && (!checkpointRequired || checkpoint.ok) && assets.ok && workflow.ok && discussion.ok) {
+    workflowContextHash(root, ctx, true);
     removeRuntimeReceipt(ctx, stopContinuationReceiptName(input));
     removeRuntimeReceipt(ctx, "change-state");
     allowStop();
@@ -2018,6 +2037,7 @@ export function stop(input, root, ctx) {
   issues.push(...discussion.issues);
 
   if (issues.length === 0) {
+    workflowContextHash(root, ctx, true);
     removeRuntimeReceipt(ctx, stopContinuationReceiptName(input));
     removeRuntimeReceipt(ctx, "change-state");
     allowStop();

@@ -4,7 +4,7 @@ import { readText } from "./core.mjs";
 import { hasHeading, meaningful, sectionContent } from "./markdown.mjs";
 import { writeRecoveryReceipt } from "./runtime.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
-import { workflowStatus } from "./workflow.mjs";
+import { workflowContextHash, workflowStatus } from "./workflow.mjs";
 
 function isInside(parent, child) {
   const relative = path.relative(parent, child);
@@ -138,6 +138,10 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
     ? state.phase === "wayfinding"
     : state.phase !== "wayfinding";
   const preImplementation = ["discovery", "wayfinding", "brainstorming", "spec", "planning"].includes(state.phase);
+  const currentContextHash = workflowContextHash(root, ctx, false).combined;
+  const contextHashMatches = state.handoff_hash &&
+    state.handoff_hash !== "null" &&
+    state.handoff_hash === currentContextHash;
 
   const probes = [
     {
@@ -153,18 +157,19 @@ export function evaluateRecovery(root, ctx = path.join(root, ".codex-context")) 
       ok: complete
         ? workflow.ok
         : workflow.ok &&
-          !!state.handoff_hash &&
-          state.handoff_hash !== "null" &&
+          contextHashMatches &&
           state.handoff_task_id === state.task_id &&
           String(state.handoff_task_generation) === String(state.task_generation),
       detail: complete
         ? "workflow complete; active handoff hash not required"
         : (!state.handoff_hash || state.handoff_hash === "null"
             ? "active workflow requires a refreshed handoff hash"
-            : (state.handoff_task_id !== state.task_id ||
+            : (!contextHashMatches
+                ? "saved handoff hash does not match current recovery context"
+                : (state.handoff_task_id !== state.task_id ||
                 String(state.handoff_task_generation) !== String(state.task_generation)
                 ? "saved handoff hash task identity does not match current workflow task identity"
-                : (workflow.ok ? "handoff hash and task identity match" : workflow.issues.join("; "))))
+                : (workflow.ok ? "handoff hash and task identity match" : workflow.issues.join("; ")))))
     },
     {
       id: "file-pointers",

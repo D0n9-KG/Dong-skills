@@ -204,9 +204,13 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /lowest sufficient lane/);
   assert.match(governance, /Hook output includes a compact status line/);
   assert.match(governance, /PreToolUse` protects supported mutating\/destructive paths/);
-  assert.match(governance, /pre-mutation intent with current Git evidence/);
-  assert.match(governance, /failed or no-op edits do not count/);
-  assert.match(governance, /does not enforce file-level delegated scope/);
+  assert.match(
+    governance,
+    /(?:pre-mutation|invocation-scoped) intent with (?:current )?Git evidence/,
+  );
+  assert.match(governance, /failed or no-op governance edits do not earn it/);
+  assert.match(governance, /No-op tests and commit-only operations preserve valid refresh evidence/);
+  assert.match(governance, /does not block native multi-agent completion or force immediate parent-state writes/);
   assert.match(governance, /bounded continuation receipt/);
   assert.match(governance, /static hook configuration, root\/bootstrap runtime parity, and recent liveness/);
   assert.match(governance, /discussion-state\.json/);
@@ -217,7 +221,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /codex-agent-architecture-audit/);
   assert.match(governance, /codex-loop-design-check/);
   assert.match(governance, /docs\/codex\/specs/);
-  assert.match(governance, /review-changes-requested/);
+  assert.match(governance, /first real project mutation automatically reopens debugging and invalidates old verification\/review evidence/);
   assert.match(governance, /workflow-state transition debugging-start/);
   assert.match(governance, /Bare continuation, pure status inquiry, and learning-only future preferences/);
 
@@ -230,11 +234,14 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.equal(agentsSnippet, bootstrapAgentsSnippet);
   for (const guidance of [readme, agentsSnippet]) {
     assert.match(guidance, /session-scoped/);
-    assert.match(guidance, /failed or no-op/i);
+    assert.match(
+      guidance,
+      /(?:failed or no-op governance edits do not earn refresh evidence|no-op commands, and commit-only operations do not erase completed refresh evidence)/i,
+    );
     assert.match(guidance, /bounded continuation/);
-    assert.match(guidance, /do not enforce file-level delegated scope/);
+    assert.match(guidance, /without blocking native multi-agent completion/);
     assert.match(guidance, /root\/bootstrap parity/);
-    assert.match(guidance, /review-changes-requested/);
+    assert.match(guidance, /(?:the first|a) real project mutation .*automatically reopens debugging/i);
     assert.match(guidance, /docs\/codex\/wayfinder/);
     assert.match(guidance, /spec-skipped/);
     assert.match(guidance, /mechanical-exception/);
@@ -264,7 +271,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(reviewPanel, /## Standards Verdict/);
   assert.match(reviewPanel, /## Spec Verdict/);
   assert.match(reviewPanel, /Do not merge, deduplicate, or rerank findings across these two axes/);
-  assert.match(reviewPanel, /review-changes-requested/);
+  assert.match(reviewPanel, /first real project mutation automatically reopens debugging and invalidates prior verification\/review evidence/);
   assert.match(reviewPanel, /Review Evidence/);
   assert.match(reviewPanel, /rejects delivery if it changes after review closure/);
 

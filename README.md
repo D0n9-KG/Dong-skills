@@ -120,6 +120,8 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 
 `.codex-context/workflow-state.yaml` 是机器可读的阶段索引。`workflow-state status`、hooks 和 `health-check` 会检查它与 `spec.md`、`plan-progress.md` 是否矛盾；如果出现矛盾，先修状态，不要继续实现。
 
+`PostToolUse` 用单次工具调用绑定的 intent 和 Git 前后证据累计当前任务尚未收口的真实变更。失败或无变化的治理编辑不会获得刷新证据；无变化测试和仅提交操作也不会清空此前已经完成的状态刷新。
+
 ### 常用命令
 
 从目标项目运行：
@@ -265,15 +267,15 @@ node .codex/hooks/project-ops.mjs health-check
 - Project hooks front-load supported mutation checks: `PreToolUse` requires valid workflow/approval state and a session-scoped recovery receipt tied to the task, handoff, and runtime. It is a guardrail over supported tool paths, not a complete security sandbox.
 - During execution, a new user instruction must be externalized before the next supported project mutation. Scope, requirement, goal, acceptance, or priority changes require `brainstorming-start` and fresh approval; bare continuation, pure status questions, and learning-only future preferences stay non-blocking.
 - Before execution approval, hooks still permit canonical governance artifacts in `.codex-context/`, `STRATEGY.md`, `docs/codex/specs/`, `docs/codex/plans/`, and `docs/codex/wayfinder/`; product-code edits remain blocked for Lane 2/3.
-- `PostToolUse` keeps read/exploration tracking lightweight, but uses pre-mutation intent plus current Git evidence for writes, including tools that commit their own changes. A failed or no-op state edit cannot satisfy freshness because refresh evidence is content-hash based.
+- `PostToolUse` leaves ordinary reads/searches debt-free and uses invocation-scoped intent plus before/after Git evidence to accumulate actual project changes, including tool-contained commits. Failed or no-op governance edits do not earn refresh evidence; no-op tests and commit-only operations do not erase completed refresh evidence. It emits reminders rather than interrupting the next tool call.
 - `Stop` rechecks current delivery evidence and uses bounded continuations for unresolved issues. Learning observations and ordinary asset hygiene are advisory; severe asset problems, invalid workflow/Git state, and missing required delivery evidence can still block. Exhausted continuations must surface unresolved gaps rather than claim completion.
-- `SubagentStart`/`SubagentStop` bind results to the parent task lifecycle and require usable evidence/findings, risks/open gaps, and a parent next action. Fixed headings are recommended but not required. They do not enforce file-level delegated scope; parent review remains responsible.
+- `SubagentStart`/`SubagentStop` bind results to the parent lifecycle and grade summary evidence without blocking native multi-agent completion. Incomplete summaries cannot serve as completion evidence until the parent independently reviews them.
 - Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue. After recovery, `asset-governance --apply` can archive that temporary notice when the preserved handoff body is present.
 - `health-check` reports static hook configuration, root/bootstrap parity, and per-event freshness for recent `PreToolUse`/`PostToolUse`/`Stop` liveness separately. A new runtime cannot inherit event coverage from an older runtime; missing liveness is a warning rather than proof that host trust is disabled.
 - `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It separates Safe-Auto cleanup from Confirm-First assets that require human judgment.
 - `codex-skill-evolution` is also installed as a global maintenance entry and integrates SkillOpt-Sleep as an offline evolution layer for Dong Skills itself. It uses backlog/outbox issues as candidates, creates reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. It is not a hook, not project memory, and not a business-code optimizer.
 - `codex-wayfinder` maps frontier decisions when the destination is known but the route is still too uncertain for a credible spec. It defaults to one frontier decision per session, while allowing bounded parallel exploration when related tickets share one decision boundary and are reconciled into the map before stopping.
-- Accepted review findings that require project-file edits use `workflow-state transition review-changes-requested`, then pass through implementation, verification, and review again; pre-fix verification is not reused.
+- Accepted review/verification fixes may be applied directly within approved scope. The first real project mutation automatically reopens debugging and clears old verification/review evidence, so verification and review must run again before delivery.
 - `verification-pass` and verification-gap transitions hash the accepted `.codex-context/verification.md`; `review-complete`/`review-skipped` require a later `Review Evidence` section and hash the reviewed document. Delivery fails if evidence is missing, reused from an earlier cycle, or modified after review closure.
 - `codex-agent-architecture-audit` reviews agent wrappers, memory, tool discipline, hidden repair loops, rendering, and persistence boundaries.
 - `codex-loop-design-check` reviews Goal mode, autonomous loops, and SkillOpt-style optimization for decidable goals, boundaries, retry caps, independent judges, and human final judgment.

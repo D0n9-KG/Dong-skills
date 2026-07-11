@@ -632,16 +632,10 @@ export function workflowConsistencyStatus(root, ctx, state = null) {
       issues.push("state mismatch: verification.md changed after review closure");
     }
   }
-  if (current.handoff_hash && current.handoff_hash !== "null") {
-    if (current.handoff_task_id !== current.task_id ||
-        String(current.handoff_task_generation) !== String(current.task_generation)) {
-      issues.push("state mismatch: saved handoff hash task identity does not match current workflow task identity");
-    } else {
-      const currentHash = workflowContextHash(root, contextDir, false).combined;
-      if (currentHash !== current.handoff_hash) {
-        issues.push("state mismatch: saved handoff_hash does not match current workflow context");
-      }
-    }
+  if (current.handoff_hash && current.handoff_hash !== "null" &&
+      (current.handoff_task_id !== current.task_id ||
+       String(current.handoff_task_generation) !== String(current.task_generation))) {
+    issues.push("state mismatch: saved handoff hash task identity does not match current workflow task identity");
   }
 
   return {
@@ -1477,6 +1471,34 @@ function transitionWorkflowStateUnlocked(root, ctx, event) {
 
 export function transitionWorkflowState(root, ctx, event) {
   return withWorkflowStateLock(root, ctx, () => transitionWorkflowStateUnlocked(root, ctx, event));
+}
+
+export function reopenWorkflowAfterProjectMutation(root, ctx, sourcePhase) {
+  const contextDir = ctxFor(root, ctx);
+  return withWorkflowStateLock(root, contextDir, () => {
+    const state = loadWorkflowState(root, contextDir);
+    if (!["verification", "review", "delivery", "handoff"].includes(state.phase)) {
+      return state;
+    }
+    const fromReview = ["review", "delivery", "handoff"].includes(state.phase);
+    const next = {
+      ...state,
+      phase: "debugging",
+      next_skill: fromReview ? "receiving-code-review" : "systematic-debugging",
+      verify_result: "pending",
+      verification_gap_status: "not-required",
+      review_status: "pending",
+      checkpoint_status: "pending",
+      verification_evidence_hash: "none",
+      review_evidence_hash: "none",
+      debug_return_phase: "none",
+      debug_return_skill: "none",
+      decision_required: "none",
+      note: `Project mutation automatically reopened ${sourcePhase || state.phase} evidence`
+    };
+    saveWorkflowStateUnlocked(root, contextDir, next);
+    return next;
+  });
 }
 
 export function nextWorkflowStep(root, ctx) {
