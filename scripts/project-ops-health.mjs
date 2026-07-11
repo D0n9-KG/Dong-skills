@@ -300,6 +300,13 @@ function textSha256(text) {
   return createHash("sha256").update(String(text || ""), "utf8").digest("hex");
 }
 
+function documentSha256(text, mode) {
+  const value = mode === "normalized-v1"
+    ? String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n")
+    : String(text || "");
+  return textSha256(value);
+}
+
 function walkFiles(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -445,7 +452,7 @@ function checkWorkflowConsistency(workflow, spec, plan, issues) {
   if (workflow.spec_status === "approved") {
     if (!/^[a-f0-9]{64}$/.test(String(workflow.approved_spec_hash || ""))) {
       issues.push("workflow-state.yaml approved spec is missing approved_spec_hash");
-    } else if (workflow.approved_spec_hash !== textSha256(spec)) {
+    } else if (workflow.approved_spec_hash !== documentSha256(spec, workflow.document_hash_mode)) {
       issues.push("workflow-state.yaml/spec.md mismatch: spec.md changed after written-spec approval");
     }
   }
@@ -472,7 +479,7 @@ function checkWorkflowConsistency(workflow, spec, plan, issues) {
       ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(workflow.execution_approval)) {
     if (!/^[a-f0-9]{64}$/.test(String(workflow.approved_plan_hash || ""))) {
       issues.push("workflow-state.yaml approved plan is missing approved_plan_hash");
-    } else if (workflow.approved_plan_hash !== textSha256(plan)) {
+    } else if (workflow.approved_plan_hash !== documentSha256(plan, workflow.document_hash_mode)) {
       issues.push("workflow-state.yaml/plan-progress.md mismatch: plan changed after execution approval");
     }
   }

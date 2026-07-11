@@ -2,6 +2,7 @@ workflow: standard
 work_lane: lane-3
 task_id: task-5-2026-07-10T15-05-49-436Z
 task_generation: 5
+document_hash_mode: normalized-v1
 phase: complete
 next_skill: none
 auto_next: true
@@ -9,7 +10,7 @@ decision_required: none
 spec_status: approved
 plan_status: approved
 approved_spec_hash: e6346db5b1a924f701bf0ad045a21ba33a129de1c1aa187918e381e38683fe40
-approved_plan_hash: 25e032f9219000dd74e02d3fea798ad9514e1c1cc1a426c106a3fbcfb6cb99c2
+approved_plan_hash: 8ac7d712a2fdc02931988940e755466193b4767af88d88493f0f12519cf8d8bd
 execution_mode: traditional
 execution_approval: approved-traditional
 loop_review_status: not-required
@@ -18,7 +19,7 @@ verification_gap_status: not-required
 review_status: done
 checkpoint_status: done
 verification_evidence_hash: 12021f939a8dd02a933025261664f37b514713b85216fe25f4e19e2e4567050b
-review_evidence_hash: 777058a30b4473395c0b48bd30237b6d991d6eeec5c8f8fe8ae5087e20dbdde8
+review_evidence_hash: 68ae8432b2e6c565c8d72bab010c6967d370ccc938c6efdc2e9d7ef239d4cd77
 resume_phase: none
 resume_skill: none
 debug_return_phase: none

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readText, writeTextAtomic } from "./core.mjs";
 import { meaningful, sectionContent } from "./markdown.mjs";
 import { stableFingerprint, withRuntimeLock } from "./runtime.mjs";
@@ -21,6 +22,7 @@ const FIELD_ORDER = [
   "work_lane",
   "task_id",
   "task_generation",
+  "document_hash_mode",
   "phase",
   "next_skill",
   "auto_next",
@@ -52,6 +54,7 @@ const FIELD_ORDER = [
 const ALLOWED = {
   workflow: ["standard", "hotfix", "tweak"],
   work_lane: ["lane-0", "lane-1", "lane-2", "lane-3"],
+  document_hash_mode: ["legacy-v0", "normalized-v1"],
   phase: [
     "discovery",
     "wayfinding",
@@ -139,6 +142,7 @@ export function defaultWorkflowState() {
     work_lane: "lane-1",
     task_id: "task-1",
     task_generation: "1",
+    document_hash_mode: "normalized-v1",
     phase: "discovery",
     next_skill: "codex-codebase-onboarding",
     auto_next: "true",
@@ -196,6 +200,7 @@ export function parseWorkflowYaml(text) {
 
 export function normalizeWorkflowState(input) {
   const state = { ...(input || {}) };
+  if (!state.document_hash_mode) state.document_hash_mode = "legacy-v0";
   if (!state.work_lane) state.work_lane = "lane-1";
   if (!state.verification_gap_status) {
     state.verification_gap_status = state.verify_result === "gap-recorded" ? "pending" : "not-required";
@@ -322,6 +327,68 @@ export function migrateWorkflowState(root, ctx) {
         migrated.plan_status === "approved" &&
         ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(migrated.execution_approval)) {
       migrated.approved_plan_hash = documentHash(contextDir, REQUIRED_FILES.plan);
+    }
+    if (migrated.document_hash_mode === "legacy-v0") {
+      const rebindCurrentHash = (field, name) => {
+        const legacyStored = String(parsed[field] || "none");
+        if (!/^[a-f0-9]{64}$/.test(legacyStored)) return;
+        const stored = String(migrated[field] || "none");
+        if (!/^[a-f0-9]{64}$/.test(stored)) return;
+        const documentFile = path.join(contextDir, name);
+        const raw = fs.existsSync(documentFile) ? rawFileHash(documentFile) : "none";
+        const relative = path.relative(root, documentFile).replace(/\\/g, "/");
+        const stateRelative = path.relative(root, file).replace(/\\/g, "/");
+        let matchesRecordedRevision = false;
+        try {
+          const commits = execFileSync("git", [
+            "log",
+            "--format=%H",
+            `-S${field}: ${legacyStored}`,
+            "--",
+            stateRelative
+          ], {
+            cwd: root,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"]
+          }).trim().split(/\r?\n/).filter(Boolean);
+          for (const commit of commits) {
+            const recordedState = execFileSync("git", ["show", `${commit}:${stateRelative}`], {
+              cwd: root,
+              encoding: "utf8",
+              stdio: ["ignore", "pipe", "ignore"]
+            });
+            if (!new RegExp(`^${field}: ${legacyStored}$`, "m").test(recordedState)) continue;
+            const recordedDocument = execFileSync("git", ["show", `${commit}:${relative}`], {
+              cwd: root,
+              encoding: "utf8",
+              stdio: ["ignore", "pipe", "ignore"]
+            });
+            if (normalizedTextHash(recordedDocument) === documentHash(contextDir, name)) {
+              matchesRecordedRevision = true;
+              break;
+            }
+          }
+        } catch {}
+        if (raw !== legacyStored && !matchesRecordedRevision) {
+          throw new Error(`Cannot migrate ${field}: current ${name} does not match the legacy hash; repair or explicitly reapprove the document before migration`);
+        }
+        migrated[field] = documentHash(contextDir, name);
+      };
+      if (migrated.spec_status === "approved") {
+        rebindCurrentHash("approved_spec_hash", REQUIRED_FILES.spec);
+      }
+      if (migrated.plan_status === "approved" &&
+          ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(migrated.execution_approval)) {
+        rebindCurrentHash("approved_plan_hash", REQUIRED_FILES.plan);
+      }
+      if (["pass", "fail", "gap-recorded"].includes(migrated.verify_result) &&
+          migrated.review_status === "pending") {
+        rebindCurrentHash("verification_evidence_hash", REQUIRED_FILES.verification);
+      }
+      if (["done", "skipped"].includes(migrated.review_status)) {
+        rebindCurrentHash("review_evidence_hash", REQUIRED_FILES.verification);
+      }
+      migrated.document_hash_mode = "normalized-v1";
     }
     const validation = validateWorkflowState(migrated);
     if (!validation.ok) {
@@ -1592,6 +1659,15 @@ export function checkWorkflowEntry(root, ctx, phase) {
 }
 
 function fileHash(file) {
+  return normalizedTextHash(readText(file));
+}
+
+function normalizedTextHash(text) {
+  const normalized = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  return createHash("sha256").update(normalized, "utf8").digest("hex");
+}
+
+function rawFileHash(file) {
   return createHash("sha256").update(readText(file), "utf8").digest("hex");
 }
 

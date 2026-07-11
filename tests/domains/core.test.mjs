@@ -137,6 +137,160 @@ test("workflow work_lane is backward compatible and rejects unknown values", () 
   assert.match(out, /Workflow state ok/);
 });
 
+test("normalized document hashes ignore UTF-8 BOM and line-ending differences", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  syncApprovalHashes(project);
+
+  for (const name of ["spec.md", "plan-progress.md"]) {
+    const file = path.join(project, ".codex-context", name);
+    const text = fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+    fs.writeFileSync(file, `\uFEFF${text.replace(/\n/g, "\r\n")}`, "utf8");
+  }
+
+  const output = execFileSync(process.execPath, [workflowState, project, "status"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(output, /Workflow state ok/);
+});
+
+test("legacy document hash migration rebinds matching files and rejects drift", () => {
+  for (const drifted of [false, true]) {
+    const project = tempProject();
+    readyHealthFixture(project);
+    readyState(project);
+    const ctx = path.join(project, ".codex-context");
+    const specFile = path.join(ctx, "spec.md");
+    const planFile = path.join(ctx, "plan-progress.md");
+    const rawHash = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+    let state = fs.readFileSync(path.join(ctx, "workflow-state.yaml"), "utf8")
+      .replace(/^document_hash_mode:.*\r?\n/m, "")
+      .replace(/^approved_spec_hash:.*$/m, `approved_spec_hash: ${rawHash(specFile)}`)
+      .replace(/^approved_plan_hash:.*$/m, `approved_plan_hash: ${rawHash(planFile)}`);
+    write(path.join(ctx, "workflow-state.yaml"), state);
+    if (drifted) write(specFile, `${fs.readFileSync(specFile, "utf8")}\nUnapproved drift.\n`);
+
+    if (drifted) {
+      assert.throws(() => {
+        execFileSync(process.execPath, [workflowState, project, "migrate"], {
+          cwd: root,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"]
+        });
+      }, /Command failed/);
+    } else {
+      execFileSync(process.execPath, [workflowState, project, "migrate"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      state = fs.readFileSync(path.join(ctx, "workflow-state.yaml"), "utf8");
+      assert.match(state, /^document_hash_mode: normalized-v1$/m);
+      const output = execFileSync(process.execPath, [workflowState, project, "status"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      assert.match(output, /Workflow state ok/);
+    }
+  }
+});
+
+test("legacy document hash migration rejects drift committed after approval evidence", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  const ctx = path.join(project, ".codex-context");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  const specFile = path.join(ctx, "spec.md");
+  const planFile = path.join(ctx, "plan-progress.md");
+  const rawHash = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^document_hash_mode:.*\r?\n/m, "")
+      .replace(/^approved_spec_hash:.*$/m, `approved_spec_hash: ${rawHash(specFile)}`)
+      .replace(/^approved_plan_hash:.*$/m, `approved_plan_hash: ${rawHash(planFile)}`)
+  );
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "dong-skills-test"]);
+  git(project, ["config", "user.name", "Dong Skills Test"]);
+  git(project, ["add", ".codex-context"]);
+  git(project, ["commit", "-m", "record approved workflow evidence"]);
+
+  write(specFile, `${fs.readFileSync(specFile, "utf8")}\nCommitted without reapproval.\n`);
+  git(project, ["add", ".codex-context/spec.md"]);
+  git(project, ["commit", "-m", "change spec without approval"]);
+
+  assert.throws(() => {
+    execFileSync(process.execPath, [workflowState, project, "migrate"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /Command failed/);
+});
+
+test("legacy document hash migration accepts equivalent content from its recorded revision", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  const ctx = path.join(project, ".codex-context");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  const specFile = path.join(ctx, "spec.md");
+  const planFile = path.join(ctx, "plan-progress.md");
+  const spec = fs.readFileSync(specFile, "utf8").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  fs.writeFileSync(specFile, spec.replace(/\n/g, "\r\n"), "utf8");
+  const rawHash = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^document_hash_mode:.*\r?\n/m, "")
+      .replace(/^approved_spec_hash:.*$/m, `approved_spec_hash: ${rawHash(specFile)}`)
+      .replace(/^approved_plan_hash:.*$/m, `approved_plan_hash: ${rawHash(planFile)}`)
+  );
+  git(project, ["init"]);
+  git(project, ["config", "core.autocrlf", "false"]);
+  git(project, ["config", "user.email", "dong-skills-test"]);
+  git(project, ["config", "user.name", "Dong Skills Test"]);
+  git(project, ["add", ".codex-context"]);
+  git(project, ["commit", "-m", "record legacy approval evidence"]);
+
+  fs.writeFileSync(specFile, spec, "utf8");
+  execFileSync(process.execPath, [workflowState, project, "migrate"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const state = fs.readFileSync(stateFile, "utf8");
+  assert.match(state, /^document_hash_mode: normalized-v1$/m);
+  assert.match(
+    state,
+    new RegExp(`^approved_spec_hash: ${createHash("sha256").update(spec, "utf8").digest("hex")}$`, "m")
+  );
+});
+
+test("project-ops wrapper routes rootless workflow migrate to the current project", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(stateFile, fs.readFileSync(stateFile, "utf8").replace(/^document_hash_mode:.*\r?\n/m, ""));
+
+  const output = execFileSync(process.execPath, [hook, "workflow-state", "migrate"], {
+    cwd: project,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(output, /Migrated workflow-state\.yaml/);
+  assert.match(fs.readFileSync(stateFile, "utf8"), /^document_hash_mode: normalized-v1$/m);
+});
+
 test("validated work-lane transitions classify complex work before execution", () => {
   const project = tempProject();
   readyHealthFixture(project);

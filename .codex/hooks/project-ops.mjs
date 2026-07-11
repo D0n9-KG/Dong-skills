@@ -22,6 +22,7 @@ const ROOTLESS_FIRST_ARGS = {
   "skill-evolution": new Set(["status", "collect-candidates", "dry-run", "run", "inspect-stage", "adopt", "help", "--help", "-h"]),
   "workflow-state": new Set([
     "init",
+    "migrate",
     "status",
     "get",
     "set",

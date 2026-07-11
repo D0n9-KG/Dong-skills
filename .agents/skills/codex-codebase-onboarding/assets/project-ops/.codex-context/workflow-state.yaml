@@ -2,6 +2,7 @@ workflow: standard
 work_lane: lane-1
 task_id: task-1
 task_generation: 1
+document_hash_mode: normalized-v1
 phase: discovery
 next_skill: codex-codebase-onboarding
 auto_next: true

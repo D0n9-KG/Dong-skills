@@ -545,15 +545,19 @@ function syncApprovalHashes(projectRoot) {
   const specStatus = state.match(/^spec_status:\s*(.+)$/m)?.[1]?.trim() || "not-started";
   const planStatus = state.match(/^plan_status:\s*(.+)$/m)?.[1]?.trim() || "not-started";
   const executionApproval = state.match(/^execution_approval:\s*(.+)$/m)?.[1]?.trim() || "pending";
+  const normalizedHash = (file) => createHash("sha256")
+    .update(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n"), "utf8")
+    .digest("hex");
   const specHash = specStatus === "approved"
-    ? createHash("sha256").update(fs.readFileSync(path.join(ctx, "spec.md"))).digest("hex")
+    ? normalizedHash(path.join(ctx, "spec.md"))
     : "none";
   const planHash = planStatus === "approved" &&
       ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(executionApproval)
-    ? createHash("sha256").update(fs.readFileSync(path.join(ctx, "plan-progress.md"))).digest("hex")
+    ? normalizedHash(path.join(ctx, "plan-progress.md"))
     : "none";
 
   for (const [field, value] of [
+    ["document_hash_mode", "normalized-v1"],
     ["approved_spec_hash", specHash],
     ["approved_plan_hash", planHash]
   ]) {
