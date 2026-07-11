@@ -7,7 +7,7 @@
 整体仔细审查近期 hooks 优化，重点核实 change-state receipt 的 fingerprint/刷新判断，并修复会干扰模型或阻碍项目推进的问题。
 
 ## 当前阶段
-verified / not committed
+verified / checkpoint pushed；workflow closure pending
 
 ## 当前假设
 - 当前工作继续沿用 Lane 3、Traditional task-by-task execution。
@@ -24,8 +24,8 @@ verified / not committed
 - 完整验证：204/204 tests across 11 domains；最终 hooks/workflow 104/104；health、release check、installer preview、runtime parity、`git diff --check` 均通过。
 
 ## 下一步动作
-1. 等待用户审阅本轮结果；本轮未自动 commit/push，也未覆盖全局安装副本。
-2. 用户确认后可提交、推送并运行真实安装同步。
+1. 主功能 checkpoint `2ac0c55` 已推送到 `origin/main`。
+2. 完成 workflow 状态收口并运行真实安装同步。
 3. 旧项目仍需重新 bootstrap 才能获得最新项目级 hooks/runtime。
 
 ## 最后更新

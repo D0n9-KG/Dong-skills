@@ -15,8 +15,7 @@
 
 ## 计划状态
 - Task 1-11 已实现并通过验证。
-- 当前状态：verified, not committed, not installed globally in this round。
-- 下一步取决于用户：审阅后提交/推送和真实安装同步。
+- 主功能 checkpoint `2ac0c55` 已提交并推送；workflow 状态收口和真实安装同步进行中。
 
 ## 已修改文件
 - hooks/runtime：`.codex/hooks*`、`.codex/scripts/lib/{core,events,git,learning,markdown,recovery-eval,runtime,templates,workflow}.mjs`。
@@ -38,7 +37,7 @@
 ## 当前状态
 - Git 分支：`main`
 - HEAD / 基线：`774430a2e92fc42980555b8fa980fe981d699ee4`
-- 远端：与 `origin/main` 一致；当前工作区有本轮未提交变更。
+- 远端：`origin/main` 已包含主功能 checkpoint `2ac0c55`；当前仅有 checkpoint/workflow 状态收口尾部。
 - 安装副本：本轮仅运行 installer preview，未覆盖全局或其他项目安装副本。
 - health：pass；hook liveness runtime-mismatch warning 仅表示当前会话未刷新对应 runtime liveness，不是静态失败。
 
@@ -66,8 +65,8 @@
 - 无已知未修复 P0/P1。
 
 ## 下一步动作
-1. 等待用户审阅本轮结果。
-2. 用户确认后提交并推送，并运行真实安装同步。
+1. 记录 checkpoint-done 并完成 workflow closure。
+2. 提交、推送状态收口尾部并运行真实安装同步。
 3. 对旧项目运行 onboarding/bootstrap，更新项目级 Dong Skills。
 
 ## 优先重读文件
@@ -89,12 +88,12 @@
 - 不自动 commit/push。
 
 ## Git 存档
-- 最新功能提交：`774430a2e92fc42980555b8fa980fe981d699ee4`。
-- 推送状态：该基线与 `origin/main` 一致；本轮未提交改动尚未推送。
-- 已包含文件：已提交基线包含上一轮 GPT 5.6 SOL 适配。
-- 有意保留未提交的文件：当前 hooks/runtime、bootstrap 镜像、tests、skills/docs 和状态文件。
-- 暂缓原因：等待用户确认提交/推送。
-- 下次存档：用户确认后提交并推送。
+- 最新功能提交：`2ac0c55ba4559394385f2bb7776f8636ab669ff0`。
+- 推送状态：已推送到 `origin/main`，远端 ref 已核对为 `2ac0c55ba4559394385f2bb7776f8636ab669ff0`。
+- 已包含文件：本轮 hooks/runtime、bootstrap 镜像、tests、skills/docs 和验证状态。
+- 有意保留未提交的文件：checkpoint/workflow 状态收口尾部。
+- 暂缓原因：无；状态尾部将在 workflow closure 后单独提交。
+- 下次存档：提交并推送状态收口尾部。
 
 ## 已读取但未修改文件
 - 外部上游快照和历史验证证据仅作为背景；本轮最终判断以 2026-07-11 验证为准。
