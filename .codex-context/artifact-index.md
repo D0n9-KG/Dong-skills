@@ -19,6 +19,7 @@
 - `licenses/MATT-POCOCK-SKILLS-LICENSE`: Matt Pocock Skills MIT 许可证。
 
 ## 已修改
+- `scripts/run-domain-tests.mjs`: 新增 domain 测试实时 start/done 输出、`DONG_DOMAIN_TEST_TIMEOUT_MS` 单域硬超时、超时终止与失败域报告，避免 release-check 长时间运行或卡住时无诊断。
 - `.codex/scripts/lib/{events,workflow,recovery-eval}.mjs` 与 bootstrap 镜像：修复 change-state receipt/fingerprint、shell/tool 分类、recovery hash 与 evidence 自动 reopen。
 - `tests/domains/{workflow-hooks,workflow-governance,skills-contracts}.test.mjs`：新增 no-op/commit/连续 mutation、quote-aware shell、PowerShell alias、opaque/unknown 工具、普通 Read、scoped fix 与恢复 hash 回归。
 - `.agents/skills/{codex-project-governance,codex-review-panel,executing-plans,receiving-code-review,requesting-code-review,systematic-debugging,using-superpowers,verification-before-completion}/SKILL.md`：把状态更新移到 meaningful checkpoint，移除每次本地 fix 的额外 ceremony，保留跨 session 显式 reopen。
@@ -52,6 +53,8 @@
 - microsoft/SkillOpt `e4ea6a6`
 
 ## 验证产物
+- 2026-07-12 完整 release check：pass；包含新增可诊断 domain runner、health、context budget、syntax、domain-sharded tests、privacy/readability/large-file/runtime-artifact。
+- 2026-07-12 单独慢域复验：bootstrap-install 8/8、bootstrap-integrity 8/8、bootstrap-recovery 8/8、health-release 22/22、installer-global 10/10、workflow-governance 19/19、workflow-hooks 92/92。
 - 当前完整领域测试：204/204，11 domains，concurrency 4，237.8 秒。
 - 最终 hooks/workflow 两域：104/104，153.2 秒。
 - 当前 release check、health、installer preview、root/bootstrap parity 和 diff check：pass。
@@ -70,7 +73,7 @@
 - 临时 bootstrap、安装和错误场景 fixture 位于系统临时目录并已清理。
 
 ## 最新刷新
-2026-07-11：Task 11 完成；hooks wrapper regression 与 receipt/fingerprint 问题已修复，完整测试、release、health、preview、parity 和最终两域复验通过；未提交、未执行真实安装。
+2026-07-12：整体逐项审查发现并修复 release/domain test runner 诊断缺口；完整 release-check 通过。上一轮 Stop hook 修复已在 `09b5748` 推送。
 
 ## 已读取 / 已检查
 - 暂无。

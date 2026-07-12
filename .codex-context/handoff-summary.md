@@ -36,12 +36,14 @@
 
 ## 当前状态
 - Git 分支：`main`
-- HEAD / 基线：`774430a2e92fc42980555b8fa980fe981d699ee4`
-- 远端：`origin/main` 已包含主功能 checkpoint `2ac0c55`；当前仅有 checkpoint/workflow 状态收口尾部。
-- 安装副本：本轮仅运行 installer preview，未覆盖全局或其他项目安装副本。
-- health：pass；hook liveness runtime-mismatch warning 仅表示当前会话未刷新对应 runtime liveness，不是静态失败。
+- HEAD / 基线：`09b5748 fix(hooks): close Stop state refresh loops` 已推送到 `origin/main`。
+- 当前未提交改动：`scripts/run-domain-tests.mjs` 的诊断修复，以及本轮状态记录。
+- 安装副本：本轮未覆盖全局或其他项目安装副本；旧项目仍需重新 bootstrap。
+- health/release：pass；hook liveness runtime-mismatch warning 仅表示当前会话未刷新对应 runtime liveness，不是静态失败。
 
 ## 已完成
+- 本轮整体逐项审查：28 个 skill manifest/frontmatter/状态触点通过；核心 routing/approval/state 合同存在；root/bootstrap 关键镜像一致。
+- 发现并修复 release/domain 测试 runner 诊断缺口：原来长时间完整 release-check 或超时时无实时进度；现在 domain runner 会实时输出 start/done，并支持 per-domain timeout。
 - hooks 控制面：PreToolUse recovery/approval/lane/phase/Git 门禁，PostToolUse mutation intent，Stop 分级与有界 continuation，Subagent lifecycle，liveness health。
 - 信任闭环：session-scoped transition、一次性用户决策 receipt、Lane 3 closure、workflow 锁与原子写、new-task 归档重置。
 - 安装生命周期：self-contained distribution snapshot/id、stale source fail closed、source relocation、junction 物理锁、workflow schema migrator。
@@ -50,6 +52,8 @@
 - hooks 实际使用修复：receipt refresh 保留和多 mutation 累积；quote-aware shell parser；PowerShell alias/复合写动词；opaque 前置门禁；未知工具观察式追踪；未知执行结果不授予刷新；review/verification 真实 mutation 自动 reopen；普通探索无债务。
 
 ## 验证证据
+- 2026-07-12 `node scripts/release-check.mjs .`: pass。
+- 2026-07-12 单独慢域复验：bootstrap-install、bootstrap-integrity、bootstrap-recovery、health-release、installer-global、workflow-governance、workflow-hooks 均通过。
 - `node scripts/run-domain-tests.mjs`: pass, 204/204, 11 domains, concurrency 4, 237.8s。
 - 最终 `node --test tests/domains/workflow-hooks.test.mjs tests/domains/workflow-governance.test.mjs`: pass, 104/104, 153.2s。
 - `node --test tests/domains/skills-contracts.test.mjs`: pass, 2/2。
@@ -60,14 +64,14 @@
 - root/bootstrap `events`、`workflow`、`recovery-eval`、AGENTS snippet SHA-256 parity: pass。
 
 ## 当前判断
-- 本轮确认的实际误阻断和漏门禁问题已修复；未发现仍会系统性阻碍复杂项目推进的 P0/P1。
+- 本轮确认的实际误阻断、漏门禁和验证入口不可诊断问题已修复；未发现仍会系统性阻碍复杂项目推进的 P0/P1。
 - Dong Skills 当前约束可恢复事实、批准边界和交付证据，不强制模型按旧模板表达探索、多智能体或 scoped fix。
 - 无已知未修复 P0/P1。
 
 ## 下一步动作
-1. 记录 checkpoint-done 并完成 workflow closure。
-2. 提交、推送状态收口尾部并运行真实安装同步。
-3. 对旧项目运行 onboarding/bootstrap，更新项目级 Dong Skills。
+1. 提交并推送本轮 `run-domain-tests` 诊断修复。
+2. 对旧项目运行 onboarding/bootstrap，更新项目级 Dong Skills。
+3. 后续可择机做 context-budget 冷路径拆分和 verification 日志 prune。
 
 ## 优先重读文件
 1. `.codex-context/spec.md`
@@ -88,12 +92,12 @@
 - 不自动 commit/push。
 
 ## Git 存档
-- 最新功能提交：`2ac0c55ba4559394385f2bb7776f8636ab669ff0`。
-- 推送状态：已推送到 `origin/main`，远端 ref 已核对为 `2ac0c55ba4559394385f2bb7776f8636ab669ff0`。
-- 已包含文件：本轮 hooks/runtime、bootstrap 镜像、tests、skills/docs 和验证状态。
-- 有意保留未提交的文件：checkpoint/workflow 状态收口尾部。
-- 暂缓原因：无；状态尾部将在 workflow closure 后单独提交。
-- 下次存档：提交并推送状态收口尾部。
+- 最新提交：`09b5748 fix(hooks): close Stop state refresh loops`。
+- 推送状态：已推送到 `origin/main`；当前待提交 `scripts/run-domain-tests.mjs` 诊断修复与本轮审查状态记录。
+- 已包含文件：上一轮 Stop hook 修复已包含 hooks/runtime、bootstrap 镜像、tests、skills/docs 与状态记录；本轮提交将包含 `scripts/run-domain-tests.mjs` 和 `.codex-context` 审查记录。
+- 有意保留未提交的文件：无；本轮审查修复验证后提交并推送。
+- 暂缓原因：无。
+- 下次存档：提交并推送本轮审查/验证入口修复。
 
 ## 已读取但未修改文件
 - 外部上游快照和历史验证证据仅作为背景；本轮最终判断以 2026-07-11 验证为准。

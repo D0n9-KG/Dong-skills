@@ -1,5 +1,56 @@
 # 验证
 
+## 当前任务：Dong Skills 整体逐项审查与测试 runner 诊断修复
+- `git status --short --branch; git log -1 --oneline`
+  - Result: pass
+  - Evidence: 审查开始时仓库位于 `main...origin/main`，最新提交为 `09b5748 fix(hooks): close Stop state refresh loops`。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs health-check`
+  - Result: pass
+  - Evidence: static configuration pass、runtime parity pass、Issues none；recent hook liveness 为 runtime-mismatch warning，不是静态失败。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs context-budget`
+  - Result: pass
+  - Evidence: hot recovery path 约 16,359 tokens，低于 warn 35,000 / fail 45,000。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs asset-governance`
+  - Result: pass
+  - Evidence: Blocking issues none；仅提示 verification command entries 可考虑从 10 prune 到 8，并复核部分 on-demand state freshness。
+  - Date: 2026-07-12.
+- `node --test tests/domains/core.test.mjs`
+  - Result: pass
+  - Evidence: 24/24 tests passed。
+  - Date: 2026-07-12.
+- `node --test --test-name-pattern "Stop" tests/domains/workflow-hooks.test.mjs`
+  - Result: pass
+  - Evidence: 21/21 Stop-related tests passed，覆盖 Stop 循环/continuation/中文 checkpoint/ordinary reads 等关键路径。
+  - Date: 2026-07-12.
+- `node --test tests/domains/skills-contracts.test.mjs`
+  - Result: pass
+  - Evidence: 2/2 tests passed；确认 brainstorming continuation loop 与 borrowed workflow gates 保留。
+  - Date: 2026-07-12.
+- `node --check scripts/run-domain-tests.mjs`
+  - Result: pass
+  - Evidence: 新增实时 domain progress 与 per-domain timeout 后语法检查通过。
+  - Date: 2026-07-12.
+- `node --test tests/domains/bootstrap-install.test.mjs tests/domains/bootstrap-integrity.test.mjs tests/domains/bootstrap-recovery.test.mjs`
+  - Result: pass
+  - Evidence: 三个 bootstrap 域分别 8/8、8/8、8/8 pass；确认 45 秒临时超时是误杀，不是功能失败。
+  - Date: 2026-07-12.
+- `node --test tests/domains/health-release.test.mjs tests/domains/installer-global.test.mjs tests/domains/workflow-governance.test.mjs tests/domains/workflow-hooks.test.mjs`
+  - Result: pass
+  - Evidence: 四个慢域分别 22/22、10/10、19/19、92/92 pass。
+  - Date: 2026-07-12.
+- `node scripts/release-check.mjs .`
+  - Result: pass
+  - Evidence: health、context budget、Node/PowerShell syntax、domain-sharded tests、privacy、text readability、large file、runtime artifact checks 全部通过。
+  - Date: 2026-07-12.
+
+## 审查证据
+- Scope: 28 个 skill、manifest、核心 routing/approval/state 合同、hook runtime、bootstrap asset parity、release/test runner。
+- Findings: 无 P0/P1；唯一已修复 P2 为 `scripts/run-domain-tests.mjs` 缺少实时进度和单域硬超时，导致 release-check 超时不可诊断。
+- Residual risks: `events.mjs` 与 `workflow.mjs` 仍是最大冷路径文件；context-budget 已通过但后续可以按模块继续拆分。`verification.md` 有 10 条 command entries，可按 asset-governance 建议 prune 到 8。
+
 ## 当前任务：hooks wrapper regression 与 change-state receipt 修复
 - `node scripts/run-domain-tests.mjs`
   - Result: pass
@@ -87,4 +138,3 @@
 - Blocking findings: none。
 - Residual risks: hooks 不是完整安全沙箱；旧项目需要重新 bootstrap；本轮尚未执行真实全局安装。
 - Fixes required: none before user review/commit decision。
-
