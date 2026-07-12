@@ -19,7 +19,7 @@
 ## 计划状态
 - Traditional task-by-task execution。
 - 实现、发布级验证和 review 已完成。
-- 待提交、推送和全局安装同步。
+- 提交和推送已完成；待全局安装同步。
 
 ## 已修改文件
 - `.codex/scripts/lib/core.mjs`
@@ -53,21 +53,20 @@
 - 根运行时与 bootstrap 镜像一致。
 
 ## Git 存档
-- 最新提交: `3d665d9 fix(hooks): harden compound command gates`。
-- 推送状态: 当前修复尚未提交推送。
-- 已包含文件: 待提交。
-- 有意保留未提交的文件: 当前修复和状态文件。
-- 暂缓原因: 正在完成 review 和最终 checkpoint。
-- 下次存档: review 通过后立即提交并推送。
+- 最新提交: `cec828c fix(hooks): tighten raw writes and freshness evidence`。
+- 推送状态: 已推送到 `origin/main`。
+- 已包含文件: hook 运行时、bootstrap 镜像、回归测试、当前任务状态与上一任务归档。
+- 有意保留未提交的文件: 仅 checkpoint-finalize 治理尾部。
+- 暂缓原因: 无。
+- 下次存档: 出现新的已验证源代码变更后。
 
 ## 需要保留的经验沉淀
 - 安全目录和运行时目录不能因为位于治理树下就自动获得修复豁免。
 - freshness 结论、责任资产和展示时间必须来自同一事实集合。
 
 ## 下一步动作
-1. 提交并推送。
-2. 同步全局 Dong Skills 安装。
-3. 提供旧项目更新说明。
+1. 同步全局 Dong Skills 安装。
+2. 提供旧项目更新说明。
 
 ## 优先重读文件
 1. `.codex-context/spec.md`
