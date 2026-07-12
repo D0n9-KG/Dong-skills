@@ -1,5 +1,38 @@
 # 验证
 
+## 当前任务：提交后稳定性复核与 handoff 结构修复
+- `git commit` / `git push origin main`
+  - Result: pass
+  - Evidence: 已提交并推送 `77d12d9 feat(skills): strengthen Wayfinder routing`；远端 `refs/heads/main` 为 `77d12d928c175d956098214fd282a08031f434a2`。
+  - Date: 2026-07-12.
+- `node --test tests/domains/core.test.mjs`
+  - Result: pass
+  - Evidence: 24/24 tests passed；此前 core 域失败的原因是 fixture 内 `handoff-summary.md` 缺固定 health-check 章节，补齐 handoff 结构后该域通过。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs health-check`
+  - Result: pass
+  - Evidence: static configuration pass、runtime parity pass、Issues none；hook liveness runtime-mismatch 仍为 warning，不代表静态配置失败。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs context-budget`
+  - Result: pass
+  - Evidence: hot recovery path 约 16,653 tokens，低于 warn/fail 阈值。
+  - Date: 2026-07-12.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-windows.ps1 -TargetProjectRoot . -Preview`
+  - Result: pass
+  - Evidence: install preview 显示将替换/更新 managed Dong Skills 资产，且 `No files were written.`
+  - Date: 2026-07-12.
+- `node scripts/release-check.mjs .`
+  - Result: pass
+  - Evidence: health-check、context budget、Node/PowerShell syntax、domain-sharded tests、privacy scan、text readability scan、large file scan、runtime artifact scan 全部通过。
+  - Date: 2026-07-12.
+
+## Review Evidence
+- Post-push stability review: 2026-07-12，复核提交/推送状态、strict routing scan、core 域、health-check、context-budget、install preview 和完整 release-check。
+- Scope: Wayfinder 路由、Matt Pocock prototype/deep-module/local-ticket 吸收、router/governance 覆盖、handoff 固定章节、workflow 状态闭环、发布检查。
+- Verdict: Ready after handoff structure repair and workflow evidence hash refresh。
+- Blocking findings: none after the handoff structure fix。
+- Residual risks: hook liveness runtime-mismatch 仍为 warning；需要在真实项目/新 session 中通过 host trust 和实际 hook 运行刷新 liveness。冷路径大文件仍可后续拆分，但 context-budget 当前通过。
+
 ## 当前任务：Wayfinder 路由修复与 Matt Pocock 最新机制吸收
 - `git ls-remote https://github.com/mattpocock/skills.git HEAD`
   - Result: pass
