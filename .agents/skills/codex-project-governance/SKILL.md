@@ -125,6 +125,8 @@ Load only the skill needed for the current phase.
 15. Checkpoint: use `codex-git-checkpoint` after verified meaningful work, before long pauses, compaction, delivery, branch switches, or GitHub archive/push.
 16. Handoff: refresh `handoff-summary.md` before compaction, long pause, final response, or task switch.
 
+When Dong Skills itself is updated inside a business project, close the maintenance task explicitly: record a concise audit note, archive detailed Stop/hook/recovery/debug trails, and restore the active handoff/current-state top sections to the business project before resuming normal work. Do not let infrastructure maintenance become the next session's primary recovery story unless the current task is actually Dong Skills maintenance.
+
 ## Hooks
 
 When `.codex/hooks/project-ops.mjs` and `.codex/hooks.json` are installed and trusted:
@@ -141,6 +143,7 @@ When `.codex/hooks/project-ops.mjs` and `.codex/hooks.json` are installed and tr
 - Repeated unresolved `Stop` findings use a bounded continuation receipt. After the bound is exhausted, stopping is allowed only with an explicit unresolved-gap message; the final response must not claim verified completion.
 - `Stop` and `PreCompact` report malformed or missing `workflow-state.yaml`, but do not require it to be newer than every source edit.
 - `health-check` reports static hook configuration, root/bootstrap runtime parity, and recent liveness separately. Required critical events must each be fresh under the current runtime; missing liveness is a warning and cannot prove whether host trust is enabled, while runtime or parity failures are release issues.
+- `health-check` and `asset-governance` can warn about semantic state drift: handoff focused on infrastructure instead of the business task, contradictory current-state conclusions, repeated open-question headings, closed hook/debug logs in active working notes, or oversized raw footprints. Treat these warnings as recovery-quality issues to fix before milestone handoff, even when structural health still passes.
 - Hook output includes a compact status line with the actual Git root, phase, next skill, blocking decision, learning state, asset state, checkpoint state, and latest changed file when known.
 
 If a hook blocks, update the named state files. Do not disable hooks unless the user explicitly asks.

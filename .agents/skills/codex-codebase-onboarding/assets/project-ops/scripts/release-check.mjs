@@ -23,6 +23,7 @@ const READABILITY_SCAN_FILES = new Set([
 const MAX_TEXT_FILE_BYTES = 512 * 1024;
 const HOT_CONTEXT_WARN_LIMIT = 35_000;
 const HOT_CONTEXT_FAIL_LIMIT = 45_000;
+const COMMAND_MAX_BUFFER = 32 * 1024 * 1024;
 
 function gitRoot(cwd) {
   try {
@@ -71,7 +72,8 @@ function runCommand(label, command, args, options = {}) {
       cwd: options.cwd,
       env: options.env || process.env,
       encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: options.maxBuffer || COMMAND_MAX_BUFFER
     });
     return { ok: true, label };
   } catch (error) {

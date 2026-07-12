@@ -760,6 +760,114 @@ test("release check skips directory junctions without crashing", () => {
   assert.match(out, /Result: pass/);
 });
 
+test("health check warns on semantic state drift without failing", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const ctx = path.join(project, ".codex-context");
+  write(path.join(ctx, "handoff-summary.md"), `# Handoff 摘要
+
+## 2026-07-11 Dong Skills mutation refresh
+- Stop hook reported infrastructure debt.
+
+## Objective
+Fixture objective.
+
+## Latest User Instruction
+Fixture instruction.
+
+## Approved Scope / Spec
+Fixture scope.
+
+## Plan Status
+Fixture plan.
+
+## Files Modified
+- fixture.txt
+
+## Decisions Made
+- Fixture decision.
+
+## Verification Evidence
+- Fixture verification.
+
+## Git Checkpoint
+- Latest commit: fixture
+- Push state: no remote
+- Files included: fixture.txt
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+
+## Next Action
+Continue.
+
+## Files To Re-read First
+- fixture.txt
+`);
+  write(path.join(ctx, "current-state.md"), `# 当前状态摘要
+
+## Stop refresh
+- Stop hook still reports runtime risk and recovery gate risk.
+- Stop hook risk not yet resolved.
+- Stop hook and PreCompact runtime issue remains.
+- Stop hook runtime evidence remains.
+
+## Final
+- Stop freshness 回归通过。
+`);
+  write(path.join(ctx, "working-notes.md"), `# Working Notes
+
+## Purpose
+Fixture.
+
+## Current Findings
+Fixture.
+
+## Current Hypothesis
+Fixture.
+
+## Rejected Paths
+Fixture.
+
+## Open Investigation Questions
+Fixture.
+
+## Next Verification Step
+Fixture.
+
+## Promotion Notes
+Fixture.
+
+## Stop issue 1
+## Stop issue 2
+## Stop issue 3
+## Stop issue 4
+## Stop issue 5
+`);
+  write(path.join(ctx, "open-questions.md"), `# Open Questions
+
+## Dong Skills 升级后待确认
+- one
+## Dong Skills 升级后待确认
+- two
+## Dong Skills 升级后待确认
+- three
+`);
+
+  const out = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Warnings:/);
+  assert.match(out, /handoff-summary\.md top appears focused on Dong Skills maintenance/);
+  assert.match(out, /current-state\.md contains many Stop\/hook\/runtime entries/);
+  assert.match(out, /working-notes\.md looks like a closed Stop\/Git\/hook investigation log/);
+  assert.match(out, /open-questions\.md has repeated headings/);
+  assert.match(out, /Result: pass/);
+});
+
 test("source health rejects skill directories omitted from the manifest", () => {
   const project = tempProject();
   fs.cpSync(root, project, {
@@ -794,6 +902,8 @@ test("source release uses the parallel domain test runner", () => {
   assert.ok(domainFiles.length >= 5);
   assert.match(release, /domain-sharded tests/);
   assert.match(release, /run-domain-tests\.mjs/);
+  assert.match(release, /COMMAND_MAX_BUFFER/);
+  assert.match(release, /maxBuffer:\s*options\.maxBuffer\s*\|\|\s*COMMAND_MAX_BUFFER/);
 
   const owners = new Map();
   for (const name of domainFiles) {

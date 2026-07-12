@@ -692,6 +692,73 @@ function checkContext(root, issues) {
   checkWorkflowConsistency(workflow, spec, plan, issues);
 }
 
+function headingLines(markdown) {
+  return String(markdown || "")
+    .split(/\r?\n/)
+    .map((line, index) => ({ line, index: index + 1 }))
+    .filter((item) => /^#{1,3}\s+/.test(item.line.trim()));
+}
+
+function firstHeadings(markdown, count = 5) {
+  return headingLines(markdown)
+    .slice(0, count)
+    .map((item) => item.line.replace(/^#{1,3}\s+/, "").trim());
+}
+
+function firstSectionHeading(markdown) {
+  const item = headingLines(markdown).find((candidate) => /^#{2,3}\s+/.test(candidate.line.trim()));
+  return item ? item.line.replace(/^#{2,3}\s+/, "").trim() : "";
+}
+
+function matchCount(text, patterns) {
+  return patterns.reduce((total, pattern) => total + (String(text || "").match(pattern) || []).length, 0);
+}
+
+function repeatedHeadingNames(markdown, minimum = 3) {
+  const counts = new Map();
+  for (const item of headingLines(markdown)) {
+    const name = item.line.replace(/^#{1,3}\s+/, "").trim();
+    counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count >= minimum)
+    .map(([name, count]) => `${name} (${count})`);
+}
+
+function checkSemanticContext(root, warnings) {
+  const ctx = path.join(root, ".codex-context");
+  const handoff = readText(path.join(ctx, "handoff-summary.md"));
+  const current = readText(path.join(ctx, "current-state.md"));
+  const workingNotes = readText(path.join(ctx, "working-notes.md"));
+  const questions = readText(path.join(ctx, "open-questions.md"));
+
+  const handoffFirstSection = firstSectionHeading(handoff);
+  if (handoffFirstSection &&
+      /(dong skills|hook|hooks|stop|precompact|mutation|runtime|freshness|recovery)/i.test(handoffFirstSection) &&
+      !/^(objective|目标|latest user instruction|最新用户指令)$/i.test(handoffFirstSection)) {
+    warnings.push("handoff-summary.md top appears focused on Dong Skills maintenance; active handoff should start from the business task and archive resolved infrastructure/debug history");
+  }
+
+  const currentMaintenanceMentions = matchCount(current, [/stop hook/gi, /\bstop\b/gi, /precompact/gi, /recovery gate/gi, /runtime/gi]);
+  if (currentMaintenanceMentions >= 8) {
+    warnings.push("current-state.md contains many Stop/hook/runtime entries; compact resolved infrastructure history and keep active state to current project truth");
+  }
+  if (/(仍|still|not).*?(未收口|risk|风险|fail|失败)/i.test(current) &&
+      /(已|pass|通过|resolved|收口).*?(stop|freshness|回归)/i.test(current)) {
+    warnings.push("current-state.md may contain both unresolved and resolved versions of one issue; rewrite active summary to one current conclusion");
+  }
+
+  const workingMaintenanceSections = matchCount(workingNotes, [/^#{2,3}\s+.*\bstop\b/gim, /^#{2,3}\s+.*hook/gim, /^#{2,3}\s+.*git status/gim]);
+  if (workingMaintenanceSections >= 5) {
+    warnings.push("working-notes.md looks like a closed Stop/Git/hook investigation log; archive detailed history after promoting the current conclusion");
+  }
+
+  const repeatedQuestions = repeatedHeadingNames(questions, 3);
+  if (repeatedQuestions.length) {
+    warnings.push(`open-questions.md has repeated headings (${repeatedQuestions.slice(0, 5).join(", ")}); mark old entries resolved/superseded or archive duplicates`);
+  }
+}
+
 function readJsonFile(file, issues, label) {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -985,6 +1052,7 @@ function run(root) {
   const issues = [];
   const hookIssues = [];
   const parityIssues = [];
+  const warnings = [];
 
   if (!fs.existsSync(path.join(root, ".codex", "hooks", "project-ops.mjs"))) {
     issues.push("Missing .codex/hooks/project-ops.mjs");
@@ -1010,6 +1078,7 @@ function run(root) {
   checkRuntimeGitignore(root, issues);
   checkTrackedRaw(root, issues);
   checkContext(root, issues);
+  checkSemanticContext(root, warnings);
   checkProjectSkills(root, issues);
   checkSourceManifestCoverage(root, issues);
   checkInstallReceipt(root, issues);
@@ -1049,13 +1118,14 @@ function run(root) {
   ];
 
   if (!liveness.recent) {
-    lines.push("Warnings:");
-    lines.push(`- Hook liveness is ${liveness.status}: ${liveness.detail}. This does not prove whether host trust is enabled.`);
-    lines.push("");
+    warnings.push(`Hook liveness is ${liveness.status}: ${liveness.detail}. This does not prove whether host trust is enabled.`);
   }
   if (liveness.recent && liveness.missingEvents.length) {
+    warnings.push(`Recent liveness does not yet cover critical events: ${liveness.missingEvents.join(", ")}.`);
+  }
+  if (warnings.length) {
     lines.push("Warnings:");
-    lines.push(`- Recent liveness does not yet cover critical events: ${liveness.missingEvents.join(", ")}.`);
+    for (const warning of warnings) lines.push(`- ${warning}`);
     lines.push("");
   }
 

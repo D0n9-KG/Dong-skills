@@ -1,34 +1,31 @@
 # 当前状态
 
 ## 目标
-修复 Dong Skills 中 `codex-wayfinder` 存在但不容易被 `using-superpowers` 路由到的问题，整体扫描是否还有“skill 有但入口弱/无法发挥作用”的类似情况，并吸收 Matt Pocock Skills 最近值得引入的机制。
+针对真实旧项目使用反馈，修复 Dong Skills 状态治理容易语义漂移的问题：handoff/current-state/open-questions/working-notes 不能被 Stop、hook、runtime、Dong Skills 维护日志长期盖住，也不能在压缩或新 session 后把过期维护历史当成当前项目事实。
 
 ## 最新用户指令
-确认 Wayfinder 路由思路正确；修完后整体探查 Dong Skills 是否还有类似导致模块无法发挥作用的问题；之后吸收 mattpocock/skills 中最新的几个 skill/机制进入 Dong Skills。
+用户确认这些实际使用层面的问题很有价值，要求全部针对性修复。
 
 ## 当前阶段
-实现和验证已完成；等待最终交付/按需提交推送。
+实现已完成，正在做状态闭环、发布复核、Git 提交和推送。
 
 ## 当前假设
-- 本轮属于 Dong Skills 自身维护，继续按 Lane 3、Traditional task-by-task execution 处理。
-- 不照搬 Matt Pocock 的完整 issue tracker；只吸收对 Dong Skills 有用且能融入现有文件化治理的机制。
-- 优先修入口、路由、状态契约和测试锁定，避免“轻量化”把关键流程删掉。
+- 本轮属于 Dong Skills 自身维护，风险等级按 Lane 3 处理。
+- 旧项目 `scientific_Graph` 只作为只读样本，不在本轮直接修改。
+- 语义漂移应作为 warning/advisory，而不是让结构健康项目直接 fail，避免治理工具自己制造 Stop 循环。
+- raw 大文件即使不被 Git 跟踪，也应该提示 owner/reason/retention，而不是只看 Git tracked 文件。
 
 ## 当前结果
-- 已确认 mattpocock/skills 当前 upstream HEAD 为 `391a2701dd948f94f56a39f7533f8eea9a859c87`。
-- 已修复 `using-superpowers`：frontmatter 和路由门现在明确包含 `wayfind uncertain multi-session routes`、route discovery、Wayfinder vs brainstorming 预判、frontier/prototype/grilling/fog/dishonest-spec 风险。
-- 已修复 `codex-project-governance`：主循环 Scope 阶段先做 Wayfinder pre-check；Skill Map 明确 research/prototype/user-grilling/frontier-ticket/blocking-edge 触发。
-- 已增强 `codex-wayfinder`：新增 Typical Triggers、one-question ticket 约束、`docs/codex/wayfinder/tickets/`、Prototype As Primary Source、Logic prototype / UI prototype、primary-source pointer、原型归档/清理规则。
-- 已增强 `codex-architecture-governance`：新增 Deep Module Boundary Check，覆盖 public entry points、private internals、deep imports、package exports/path alias/barrel file/dependency-cruiser 边界。
-- 已增强 `writing-plans` 和 `executing-plans`：计划和执行必须在涉及 package/module 边界时记录/遵守 public entry point、private internals、forbidden deep imports，按 ticket-like execution 切任务。
-- 已同步 README、AGENTS、根/bootstrap `AGENTS.project-ops.snippet.md`。
-- 严格路由扫描已通过：所有 28 个项目 skill 均在 `using-superpowers` 和 `codex-project-governance` 中有入口或说明；额外补了 `codex-project-governance` 与 `requesting-code-review` 的 router 入口。
-- 完整 release check 已通过。
+- `asset-governance` 已新增 semantic state advisories：检测 handoff 顶部是否被 Dong Skills/Stop/hook/runtime 维护内容占据、current-state 是否新旧矛盾、working-notes 是否像已结束的 hook/Git 调试日志、open-questions 是否重复标题、raw footprint 是否过大。
+- `project-ops-health` 已新增非阻断 warning：发现语义漂移时提示，但保持结构健康项目 pass。
+- `asset-governance` CLI 已新增 `--raw-total-warn-mb` 和 `--raw-largest-warn-mb`。
+- `release-check` 已增加 32MB command buffer，避免 domain-sharded tests 输出较大时误失败。
+- `codex-asset-governance`、`codex-docs-stewardship`、`codex-project-governance`、根/bootstrap `AGENTS.project-ops.snippet.md` 已同步新约束：active state 应以当前项目事实为主，不把维护日志当作恢复主线。
 
 ## 下一步动作
-1. 如需存档，提交并推送本轮 Dong Skills 变更。
-2. 旧项目需要重新 bootstrap 才能拿到这批项目级技能/AGENTS/hooks 文档更新。
-3. 后续可继续关注 context-budget 提示的冷路径大文件拆分，但本轮不是阻塞项。
+1. 运行发布级复核：diff check、domain tests、health、asset-governance、release-check。
+2. 若通过，提交并推送 `feat(governance): detect semantic state drift`。
+3. 最终汇报修复内容、验证证据、旧项目同步方式。
 
 ## 最后更新
 2026-07-12。

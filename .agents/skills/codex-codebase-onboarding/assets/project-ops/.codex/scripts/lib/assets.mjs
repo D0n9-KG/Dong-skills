@@ -10,6 +10,8 @@ const DEFAULTS = {
   activeFileLineThreshold: 400,
   rawPrecompactKeep: 5,
   rawMaxAgeDays: 30,
+  rawTotalWarnBytes: 100 * 1024 * 1024,
+  rawLargestWarnBytes: 1024 * 1024,
   staleReviewHours: 24
 };
 
@@ -225,6 +227,109 @@ function activeStateMetrics(root, ctx) {
     });
 }
 
+function headingLines(markdown) {
+  return String(markdown || "")
+    .split(/\r?\n/)
+    .map((line, index) => ({ line, index: index + 1 }))
+    .filter((item) => /^#{1,3}\s+/.test(item.line.trim()));
+}
+
+function firstHeadings(markdown, count = 4) {
+  return headingLines(markdown)
+    .slice(0, count)
+    .map((item) => item.line.replace(/^#{1,3}\s+/, "").trim());
+}
+
+function firstSectionHeading(markdown) {
+  const item = headingLines(markdown).find((candidate) => /^#{2,3}\s+/.test(candidate.line.trim()));
+  return item ? item.line.replace(/^#{2,3}\s+/, "").trim() : "";
+}
+
+function countMatches(text, patterns) {
+  return patterns.reduce((count, pattern) => count + (String(text || "").match(pattern) || []).length, 0);
+}
+
+function repeatedHeadingNames(markdown, minimum = 3) {
+  const counts = new Map();
+  for (const item of headingLines(markdown)) {
+    const name = item.line.replace(/^#{1,3}\s+/, "").trim();
+    counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count >= minimum)
+    .map(([name, count]) => `${name} (${count})`);
+}
+
+function rawFootprint(ctx) {
+  const raw = path.join(ctx, "raw");
+  const files = fs.existsSync(raw)
+    ? walk(raw).map((file) => {
+        const stat = fs.statSync(file);
+        return {
+          file,
+          rel: path.join(".codex-context", "raw", path.relative(raw, file)).replace(/\\/g, "/"),
+          size: stat.size,
+          mtimeMs: stat.mtimeMs
+        };
+      })
+    : [];
+  const totalBytes = files.reduce((sum, item) => sum + item.size, 0);
+  return {
+    files,
+    totalBytes,
+    largest: [...files].sort((a, b) => b.size - a.size).slice(0, 10)
+  };
+}
+
+function semanticStateFindings(ctx, options) {
+  const advisories = [];
+  const handoff = readText(path.join(ctx, "handoff-summary.md"));
+  const current = readText(path.join(ctx, "current-state.md"));
+  const workingNotes = readText(path.join(ctx, "working-notes.md"));
+  const questions = readText(path.join(ctx, "open-questions.md"));
+
+  const handoffFirstSection = firstSectionHeading(handoff);
+  if (handoffFirstSection &&
+      /(dong skills|hook|hooks|stop|precompact|mutation|runtime|freshness|recovery)/i.test(handoffFirstSection) &&
+      !/^(objective|目标|latest user instruction|最新用户指令)$/i.test(handoffFirstSection)) {
+    advisories.push("handoff-summary.md appears focused on Dong Skills maintenance at the top; rewrite the active handoff around the business task and archive infrastructure/debug history");
+  }
+
+  const stopOrHookCurrent = countMatches(current, [/stop hook/gi, /\bstop\b/gi, /precompact/gi, /recovery gate/gi, /runtime/gi]);
+  if (stopOrHookCurrent >= 8) {
+    advisories.push("current-state.md contains many Stop/hook/runtime entries; compact resolved infrastructure history into archive and keep only the current task truth");
+  }
+  if (/(仍|still|not).*?(未收口|risk|风险|fail|失败)/i.test(current) &&
+      /(已|pass|通过|resolved|收口).*?(stop|freshness|回归)/i.test(current)) {
+    advisories.push("current-state.md may contain both unresolved and resolved versions of the same issue; rewrite the active summary to one current conclusion and archive the superseded trail");
+  }
+
+  const workingStopSections = countMatches(workingNotes, [/^#{2,3}\s+.*\bstop\b/gim, /^#{2,3}\s+.*hook/gim, /^#{2,3}\s+.*git status/gim]);
+  if (workingStopSections >= 5) {
+    advisories.push("working-notes.md looks like a closed Stop/Git/hook investigation log; promote the current conclusion and archive detailed history so active notes stay recoverable");
+  }
+
+  const repeatedQuestions = repeatedHeadingNames(questions, 3);
+  if (repeatedQuestions.length) {
+    advisories.push(`open-questions.md has repeated headings (${repeatedQuestions.slice(0, 5).join(", ")}); mark old entries resolved/superseded or archive duplicates`);
+  }
+  const questionMaintenanceCount = countMatches(questions, [/dong skills/gi, /stop hook/gi, /recovery/gi, /git 身份/g, /升级/g]);
+  if (questionMaintenanceCount >= 12) {
+    advisories.push("open-questions.md is dominated by Dong Skills maintenance questions; separate business open questions from resolved infrastructure follow-ups");
+  }
+
+  const raw = rawFootprint(ctx);
+  if (raw.totalBytes > options.rawTotalWarnBytes) {
+    advisories.push(`.codex-context/raw footprint is ${(raw.totalBytes / 1024 / 1024).toFixed(1)} MB across ${raw.files.length} files; classify owner/reason/retention before the next milestone`);
+  }
+  const largeRaw = raw.largest.filter((item) => item.size > options.rawLargestWarnBytes);
+  if (largeRaw.length) {
+    advisories.push(`large raw evidence files found: ${largeRaw.slice(0, 5).map((item) => `${item.rel} (${(item.size / 1024 / 1024).toFixed(1)} MB)`).join(", ")}`);
+  }
+
+  return { advisories, raw };
+}
+
 function staleReviewFiles(ctx, options) {
   const anchor = Math.max(
     mtimeMs(path.join(ctx, "handoff-summary.md")),
@@ -344,6 +449,9 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
     advisories.push(`review on-demand state file freshness: ${staleFiles.map((item) => item.rel).join(", ")}`);
   }
 
+  const semantic = semanticStateFindings(ctx, options);
+  advisories.push(...semantic.advisories);
+
   const debtMarkers = simplificationDebtMarkers(root);
   const debtWithoutTrigger = debtMarkers.filter((marker) => !marker.hasTrigger);
   if (debtMarkers.length) {
@@ -376,7 +484,9 @@ export function assetGovernanceStatus(root, ctx, overrides = {}) {
       trackedRawFiles: unsafeRaw,
       simplificationDebtMarkers: debtMarkers,
       simplificationDebtWithoutTrigger: debtWithoutTrigger,
-      archiveFiles
+      archiveFiles,
+      semanticStateAdvisories: semantic.advisories,
+      rawFootprint: semantic.raw
     },
     options
   };
@@ -406,6 +516,8 @@ export function assetGovernanceReport(root, ctx, options = {}, apply = false) {
     `- Prunable raw snapshots: ${status.metrics.prunableRawSnapshots.length}`,
     `- Temporary PreCompact handoff notice: ${status.metrics.emergencyHandoffNotice.present ? "present" : "none"}`,
     `- Stale review candidates: ${status.metrics.staleReviewFiles.length}`,
+    `- Semantic state advisories: ${status.metrics.semanticStateAdvisories.length}`,
+    `- Raw footprint: ${(status.metrics.rawFootprint.totalBytes / 1024 / 1024).toFixed(1)} MB across ${status.metrics.rawFootprint.files.length} files`,
     `- Runtime artifacts outside raw/archive: ${status.metrics.runtimeArtifacts.length}`,
     `- Tracked raw/runtime artifacts: ${status.metrics.trackedRawFiles.length + status.metrics.trackedRuntimeArtifacts.length}`,
     `- Dong debt markers: ${status.metrics.simplificationDebtMarkers.length}`,

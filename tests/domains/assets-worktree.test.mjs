@@ -265,6 +265,109 @@ export function naivePath(value) {
   assert.match(out, /review with codex-simplicity-review/);
 });
 
+test("asset-governance reports semantic state drift and raw footprint", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const ctx = path.join(project, ".codex-context");
+
+  write(path.join(ctx, "handoff-summary.md"), `# Handoff 摘要
+
+## 2026-07-11 Dong Skills mutation refresh
+- Stop hook reported infrastructure debt.
+
+## 2026-07-11 Stop hook refresh
+- Runtime recovery refresh.
+
+## Objective
+Fixture objective.
+
+## Latest User Instruction
+Fixture instruction.
+
+## Approved Scope / Spec
+Fixture scope.
+
+## Plan Status
+Fixture plan.
+
+## Files Modified
+- fixture.txt
+
+## Decisions Made
+- Fixture decision.
+
+## Verification Evidence
+- Fixture verification.
+
+## Git Checkpoint
+- Latest commit: fixture
+- Push state: no remote
+- Files included: fixture.txt
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+
+## Next Action
+Continue.
+
+## Files To Re-read First
+- fixture.txt
+`);
+  write(path.join(ctx, "current-state.md"), `# 当前状态摘要
+
+## Stop refresh
+- Stop hook still reports runtime risk and recovery gate risk.
+- Stop hook risk not yet resolved.
+- Stop hook and PreCompact runtime issue remains.
+
+## Final
+- Stop freshness 回归通过。
+- 已通过 Stop freshness 验证。
+`);
+  write(path.join(ctx, "working-notes.md"), `# 工作记录
+
+## Stop issue 1
+## Stop issue 2
+## Stop issue 3
+## Stop issue 4
+## Stop issue 5
+`);
+  write(path.join(ctx, "open-questions.md"), `# 开放问题
+
+## Dong Skills 升级后待确认
+- one
+## Dong Skills 升级后待确认
+- two
+## Dong Skills 升级后待确认
+- three
+`);
+  write(path.join(ctx, "raw", "large.json"), "x".repeat(2 * 1024 * 1024));
+
+  const out = execFileSync(process.execPath, [
+    assetGovernance,
+    project,
+    "--raw-total-warn-mb",
+    "1",
+    "--raw-largest-warn-mb",
+    "1"
+  ], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  assert.match(out, /Semantic state advisories: [1-9]/);
+  assert.match(out, /Raw footprint: 2\.0 MB/);
+  assert.match(out, /handoff-summary\.md appears focused on Dong Skills maintenance at the top/);
+  assert.match(out, /current-state\.md contains many Stop\/hook\/runtime entries/);
+  assert.match(out, /current-state\.md may contain both unresolved and resolved versions/);
+  assert.match(out, /working-notes\.md looks like a closed Stop\/Git\/hook investigation log/);
+  assert.match(out, /open-questions\.md has repeated headings/);
+  assert.match(out, /\.codex-context\/raw footprint is 2\.0 MB/);
+  assert.match(out, /large raw evidence files found/);
+  assert.match(out, /Result: pass/);
+});
+
 test("asset-governance removes all nested PreCompact notices in one apply", () => {
   const project = tempProject();
   git(project, ["init"]);

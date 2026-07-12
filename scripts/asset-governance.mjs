@@ -47,6 +47,16 @@ function parseArgs(argv) {
       index += 1;
     } else if (flag.startsWith("--raw-days=")) {
       options.rawMaxAgeDays = Number.parseInt(flag.slice("--raw-days=".length), 10);
+    } else if (flag === "--raw-total-warn-mb") {
+      options.rawTotalWarnBytes = Number.parseInt(value || "", 10) * 1024 * 1024;
+      index += 1;
+    } else if (flag.startsWith("--raw-total-warn-mb=")) {
+      options.rawTotalWarnBytes = Number.parseInt(flag.slice("--raw-total-warn-mb=".length), 10) * 1024 * 1024;
+    } else if (flag === "--raw-largest-warn-mb") {
+      options.rawLargestWarnBytes = Number.parseInt(value || "", 10) * 1024 * 1024;
+      index += 1;
+    } else if (flag.startsWith("--raw-largest-warn-mb=")) {
+      options.rawLargestWarnBytes = Number.parseInt(flag.slice("--raw-largest-warn-mb=".length), 10) * 1024 * 1024;
     }
   }
 
