@@ -1,6 +1,6 @@
 ---
 name: codex-project-governance
-description: Full project lifecycle governance for Codex. Use when a task spans files, turns, phases, project setup, implementation, debugging, verification, review, context compaction risk, or handoff.
+description: Full project lifecycle governance for Codex. Use when a task spans files, turns, phases, route discovery, project setup, implementation, debugging, verification, review, context compaction risk, or handoff.
 ---
 
 # Codex Project Governance
@@ -78,7 +78,7 @@ Before choosing the gate depth, classify the work into the lowest sufficient lan
 
 - `using-superpowers`: choose the relevant workflow skill.
 - `brainstorming`: unclear requirements, creative work, behavior changes.
-- `codex-wayfinder`: multi-session discovery where the destination is known but the route is too uncertain for a credible spec.
+- `codex-wayfinder`: multi-session discovery where the destination is known but the route is too uncertain for a credible spec, especially unresolved research, prototype, user-grilling, frontier-ticket, or blocking-edge questions.
 - `codex-codebase-onboarding`: bootstrap Dong Skills project config when needed, then map an unfamiliar repo.
 - `writing-plans`: approved spec or multi-step implementation.
 - `executing-plans`: execute a written plan in Traditional task-by-task mode or explicit Codex Goal mode.
@@ -110,7 +110,7 @@ Load only the skill needed for the current phase.
 
 1. Discover: if Dong Skills project config is missing, use `codex-codebase-onboarding` to bootstrap it; then read instructions, state files, worktree state, project map, `STRATEGY.md` when present, relevant docs, and relevant code.
 2. Recover: read `workflow-state.yaml` and run `workflow-state recover` when phase or next action is unclear. If project files are still insufficient, use `codex-session-history` narrowly; store durable findings in `.codex-context/` or `docs/solutions/`.
-3. Scope: if the destination is known but discovery will span sessions and the route is not yet specifiable, use `codex-wayfinder` and default to one frontier decision per session; bounded parallel exploration is allowed only when related tickets share one decision boundary and are reconciled into the map before stopping. Otherwise, if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, truth hierarchy, work class/risk lane, and What-level scope; transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`; require written-spec approval before planning. Canonical scope artifacts may live in `STRATEGY.md`, `docs/codex/specs/`, or `docs/codex/wayfinder/`; they are governance evidence, not permission to edit product code.
+3. Scope: run the Wayfinder pre-check before ordinary brainstorming. If the destination is known but discovery will span sessions and the route is not yet specifiable, use `codex-wayfinder` and default to one frontier decision per session; bounded parallel exploration is allowed only when related tickets share one decision boundary and are reconciled into the map before stopping. Otherwise, if intent is unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product-directional, use `brainstorming`; use `codex-strategy-anchor` when product direction is missing or stale; update `spec.md` with living/final approval status, truth hierarchy, work class/risk lane, and What-level scope; transition workflow state through `brainstorming-start`, `spec-living`, `spec-ready`, and `spec-approved`; require written-spec approval before planning. Canonical scope artifacts may live in `STRATEGY.md`, `docs/codex/specs/`, or `docs/codex/wayfinder/`; they are governance evidence, not permission to edit product code.
 4. Plan: for multi-step work, use `writing-plans`; update `plan-progress.md`; include work class/risk lane, execution mode choices, runtime constraints, checkpoint cadence, and a Goal Mode objective draft; use `workflow-state transition plan-ready` when the plan is awaiting execution approval, then ask for execution mode approval unless the user explicitly requested plan-then-execute.
 5. Workspace: before execution in a new/resumed worktree, or when hook source/root paths are confusing, use `codex-worktree-governance` and refresh `worktree-state.md`.
 6. Implement: only after the written spec, plan, and execution mode gates are satisfied; use `workflow-state transition execution-approved-traditional` or `execution-approved-goal` after explicit approval; follow the plan and existing codebase patterns; apply the Simplicity Gate before adding custom code, dependencies, abstractions, scripts, docs, or state assets; search `docs/solutions/` when the area has prior learnings; keep `artifact-index.md` fresh. During substantial investigation, keep `working-notes.md` fresh with checked facts, rejected paths, current hypothesis/conclusion, open questions, and next verification step.

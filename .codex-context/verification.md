@@ -1,5 +1,37 @@
 # 验证
 
+## 当前任务：Wayfinder 路由修复与 Matt Pocock 最新机制吸收
+- `git ls-remote https://github.com/mattpocock/skills.git HEAD`
+  - Result: pass
+  - Evidence: upstream HEAD 为 `391a2701dd948f94f56a39f7533f8eea9a859c87`，本轮吸收点基于该版本与本地既有 snapshot 的差异判断。
+  - Date: 2026-07-12.
+- Strict routing scan across `.agents/skills/*/SKILL.md`
+  - Result: pass
+  - Evidence: 所有 28 个项目 skill 均在 `using-superpowers` 和 `codex-project-governance` 中有路由/说明入口；此前发现的 `codex-project-governance router=False` 与 `requesting-code-review router=False` 已补齐。
+  - Date: 2026-07-12.
+- `node --test tests/domains/skills-contracts.test.mjs`
+  - Result: pass
+  - Evidence: 2/2 tests passed；新增断言覆盖 `wayfind uncertain multi-session routes`、Wayfinder pre-check、Typical Triggers、Prototype As Primary Source、Logic/UI prototype、tickets、Deep Module Boundary Check、deep imports、ticket-like execution。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs health-check`
+  - Result: pass
+  - Evidence: static configuration pass、runtime parity pass、Issues none；hook liveness runtime-mismatch 仍为 warning，不代表静态配置失败。
+  - Date: 2026-07-12.
+- `node .codex/hooks/project-ops.mjs context-budget`
+  - Result: pass
+  - Evidence: hot recovery path 约 16,670 tokens，低于 warn 35,000 / fail 45,000；提示冷路径大文件可后续拆分，但不阻塞本轮交付。
+  - Date: 2026-07-12.
+- `node scripts/release-check.mjs .`
+  - Result: pass
+  - Evidence: health、context budget、Node/PowerShell syntax、domain-sharded tests、privacy scan、text readability、large file、runtime artifact checks 全部通过。
+  - Date: 2026-07-12.
+
+## 审查结论
+- 原始问题不是 `codex-wayfinder` runtime 缺失，而是 router/frontmatter/AGENTS 阶段门对 Wayfinder 的显性优先级不够，容易让 agent 直接落到 ordinary brainstorming。
+- 类似入口弱点已用严格扫描发现并修复：`codex-project-governance` 和 `requesting-code-review` 已补进 router。
+- Matt Pocock 的最新机制没有整套照搬；已吸收适合 Dong Skills 的三类：prototype-as-primary-source、deep-module boundary、local one-question ticket/frontier。
+- 未发现仍会导致某个项目 skill 完全无法发挥作用的 P0/P1。
+
 ## 当前任务：Dong Skills 整体逐项审查与测试 runner 诊断修复
 - `git status --short --branch; git log -1 --oneline`
   - Result: pass

@@ -5,7 +5,7 @@ description: Map a large, multi-session effort whose destination is known but wh
 
 # Codex Wayfinder
 
-Use Wayfinder to discover the route, not to execute the destination. It is a lightweight local Markdown adaptation of Matt Pocock's Wayfinder: no issue tracker, labels, assignments, or external service is required.
+Use Wayfinder to discover the route, not to execute the destination. It is a lightweight local Markdown adaptation of Matt Pocock's Wayfinder, with recent prototype-as-primary-source and local ticket guidance adapted for Dong Skills: no issue tracker, labels, assignments, or external service is required.
 
 ## Entry Gate
 
@@ -25,6 +25,16 @@ node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start
 ```
 
 Do not start Wayfinder by directly editing `workflow-state.yaml`.
+
+## Typical Triggers
+
+Use Wayfinder before brainstorming when any of these are true:
+
+- the user can name the destination, but the route still depends on unresolved research, prototype, or user-grilling decisions
+- a normal spec would need to pretend uncertain architecture, UX, data model, migration, or evaluation choices are already known
+- the work has visible frontier questions and fog that will likely span sessions
+- the next best step is to answer one bounded question, not approve an implementation plan
+- the project needs a recoverable map of decisions, blockers, and rejected routes before committing to a spec
 
 ## Canonical Map
 
@@ -68,13 +78,29 @@ Use names, not bare numeric IDs, in user-facing narration.
 Each ticket resolves one question sized for one session:
 
 - `Research` (`AFK`): gather external or repository evidence and produce a linked summary.
-- `Prototype` (`HITL`): create a cheap artifact that helps the user react to behavior or shape.
+- `Prototype` (`HITL`): create a cheap artifact that answers one design question and helps the user react to behavior or shape.
 - `Grilling` (`HITL`): resolve a decision through one-question-at-a-time discussion.
 - `Task` (`AFK` or `HITL`): perform only the concrete prerequisite needed to unblock a later decision.
 
 `HITL` means the human must supply judgment or information. The agent must not answer the human side of the exchange. `AFK` means the ticket can be resolved from available evidence without a user decision.
 
 The frontier contains open, unblocked tickets whose questions are precise now. Fog contains in-scope uncertainty whose question cannot yet be stated precisely.
+
+Keep ticket-style detail local and one-question-per-row. If a frontier row needs more than a sentence, create `docs/codex/wayfinder/tickets/<slug>.md` and link it from the map. Do not collapse multiple unrelated decisions into one ticket blob.
+
+## Prototype As Primary Source
+
+When a prototype is needed, make the prototype the primary source for the question it answers, not an untracked side experiment:
+
+- state the design question before creating the prototype
+- choose `Logic prototype` for behavior, data flow, algorithms, integration boundaries, or API shape
+- choose `UI prototype` for interaction, layout, user reaction, workflow shape, or copy decisions
+- keep prototype artifacts under `docs/codex/wayfinder/prototypes/` unless an existing project convention is safer
+- do not place throwaway prototype shells in production source directories or ship them as production code
+- for UI prototypes, prefer existing route/page variants when a host surface exists; create a standalone prototype route only when no safe host surface exists
+- for logic prototypes, keep decision-rich logic behind a small pure interface when practical so the validated idea can be lifted cleanly later
+- record the answer and a primary-source pointer in the map; fold only validated decisions into `spec.md`, plans, or product code
+- remove or archive losing variants and throwaway shells before implementation begins
 
 ## Session Rule
 

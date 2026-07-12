@@ -35,6 +35,19 @@ node "<skill-dir>\scripts\architecture-scan.mjs" "<project-root>"
 - duplication: repeated domain concepts, validation, IO, parsing, or state transitions are centralized deliberately
 - tests: important behavior is testable through stable public surfaces
 - docs: `project-map.md`, `decisions.md`, and `risks.md` reflect accepted structure
+- package/module public entry points: imports use intended public surfaces instead of private internals
+- deep imports: TypeScript/JavaScript package-style work avoids reaching into `src/internal`, generated build output, or sibling private modules without an explicit plan note
+- package shape: `exports`, barrel files, dependency-cruiser rules, or equivalent boundaries match actual ownership
+
+## Deep Module Boundary Check
+
+For package-style TypeScript/JavaScript projects, run this check before approving architecture or implementation plans that touch module boundaries:
+
+- identify public entry points and private internals for the package or feature
+- search for new or existing deep imports that bypass those entry points
+- confirm whether `package.json` `exports`, path aliases, barrel files, or dependency-cruiser rules enforce the intended boundary
+- prefer a small public API or explicit feature entry point over scattered imports from private files
+- record any allowed deep import as temporary `dong-debt:` with the ceiling and revisit trigger
 
 ## Output
 
@@ -70,5 +83,6 @@ When architecture facts or decisions change:
 - Do not create abstractions only for neatness.
 - Do not split files if the split makes readers bounce across more files for one concept.
 - Do not flatten by moving code without preserving import paths, tests, and ownership.
+- Do not add barrel files that hide ownership, mask circular dependencies, or turn private internals into accidental public API.
 - Do not fight an existing ADR without naming the conflict and why current friction justifies revisiting it.
 - If three bug-fix attempts fail because new coupling keeps appearing, stop local patching and use this skill before another fix.

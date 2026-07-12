@@ -19,6 +19,14 @@
 - `licenses/MATT-POCOCK-SKILLS-LICENSE`: Matt Pocock Skills MIT 许可证。
 
 ## 已修改
+- `.agents/skills/using-superpowers/SKILL.md`: 明确 Wayfinder 路由入口、route discovery、Wayfinder vs brainstorming scope 判断，并补齐 `codex-project-governance` 与 `requesting-code-review` 入口。
+- `.agents/skills/codex-project-governance/SKILL.md`: 在生命周期 Scope 阶段加入 Wayfinder pre-check，Skill Map 强化 research/prototype/user-grilling/frontier-ticket/blocking-edge 触发。
+- `.agents/skills/codex-wayfinder/SKILL.md`: 吸收 mattpocock/skills 的 Wayfinder/prototype 思路，新增 Typical Triggers、one-question local tickets、Prototype As Primary Source、Logic/UI prototype 和 primary-source pointer 规则。
+- `.agents/skills/codex-architecture-governance/SKILL.md`: 新增 Deep Module Boundary Check，覆盖 public entry points、private internals、deep imports、package exports/path alias/barrel file/dependency-cruiser。
+- `.agents/skills/writing-plans/SKILL.md`: 新增 package/module 边界计划要求、forbidden deep imports、ticket-like execution。
+- `.agents/skills/executing-plans/SKILL.md`: 执行 Simplicity Gate 时同步检查 package/module boundaries，禁止未经授权的 deep imports 和隐藏 ownership 的 barrel files。
+- `README.md`、`AGENTS.md`、根/bootstrap `AGENTS.project-ops.snippet.md`: 同步 Wayfinder 置于 ordinary brainstorming 前、Matt Pocock prototype/deep-module/ticket 吸收点和架构边界规则。
+- `tests/domains/skills-contracts.test.mjs`: 新增 Wayfinder 路由、Prototype As Primary Source、Deep Module Boundary Check、ticket-like execution、routing completeness 等合同断言。
 - `scripts/run-domain-tests.mjs`: 新增 domain 测试实时 start/done 输出、`DONG_DOMAIN_TEST_TIMEOUT_MS` 单域硬超时、超时终止与失败域报告，避免 release-check 长时间运行或卡住时无诊断。
 - `.codex/scripts/lib/{events,workflow,recovery-eval}.mjs` 与 bootstrap 镜像：修复 change-state receipt/fingerprint、shell/tool 分类、recovery hash 与 evidence 自动 reopen。
 - `tests/domains/{workflow-hooks,workflow-governance,skills-contracts}.test.mjs`：新增 no-op/commit/连续 mutation、quote-aware shell、PowerShell alias、opaque/unknown 工具、普通 Read、scoped fix 与恢复 hash 回归。
@@ -43,6 +51,7 @@
 - `.codex-context/*.md` 与 `workflow-state.yaml`: 本轮规格、计划、证据和 handoff。
 
 ## 外部上游快照
+- mattpocock/skills `391a2701dd948f94f56a39f7533f8eea9a859c87`：本轮核实 upstream HEAD，吸收 prototype-as-primary-source、deep-module boundary、local-ticket/frontier 机制。
 - mattpocock/skills `d574778`
 - obra/superpowers `d884ae0`
 - everyinc/compound-engineering-plugin `ee2fee4`
@@ -53,6 +62,7 @@
 - microsoft/SkillOpt `e4ea6a6`
 
 ## 验证产物
+- 2026-07-12 Wayfinder/Matt Pocock 吸收验证：严格路由扫描通过，所有 28 个项目 skill 在 router/governance 中有入口；`node --test tests/domains/skills-contracts.test.mjs` 2/2 pass；`node .codex/hooks/project-ops.mjs health-check` pass；`node scripts/release-check.mjs .` pass。
 - 2026-07-12 完整 release check：pass；包含新增可诊断 domain runner、health、context budget、syntax、domain-sharded tests、privacy/readability/large-file/runtime-artifact。
 - 2026-07-12 单独慢域复验：bootstrap-install 8/8、bootstrap-integrity 8/8、bootstrap-recovery 8/8、health-release 22/22、installer-global 10/10、workflow-governance 19/19、workflow-hooks 92/92。
 - 当前完整领域测试：204/204，11 domains，concurrency 4，237.8 秒。
@@ -73,7 +83,7 @@
 - 临时 bootstrap、安装和错误场景 fixture 位于系统临时目录并已清理。
 
 ## 最新刷新
-2026-07-12：整体逐项审查发现并修复 release/domain test runner 诊断缺口；完整 release-check 通过。上一轮 Stop hook 修复已在 `09b5748` 推送。
+2026-07-12：修复 Wayfinder 路由弱入口，整体扫描并补齐所有项目 skill 在 router/governance 中的入口，吸收 mattpocock/skills 最新 prototype/deep-module/local-ticket 机制；完整 release-check 通过。
 
 ## 已读取 / 已检查
-- 暂无。
+- mattpocock/skills upstream HEAD：`391a2701dd948f94f56a39f7533f8eea9a859c87`。

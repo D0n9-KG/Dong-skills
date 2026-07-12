@@ -10,16 +10,17 @@ On Windows, prefer PowerShell 7 / `pwsh` for shell work when available. Treat al
 
 ## Main Skill
 
-For non-trivial project work, use `codex-project-governance` first. It coordinates discovery, spec, plan, implementation, debugging, verification, review, delivery, learning, and handoff.
+For non-trivial project work, use `codex-project-governance` first. It coordinates route discovery, spec, plan, implementation, debugging, verification, review, delivery, learning, and handoff.
 
 ## Phase Gates
 
 For non-trivial work, keep the phase boundary explicit:
 
-1. Use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work.
-2. Do not implement until the written spec is approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria. Discussion approval is not enough for non-trivial work.
-3. Use `writing-plans` before multi-step implementation.
-4. Do not execute the plan until the user approves the execution mode or explicitly requested plan-then-execute. Plan-then-execute defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
+1. Use `codex-wayfinder` before ordinary brainstorming when the destination is known but the route is still too uncertain for a credible spec, especially when research, prototype, grilling, frontier-ticket, or blocking-edge decisions will span sessions.
+2. Use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product/project direction work that can still become a credible written spec through discussion.
+3. Do not implement until the written spec is approved by the user, the user explicitly skips brainstorming, or the task is a tiny mechanical edit with clear acceptance criteria. Discussion approval is not enough for non-trivial work.
+4. Use `writing-plans` before multi-step implementation.
+5. Do not execute the plan until the user approves the execution mode or explicitly requested plan-then-execute. Plan-then-execute defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
 
 Record spec approval in `.codex-context/spec.md`; record `执行模式`, `Goal 模式目标` when applicable, and execution approval in `.codex-context/plan-progress.md`.
 
@@ -109,7 +110,7 @@ If present:
 - `CONCEPTS.md` is stable project vocabulary.
 - `docs/solutions/` stores structured verified learnings with YAML frontmatter.
 
-Use `codex-architecture-governance` before or after structural changes, major refactors, large-file growth, flat-directory growth, unclear ownership, or repeated bugs caused by coupling. Keep architecture facts in `project-map.md`, decisions in `decisions.md`, and structural risks in `risks.md`.
+Use `codex-architecture-governance` before or after structural changes, major refactors, large-file growth, flat-directory growth, unclear ownership, package/module boundary changes, deep-import risk, or repeated bugs caused by coupling. Keep architecture facts in `project-map.md`, decisions in `decisions.md`, and structural risks in `risks.md`. For package-style TypeScript/JavaScript work, identify public entry points and private internals, avoid unauthorized deep imports, and do not add barrel files that hide ownership or create cycles.
 
 Before adding custom code, dependencies, abstractions, scripts, docs, or state assets, apply the Simplicity Gate: can the approved outcome be reached without building the new thing; does the standard library already cover it; does the native platform already cover it. Use `codex-simplicity-review` for overbuilt diffs/plans, avoidable dependencies, unnecessary abstractions, or deliberate simplification debt. If an accepted simplification has a known ceiling, mark it near the code as `dong-debt: <ceiling>; revisit when <trigger>`.
 

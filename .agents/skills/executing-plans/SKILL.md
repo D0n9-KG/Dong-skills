@@ -102,6 +102,7 @@ Goal mode runtime constraints:
    - does the standard library already do it?
    - does the native platform already do it?
    If the plan omitted the gate, record the decision in `.codex-context/plan-progress.md` before editing. Do not add one-line/minimum-implementation checks as mandatory Dong Skills rungs.
+   If the task touches package/module boundaries, confirm the plan's public entry point/private internals note before editing. Do not introduce unauthorized deep imports, accidental public APIs, or barrel files that hide ownership.
 7. Match execution depth to the lane without weakening acceptance criteria:
    - Lane 0/1 may use compact state updates and targeted verification.
    - Lane 2/3 must keep task-by-task evidence, review triggers, rollback notes, and checkpoint cadence current.

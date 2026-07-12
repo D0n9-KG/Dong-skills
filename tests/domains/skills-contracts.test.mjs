@@ -113,6 +113,9 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(writing, /zero launch-blocking open questions/);
   assert.match(writing, /happy path, edge cases, error paths, and integration/);
   assert.match(writing, /workflow-state transition spec-skipped/);
+  assert.match(writing, /Public entry points and private internals/);
+  assert.match(writing, /forbidden deep imports/);
+  assert.match(writing, /ticket-like execution/);
 
   const debugging = readSkill("systematic-debugging");
   assert.match(debugging, /Reproduction is the entry ticket to fixing/);
@@ -126,6 +129,9 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(executing, /does the standard library already do it/);
   assert.match(executing, /does the native platform already do it/);
   assert.match(executing, /already exist in the codebase/);
+  assert.match(executing, /package\/module boundaries/);
+  assert.match(executing, /public entry point\/private internals/);
+  assert.match(executing, /unauthorized deep imports/);
   assert.match(executing, /independent source of truth/);
   assert.match(executing, /dong-debt:/);
   assert.match(executing, /工作类别 \/ 风险等级/);
@@ -160,6 +166,7 @@ test("borrowed workflow skills retain required upstream gates", () => {
   const router = readSkill("using-superpowers");
   assert.match(router, /written spec is approved/);
   assert.match(router, /Workflow State Gate/);
+  assert.match(router, /codex-project-governance/);
   assert.match(router, /workflow-state next/);
   assert.match(router, /TRANSITIONS/);
   assert.match(router, /workflow-state transition new-task/);
@@ -187,8 +194,13 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /Reopening brainstorming\/spec or restarting a plan invalidates downstream/);
   assert.match(router, /codex-skill-evolution/);
   assert.match(router, /codex-wayfinder/);
+  assert.match(router, /wayfind uncertain multi-session routes/);
+  assert.match(router, /route discovery/);
+  assert.match(router, /fake certainty/);
+  assert.match(router, /dishonest-spec risk/);
   assert.match(router, /codex-agent-architecture-audit/);
   assert.match(router, /codex-loop-design-check/);
+  assert.match(router, /requesting-code-review/);
   assert.match(router, /workflow-state transition spec-skipped/);
   assert.match(router, /workflow-state transition mechanical-exception/);
   assert.match(router, /workflow-state transition debugging-start/);
@@ -218,6 +230,9 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /codex-skill-evolution/);
   assert.match(governance, /SkillOpt-Sleep/);
   assert.match(governance, /codex-wayfinder/);
+  assert.match(governance, /route discovery/);
+  assert.match(governance, /Wayfinder pre-check/);
+  assert.match(governance, /frontier-ticket/);
   assert.match(governance, /codex-agent-architecture-audit/);
   assert.match(governance, /codex-loop-design-check/);
   assert.match(governance, /docs\/codex\/specs/);
@@ -250,7 +265,13 @@ test("borrowed workflow skills retain required upstream gates", () => {
     assert.match(guidance, /debugging-start/);
     assert.match(guidance, /debugging-resolved/);
     assert.match(guidance, /pure status/i);
+    assert.match(guidance, /codex-wayfinder` before ordinary brainstorming/);
+    assert.match(guidance, /public entry points and private internals/);
+    assert.match(guidance, /unauthorized deep imports/);
   }
+  assert.match(readme, /prototype-as-primary-source/);
+  assert.match(readme, /deep-module boundary/);
+  assert.match(readme, /local-ticket\/frontier/);
 
   const requestingReview = readSkill("requesting-code-review");
   assert.match(requestingReview, /## Mandatory Review Gate/);
@@ -297,6 +318,14 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(simplicity, /Already in the codebase/);
   assert.match(simplicity, /Do not make one-line\/minimum-implementation checks mandatory/);
   assert.match(simplicity, /dong-debt: <ceiling>; revisit when <trigger>/);
+
+  const architecture = readSkill("codex-architecture-governance");
+  assert.match(architecture, /Deep Module Boundary Check/);
+  assert.match(architecture, /public entry points/);
+  assert.match(architecture, /private internals/);
+  assert.match(architecture, /deep imports/);
+  assert.match(architecture, /dependency-cruiser/);
+  assert.match(architecture, /barrel files that hide ownership/);
 
   const worktree = readSkill("codex-worktree-governance");
   assert.match(worktree, /## Branch Finishing Menu/);
@@ -354,6 +383,13 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(wayfinderSkill, /HITL|AFK/);
   assert.match(wayfinderSkill, /local Markdown/);
   assert.match(wayfinderSkill, /docs\/codex\/wayfinder\/prototypes/);
+  assert.match(wayfinderSkill, /## Typical Triggers/);
+  assert.match(wayfinderSkill, /## Prototype As Primary Source/);
+  assert.match(wayfinderSkill, /docs\/codex\/wayfinder\/tickets/);
+  assert.match(wayfinderSkill, /answers one design question/);
+  assert.match(wayfinderSkill, /Logic prototype/);
+  assert.match(wayfinderSkill, /UI prototype/);
+  assert.match(wayfinderSkill, /primary-source pointer/);
 
   const agentAudit = readSkill("codex-agent-architecture-audit");
   assert.match(agentAudit, /wrapper regression/i);

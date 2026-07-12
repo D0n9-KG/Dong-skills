@@ -1,116 +1,64 @@
 # Handoff 摘要
 
 ## 目标
-修复 Dong Skills hooks 的 change-state receipt/fingerprint 与近期 wrapper regression，确保复杂项目中的读取、探索、调试、验证、review、多智能体和恢复流程不被无意义打断。
+修复 Dong Skills 中 `codex-wayfinder` 不容易被 `using-superpowers` 自动路由的问题，审查是否还有类似“skill 存在但入口弱/发挥不出来”的情况，并吸收 mattpocock/skills 最新值得复用的机制。
 
 ## 最新用户指令
-整体仔细审查近期 hooks 优化；重点核实 change-state receipt fingerprint/刷新 bug，并修复实际使用中会干扰模型或阻碍项目推进的问题。
-
-## 已批准范围 / 规格
-- 规格：`.codex-context/spec.md`
-- 计划：`docs/codex/plans/2026-07-10-dong-skills-hooks-control-plane.md`
-- 执行模式：Traditional task-by-task execution
-- 风险等级：Lane 3
-- 本轮 GPT 5.6 SOL 适配由用户直接要求继续优化。
-
-## 计划状态
-- Task 1-11 已实现并通过验证。
-- 主功能 checkpoint `2ac0c55` 已提交并推送；workflow 状态收口和真实安装同步进行中。
-
-## 已修改文件
-- hooks/runtime：`.codex/hooks*`、`.codex/scripts/lib/{core,events,git,learning,markdown,recovery-eval,runtime,templates,workflow}.mjs`。
-- bootstrap/install：onboarding assets、`bootstrap-project-ops.ps1`、`install-windows.ps1`。
-- skills/docs：governance、router、planning、execution、debugging、verification、review、checkpoint、Wayfinder、README、AGENTS。
-- tests：11 个领域测试、`workflow-governance.test.mjs`、skills contracts 和共享 fixture。
-- state：`.codex-context/*.md`、`workflow-state.yaml`、`worktree-state.md`。
-
-## 已做决策
-- Dong Skills 的职责是事实源、恢复层、风险门禁和证据账本，不做第二套多智能体编排器。
-- 保留 hard gates：用户审批、scope re-open、execution approval、context recovery receipt、verification/review evidence、workflow-state validated transitions、destructive/action boundary、安装完整性。
-- 软化 advisory/format 层：subagent summary 不要求固定标题；Goal mode 不绑定具体工具名；Wayfinder 默认单 frontier，但允许共享 decision boundary 的 bounded parallel exploration。
-- hooks 仍明确不是完整安全沙箱。
-- 本地 opaque shell 视为潜在 mutation，必须通过 workflow/recovery/approval；已知 verification 命令仍可做基线检查，真实生成物由 PostToolUse 记账。
-- 中性未知外部/自定义工具不默认阻断；有调用 ID 时用调用前后 Git 证据观察真实变化。明确复合写动词仍走前置 mutation 门。
-- 普通 Read/Search 和 SubagentStop 质量警告不制造强制 Stop 债务。
-- 本轮不自动 commit/push；等待用户确认。
-
-## 当前状态
-- Git 分支：`main`
-- HEAD / 基线：`09b5748 fix(hooks): close Stop state refresh loops` 已推送到 `origin/main`。
-- 当前未提交改动：`scripts/run-domain-tests.mjs` 的诊断修复，以及本轮状态记录。
-- 安装副本：本轮未覆盖全局或其他项目安装副本；旧项目仍需重新 bootstrap。
-- health/release：pass；hook liveness runtime-mismatch warning 仅表示当前会话未刷新对应 runtime liveness，不是静态失败。
+这个思路正确；修完后整体探查 Dong Skills 里是否还有其他类似情况，之后开始吸收 mattpocock 中最新的几个 skill 进入 Dong Skills。
 
 ## 已完成
-- 本轮整体逐项审查：28 个 skill manifest/frontmatter/状态触点通过；核心 routing/approval/state 合同存在；root/bootstrap 关键镜像一致。
-- 发现并修复 release/domain 测试 runner 诊断缺口：原来长时间完整 release-check 或超时时无实时进度；现在 domain runner 会实时输出 start/done，并支持 per-domain timeout。
-- hooks 控制面：PreToolUse recovery/approval/lane/phase/Git 门禁，PostToolUse mutation intent，Stop 分级与有界 continuation，Subagent lifecycle，liveness health。
-- 信任闭环：session-scoped transition、一次性用户决策 receipt、Lane 3 closure、workflow 锁与原子写、new-task 归档重置。
-- 安装生命周期：self-contained distribution snapshot/id、stale source fail closed、source relocation、junction 物理锁、workflow schema migrator。
-- 宏观流程补强：审批 fail closed、执行期范围重开、执行中调试恢复、Wayfinder map freshness、subagent 外化、范围缩减/延期识别、shell 证据阶段前置阻断和 shell 状态刷新闭环。
-- GPT 5.6 SOL 适配：语义化 subagent 结果合同、goal/workflow 机制抽象、Wayfinder bounded parallel exploration。
-- hooks 实际使用修复：receipt refresh 保留和多 mutation 累积；quote-aware shell parser；PowerShell alias/复合写动词；opaque 前置门禁；未知工具观察式追踪；未知执行结果不授予刷新；review/verification 真实 mutation 自动 reopen；普通探索无债务。
+- 修复 `using-superpowers`：description、Routing Gate、Phase Order、Skill Selection 均明确包含 route discovery、Wayfinder vs brainstorming 判断、frontier/prototype/grilling/fog/dishonest-spec 风险。
+- 修复 `codex-project-governance`：description、Skill Map、Lifecycle Scope 均明确 Wayfinder pre-check 先于普通 brainstorming。
+- 增强 `codex-wayfinder`：新增 Typical Triggers、one-question ticket、`docs/codex/wayfinder/tickets/`、Prototype As Primary Source、Logic prototype、UI prototype、primary-source pointer、原型归档/清理规则。
+- 增强 `codex-architecture-governance`：新增 Deep Module Boundary Check，覆盖 public entry points、private internals、deep imports、package exports/path alias/barrel file/dependency-cruiser。
+- 增强 `writing-plans` / `executing-plans`：涉及 package/module 边界时必须记录/遵守 public entry point、private internals、forbidden deep imports；任务采用 ticket-like execution。
+- 同步 README、AGENTS、根/bootstrap `AGENTS.project-ops.snippet.md`。
+- 补强 `tests/domains/skills-contracts.test.mjs`，锁住 Wayfinder 路由、Matt Pocock 吸收点和 router/governance 覆盖。
+
+## 上游依据
+- mattpocock/skills upstream HEAD：`391a2701dd948f94f56a39f7533f8eea9a859c87`。
+- 本轮没有照搬 Matt Pocock 的完整 issue tracker / local tracker 流程；只吸收适合 Dong Skills 文件化治理的 prototype-as-primary-source、deep-module boundary、one-question ticket/frontier。
+
+## 整体探查结论
+- 严格扫描 `.agents/skills/*/SKILL.md` 后，所有 28 个项目 skill 均在 `using-superpowers` 和 `codex-project-governance` 中有入口。
+- 扫描曾发现两个入口弱点：`codex-project-governance` 缺 router 显式入口、`requesting-code-review` 缺 router 显式入口；已修复。
+- 未发现仍会导致某个项目 skill 完全无法发挥作用的 P0/P1。
 
 ## 验证证据
-- 2026-07-12 `node scripts/release-check.mjs .`: pass。
-- 2026-07-12 单独慢域复验：bootstrap-install、bootstrap-integrity、bootstrap-recovery、health-release、installer-global、workflow-governance、workflow-hooks 均通过。
-- `node scripts/run-domain-tests.mjs`: pass, 204/204, 11 domains, concurrency 4, 237.8s。
-- 最终 `node --test tests/domains/workflow-hooks.test.mjs tests/domains/workflow-governance.test.mjs`: pass, 104/104, 153.2s。
-- `node --test tests/domains/skills-contracts.test.mjs`: pass, 2/2。
-- `node scripts/project-ops-health.mjs .`: pass；liveness runtime-mismatch 为 warning。
-- `node scripts/release-check.mjs .`: pass。
-- `git diff --check`: pass。
-- `scripts/install-windows.ps1 -TargetProjectRoot <repo> -Preview`: pass；No files were written。
-- root/bootstrap `events`、`workflow`、`recovery-eval`、AGENTS snippet SHA-256 parity: pass。
+- `node --test tests/domains/skills-contracts.test.mjs`: pass，2/2。
+- `node .codex/hooks/project-ops.mjs health-check`: pass，Issues none；hook liveness runtime-mismatch 为 warning。
+- `node .codex/hooks/project-ops.mjs context-budget`: pass，hot recovery path 约 16,670 tokens。
+- `node scripts/release-check.mjs .`: pass，包含 health、context budget、syntax、domain-sharded tests、privacy、readability、large-file、runtime-artifact。
 
-## 当前判断
-- 本轮确认的实际误阻断、漏门禁和验证入口不可诊断问题已修复；未发现仍会系统性阻碍复杂项目推进的 P0/P1。
-- Dong Skills 当前约束可恢复事实、批准边界和交付证据，不强制模型按旧模板表达探索、多智能体或 scoped fix。
-- 无已知未修复 P0/P1。
+## 当前 Git 状态
+- 分支：`main`
+- HEAD 基线：`907640f test: improve domain test diagnostics`，工作区有本轮未提交改动。
+- 上一轮 Stop hook 修复状态记录中曾提到 `09b5748`；当前真实 `git log -1` 在本轮开始时显示 `907640f`。后续提交前应以当前 `git status` / `git log` 为准。
 
 ## 下一步动作
-1. 提交并推送本轮 `run-domain-tests` 诊断修复。
-2. 对旧项目运行 onboarding/bootstrap，更新项目级 Dong Skills。
-3. 后续可择机做 context-budget 冷路径拆分和 verification 日志 prune。
+1. 如需存档，提交并推送本轮 Dong Skills 更新。
+2. 旧项目需要重新运行 onboarding/bootstrap，才能获得最新项目级 skills、AGENTS/snippet 和 hook runtime 资产。
+3. 后续可择机处理 context-budget 提示的冷路径大文件拆分，但本轮不阻塞。
 
 ## 优先重读文件
-1. `.codex-context/spec.md`
-2. `.codex-context/plan-progress.md`
-3. `.codex-context/current-state.md`
-4. `.codex-context/verification.md`
-5. `.codex/scripts/lib/events.mjs`
-6. `.agents/skills/codex-wayfinder/SKILL.md`
-7. `.agents/skills/executing-plans/SKILL.md`
-8. `tests/domains/workflow-hooks.test.mjs`
-9. `tests/domains/skills-contracts.test.mjs`
-10. `scripts/install-windows.ps1`
+1. `.agents/skills/using-superpowers/SKILL.md`
+2. `.agents/skills/codex-project-governance/SKILL.md`
+3. `.agents/skills/codex-wayfinder/SKILL.md`
+4. `.agents/skills/codex-architecture-governance/SKILL.md`
+5. `.agents/skills/writing-plans/SKILL.md`
+6. `.agents/skills/executing-plans/SKILL.md`
+7. `AGENTS.md`
+8. `AGENTS.project-ops.snippet.md`
+9. `.agents/skills/codex-codebase-onboarding/assets/project-ops/AGENTS.project-ops.snippet.md`
+10. `README.md`
+11. `tests/domains/skills-contracts.test.mjs`
+12. `.codex-context/verification.md`
 
 ## 边界
-- 不保存隐藏思维链、完整聊天、密钥或子 agent transcript。
-- 不把 hooks 描述为完整安全沙箱。
-- 不引入第三方依赖、数据库或常驻进程。
-- 不自动 commit/push。
+- 不把 Matt Pocock 的重型 issue tracker 全量搬入 Dong Skills。
+- 不把 prototype artifacts 当成可交付生产代码。
+- 不允许 ordinary brainstorming 吞掉本应进入 Wayfinder 的跨 session 路线探索。
+- 不保存隐藏思维链、完整聊天、密钥或私有 transcript。
 
-## Git 存档
-- 最新提交：`09b5748 fix(hooks): close Stop state refresh loops`。
-- 推送状态：已推送到 `origin/main`；当前待提交 `scripts/run-domain-tests.mjs` 诊断修复与本轮审查状态记录。
-- 已包含文件：上一轮 Stop hook 修复已包含 hooks/runtime、bootstrap 镜像、tests、skills/docs 与状态记录；本轮提交将包含 `scripts/run-domain-tests.mjs` 和 `.codex-context` 审查记录。
-- 有意保留未提交的文件：无；本轮审查修复验证后提交并推送。
-- 暂缓原因：无。
-- 下次存档：提交并推送本轮审查/验证入口修复。
-
-## 已读取但未修改文件
-- 外部上游快照和历史验证证据仅作为背景；本轮最终判断以 2026-07-11 验证为准。
-
-## 开放问题与假设
-- 假设：用户下一步会决定是否提交并推送。
-- 开放问题：是否现在提交并推送。
-
-## 风险
-- 任意 shell/脚本不是完整可判定语言；hooks 只能在支持路径上前置识别常见写入，并用 Git/status/Stop 后置收口。
-- 旧项目必须运行 bootstrap 才会获得项目级最新 hooks/runtime；全局入口更新不等于旧项目自动更新。
-
-## 需要保留的经验沉淀
-- 新模型适配应优先抽象“证据和状态合同”，不要把某一代模型/工具的表达格式写成硬门禁。
-- 多智能体结果的关键不是标题模板，而是父任务能否吸收证据、风险和下一步。
-- Wayfinder 可允许并行探索，但必须在 session 结束前归并到 map，避免路线事实分叉。
+## 开放问题
+- 用户是否希望现在提交并推送。

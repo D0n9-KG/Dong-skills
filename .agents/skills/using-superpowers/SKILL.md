@@ -1,6 +1,6 @@
 ---
 name: using-superpowers
-description: Use at the start of any non-trivial project task, new session, resumed session, or explicit `$using-superpowers` request to route Dong Skills before acting. Decides whether to brainstorm, plan, execute, debug, verify, review, checkpoint, or clean up; process skills must be loaded before implementation work.
+description: Use at the start of any non-trivial project task, new session, resumed session, or explicit `$using-superpowers` request to route Dong Skills before acting. Decides whether to wayfind uncertain multi-session routes, brainstorm, plan, execute, debug, verify, review, checkpoint, or clean up; process skills must be loaded before implementation work.
 ---
 
 # Using Project Ops Skills
@@ -9,7 +9,7 @@ Use this as the lightweight router for Dong Skills. It should prevent improvisin
 
 ## Routing Gate
 
-Before any non-trivial action, choose the relevant process skill and use it. A non-trivial action includes code edits, config changes, multi-file docs, architecture choices, UX/API behavior, debugging, verification claims, commits, or project state updates.
+Before any non-trivial action, choose the relevant process skill and use it. A non-trivial action includes route discovery, code edits, config changes, multi-file docs, architecture choices, UX/API behavior, debugging, verification claims, commits, or project state updates.
 
 Direct execution is allowed only for tiny mechanical edits with clear acceptance criteria.
 
@@ -88,8 +88,9 @@ When this evaluation runs through the installed hook path, success creates a ses
 
 For project work, keep this order:
 
-1. **Scope:** use `brainstorming` for unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction work.
-   Use `codex-wayfinder` first when the destination is known but the route will span multiple sessions and cannot yet be written as a credible spec.
+1. **Scope:** first choose between `codex-wayfinder` and `brainstorming`.
+   Use `codex-wayfinder` when the destination is known but the route will span multiple sessions, frontier decisions are unresolved, research/prototype/grilling tickets are needed, or writing a spec now would turn fog into fake certainty.
+   Use `brainstorming` when the route can plausibly become a credible written spec through discussion in the current session.
 2. **Spec approval:** for non-trivial work, do not leave brainstorming until the written spec is approved by the user or brainstorming is explicitly skipped.
 3. **Plan:** use `writing-plans` after the written spec is approved or requirements are explicitly clear.
 4. **Execution mode:** the plan must record `Execution Mode` as `Traditional task-by-task execution` or `Codex Goal mode`.
@@ -109,7 +110,8 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 ## Skill Selection
 
 - New repo or unclear structure: `codex-codebase-onboarding`.
-- Multi-session discovery with a known destination but unresolved route: `codex-wayfinder`.
+- Full lifecycle governance, phase repair, or "use Dong Skills" project work: `codex-project-governance`.
+- Multi-session discovery with a known destination but unresolved route: `codex-wayfinder`, especially when frontier decisions, research/prototype/user-grilling tickets, fog, or dishonest-spec risk would make ordinary brainstorming premature.
 - Unclear, creative, behavior-changing, multi-file, architecture, UX, API, workflow, or product direction: `brainstorming`.
 - Approved written spec or explicit skip-brainstorming multi-step requirements: `writing-plans`.
 - Explicit skip-brainstorming instruction: record compact scope, run `spec-skipped`, then use `writing-plans`.
@@ -129,6 +131,7 @@ Do not jump from scope directly to implementation for multi-step or behavior-cha
 - Before completion claim: `verification-before-completion`.
 - Observable UI/CLI/API/artifact behavior needs proof: `codex-evidence-capture`.
 - Before long pause, compaction, final delivery, or GitHub archive/push: `codex-git-checkpoint`.
+- Lightweight request to prepare or run a code review: `requesting-code-review`.
 - Meaningful implementation, plan, doc, or high-risk change ready for risk review: `codex-review-panel`.
 - Review feedback received: `receiving-code-review`.
 - Context drift, compaction, or state size concern: `codex-context-budget`.

@@ -85,10 +85,13 @@ Before defining tasks, map files and responsibilities:
 
 - Files to create, modify, test, document, and explicitly leave alone.
 - Ownership boundaries and interfaces between modules.
+- Public entry points and private internals when the change touches package/module boundaries.
 - Existing patterns to follow.
 - Any large-file or flat-directory risk that should be addressed in the plan.
 
 Prefer focused files with clear responsibilities. In an existing codebase, do not restructure unrelated areas just because the upstream Superpowers plan style prefers smaller files; include a split only when it reduces real risk for the approved change.
+
+For package-style TypeScript/JavaScript work, add a boundary note when relevant: intended entry points, forbidden deep imports, package/export constraints, and any dependency-cruiser or equivalent rule that should protect the shape. Do not plan a barrel file unless it clarifies ownership instead of hiding it.
 
 ## Test-First Default
 
@@ -104,6 +107,7 @@ For bug fixes, behavior changes, API changes, migrations, and user-visible workf
 Default to vertical slices: each task should make one end-to-end user-visible behavior work and leave the project in a verifiable state. Do not split ordinary feature work into horizontal layers such as "all models", then "all services", then "all tests".
 
 - Each task declares its blocking edges: the earlier tasks, decisions, migrations, or external inputs that must be complete before it can start.
+- Use ticket-like execution: one task/ticket per bounded outcome or decision. Do not combine unrelated outcomes into one checklist blob just to make the plan look shorter.
 - Prefer a tracer bullet that crosses the real interface, persistence, and delivery path over broad scaffolding with no observable outcome.
 - Keep test-first execution inside each slice: one failing behavior, the minimal implementation, then verification before the next slice.
 
@@ -125,6 +129,7 @@ The gate is a constraint, not a research project. If a higher rung clearly works
 1. Re-read the approved spec or clear requirements.
 2. Map files to inspect, create, modify, and leave alone.
 3. Identify module boundaries and decomposition before tasks.
+   Include public entry points, private internals, and forbidden deep imports when the work touches package/module boundaries.
 4. Apply the Simplicity Gate: avoid building, standard library, native platform.
 5. Record `Work Class / Risk Lane` and why that lane is sufficient.
 6. Map every acceptance criterion to at least one task and one verification step. Prefer executable proof: unit/e2e/CLI/API command, product evidence, screenshot, rendered artifact, or explicit manual verification.

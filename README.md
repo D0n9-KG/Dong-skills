@@ -79,7 +79,7 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 
 ### 核心 workflow
 
-- `using-superpowers`：轻量路由，不直接替代完整流程。
+- `using-superpowers`：轻量路由，不直接替代完整流程；会先判断是否需要 `codex-wayfinder`，避免把跨 session 路线探索误压成普通 brainstorming。
 - `codex-codebase-onboarding`：新项目 bootstrap 和项目地图。
 - `brainstorming`：模糊、创造性、行为变化、多文件、架构、UX/API、项目方向任务先形成 living spec，再进入 approved spec。
 - `writing-plans`：把 approved spec 转成可执行、可验证计划。
@@ -89,9 +89,9 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 - `codex-git-checkpoint`：阶段性提交/推送纪律。
 - `codex-learning-memory`：短的项目 instincts；Dong Skills 优化候选进入 Dong Skills backlog 或项目 outbox。
 - `codex-solution-memory`：结构化、可复用的项目解决方案。
-- `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构；`asset-governance --apply` 只做安全自动整理，例如清理过期 PreCompact raw snapshot、归档临时 PreCompact notice。
+- `codex-asset-governance` / `codex-docs-stewardship` / `codex-architecture-governance`：治理资产、文档和架构；架构治理也会检查 package/module public entry points、private internals、deep imports、barrel file 和 dependency-cruiser 这类边界；`asset-governance --apply` 只做安全自动整理，例如清理过期 PreCompact raw snapshot、归档临时 PreCompact notice。
 - `codex-skill-evolution`：作为全局维护入口接入 SkillOpt-Sleep，离线把 Dong Skills backlog/outbox 中的反复失败转成可回放任务，生成 staged proposal，验证通过并经用户确认后才采纳；它操作真实 Dong Skills 源仓库，不优化业务项目代码。
-- `codex-wayfinder`：用于目标明确但路线仍处于迷雾、需要跨多个 session 逐个解决 frontier 决策的问题；默认使用本地 Markdown，不依赖 issue tracker。
+- `codex-wayfinder`：用于目标明确但路线仍处于迷雾、需要跨多个 session 逐个解决 frontier 决策的问题；默认使用本地 Markdown，不依赖 issue tracker；吸收 Matt Pocock 的 prototype-as-primary-source、one-question ticket 和 frontier/fog 思路。
 - `codex-agent-architecture-audit`：面向 agent/harness 自身的 wrapper、memory、tool、rendering、hidden repair 和 persistence 审查。
 - `codex-loop-design-check`：检查 Goal、自动循环和 SkillOpt 流程的可判定目标、边界、重试上限、独立 judge 与人工最终判断。
 - `codex-review-panel` / `codex-simplicity-review`：交付前审查和反过度工程。
@@ -274,7 +274,8 @@ node .codex/hooks/project-ops.mjs health-check
 - `health-check` reports static hook configuration, root/bootstrap parity, and per-event freshness for recent `PreToolUse`/`PostToolUse`/`Stop` liveness separately. A new runtime cannot inherit event coverage from an older runtime; missing liveness is a warning rather than proof that host trust is disabled.
 - `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It separates Safe-Auto cleanup from Confirm-First assets that require human judgment.
 - `codex-skill-evolution` is also installed as a global maintenance entry and integrates SkillOpt-Sleep as an offline evolution layer for Dong Skills itself. It uses backlog/outbox issues as candidates, creates reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. It is not a hook, not project memory, and not a business-code optimizer.
-- `codex-wayfinder` maps frontier decisions when the destination is known but the route is still too uncertain for a credible spec. It defaults to one frontier decision per session, while allowing bounded parallel exploration when related tickets share one decision boundary and are reconciled into the map before stopping.
+- Use `codex-wayfinder` before ordinary brainstorming when the destination is known but the route is still too uncertain for a credible spec. It maps frontier decisions, defaults to one frontier decision per session, and allows bounded parallel exploration only when related tickets share one decision boundary and are reconciled into the map before stopping. Prototype work is treated as a primary source for the decision it answers, with local ticket files under `docs/codex/wayfinder/tickets/` and prototype artifacts under `docs/codex/wayfinder/prototypes/`.
+- `codex-architecture-governance` adapts Matt Pocock's deep-module guidance for Codex: package-style TypeScript/JavaScript work should identify public entry points and private internals, avoid unauthorized deep imports, and avoid barrel files that hide ownership or create cycles.
 - Accepted review/verification fixes may be applied directly within approved scope. The first real project mutation automatically reopens debugging and clears old verification/review evidence, so verification and review must run again before delivery.
 - `verification-pass` and verification-gap transitions hash the accepted `.codex-context/verification.md`; `review-complete`/`review-skipped` require a later `Review Evidence` section and hash the reviewed document. Delivery fails if evidence is missing, reused from an earlier cycle, or modified after review closure.
 - `codex-agent-architecture-audit` reviews agent wrappers, memory, tool discipline, hidden repair loops, rendering, and persistence boundaries.
@@ -328,7 +329,7 @@ node scripts/release-check.mjs "."
 ### Sources And Licenses
 
 - Superpowers components are adapted from [obra/superpowers](https://github.com/obra/superpowers).
-- Planning, vertical-slice, expand-contract, and independent-test-oracle ideas are adapted from [mattpocock/skills](https://github.com/mattpocock/skills).
+- Planning, vertical-slice, expand-contract, independent-test-oracle, prototype-as-primary-source, deep-module boundary, and local-ticket/frontier ideas are adapted from [mattpocock/skills](https://github.com/mattpocock/skills).
 - ECC onboarding and continuous-learning concepts are adapted from [affaan-m/ECC](https://github.com/affaan-m/ECC).
 - Context governance ideas are adapted from [muratcankoylan/agent-skills-for-context-engineering](https://github.com/muratcankoylan/agent-skills-for-context-engineering).
 - Compound Engineering workflow ideas are adapted from [everyinc/compound-engineering-plugin](https://github.com/everyinc/compound-engineering-plugin).
