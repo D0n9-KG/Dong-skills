@@ -2226,6 +2226,7 @@ test("PreToolUse denies supported mutations until recovery is acknowledged", () 
   for (const command of [
     "git status; Set-Content work.txt changed",
     "Get-Content work.txt | Set-Content copy.txt",
+    "Get-Content README.md > work.txt; git status --short",
     "sc work.txt changed",
     "ni new.txt -ItemType File",
     "node scripts/generate-output.mjs",
@@ -3200,9 +3201,104 @@ test("unscoped recovery eval receipt can authorize same-session workflow transit
     session_id: sessionId,
     tool_name: "shell_command",
     tool_use_id: "wayfinder-start-transition",
-    tool_input: { command: "node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start" }
+    tool_input: { command: "Get-Content .codex-context/workflow-state.yaml; node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start" }
   });
   assert.deepEqual(transition, {});
+});
+
+test("compound workflow transitions are validated instead of downgraded to opaque shell mutations", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  runHook(project, { hook_event_name: "SessionStart", session_id: "compound-transition", source: "resume" });
+  acknowledgeSessionRecovery(project, "compound-transition");
+
+  const forbidden = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "compound-transition",
+    tool_name: "shell_command",
+    tool_use_id: "compound-forbidden-transition",
+    tool_input: {
+      command: "Get-Content .codex-context/workflow-state.yaml; node .codex/hooks/project-ops.mjs workflow-state set decision_required none"
+    }
+  });
+  assert.equal(forbidden.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(forbidden.hookSpecificOutput.permissionDecisionReason, /validated workflow-state transition/i);
+
+  const mixedControl = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "compound-transition",
+    tool_name: "shell_command",
+    tool_use_id: "compound-recovery-transition",
+    tool_input: {
+      command: "node .codex/hooks/project-ops.mjs context-recovery-eval; node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start"
+    }
+  });
+  assert.equal(mixedControl.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(mixedControl.hookSpecificOutput.permissionDecisionReason, /validated workflow-state transition/i);
+});
+
+test("Stop accepts refreshed state files even when PostToolUse has no explicit success response", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project, `- Latest commit: baseline
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: user explicitly requested no commit and no push
+- Next checkpoint: only after a new user request
+`);
+  write(path.join(project, "work.txt"), "before\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const mutation = {
+    tool_name: "apply_patch",
+    tool_use_id: "unknown-response-project-mutation",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...mutation });
+  write(path.join(project, "work.txt"), "after\n");
+  runHook(project, { hook_event_name: "PostToolUse", ...mutation, tool_response: { is_error: false } });
+
+  const refresh = {
+    tool_name: "apply_patch",
+    tool_use_id: "unknown-response-state-refresh",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: .codex-context/current-state.md\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...refresh });
+  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Refreshed without explicit PostToolUse success for ${name}.\n`, "utf8");
+  }
+  runHook(project, { hook_event_name: "PostToolUse", ...refresh });
+
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(Object.keys(receipt.refreshed_hashes).sort(), [
+    "artifact-index.md",
+    "current-state.md",
+    "handoff-summary.md",
+    "verification.md"
+  ]);
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
 });
 
 test("closure maintenance does not create a second Stop freshness cycle", () => {

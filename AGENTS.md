@@ -96,6 +96,7 @@ Use `.codex-context/raw/` for raw logs or large outputs.
 Project bootstrap should keep `.codex-context/raw/*` and `.codex-context/discussion-state.json` ignored in `.gitignore`, with only `.codex-context/raw/.gitkeep` trackable.
 Use `.codex-context/archive/` for old but still useful verification or handoff history.
 Use `.codex-context/working-notes.md` for compact externalized investigation state: checked facts, rejected paths, current hypothesis, current conclusion, open investigation questions, and next verification step. Do not store hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning there. Promote durable conclusions into spec, decisions, current-state, handoff, or solution docs at phase boundaries.
+Keep active state semantic, not chronological. `handoff-summary.md` must start from the current business/project task and next action; `current-state.md` must state one current conclusion; `open-questions.md` must consolidate or mark old questions as resolved/superseded/archived; closed Stop/Git/hook/runtime investigations should be promoted to a concise conclusion and archived instead of dominating active recovery.
 Use `.codex-context/instincts/` for learned instincts; keep `learned-instincts.md` as a compact index, not a dumping ground.
 Use `.codex-context/dong-skills-outbox.md` only for Dong Skills improvement candidates when the real Dong Skills source repo cannot be found. It is not project memory and not an active instinct.
 Use `.codex-context/solution-index.md` as the compact pointer to `docs/solutions/` and `CONCEPTS.md`; do not paste full solution docs into active state.
@@ -118,7 +119,7 @@ Use `codex-docs-stewardship` at milestones, before handoff, after API/architectu
 
 Use `codex-asset-governance` before milestone handoff, compaction, release, or when docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, or code assets may be stale, duplicated, orphaned, unsafe, or bloated. Classify assets as Keep, Update, Consolidate, Replace, Delete, Stale, Raw-Prune, Safe-Auto, or Confirm-First.
 
-Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle audit. Use `--apply` only for safe auto-cleanup: pruning generated `precompact-auto-*.md` raw snapshots and archiving temporary PreCompact notices when a preserved normal handoff body exists below the notice. Do not prune `observations.jsonl` generically.
+Run `node .codex/hooks/project-ops.mjs asset-governance` for a dry-run lifecycle audit. It reports semantic state advisories and raw footprint in addition to size/freshness. Use `--apply` only for safe auto-cleanup: pruning generated `precompact-auto-*.md` raw snapshots and archiving temporary PreCompact notices when a preserved normal handoff body exists below the notice. Do not prune `observations.jsonl` generically.
 
 Use `codex-review-panel` for meaningful code, plan, docs, architecture, or delivery reviews where correctness, testing, maintainability, standards, security, performance, reliability, API contract, UX/product, or adversarial lenses reduce risk.
 

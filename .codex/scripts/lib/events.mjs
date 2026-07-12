@@ -579,12 +579,18 @@ function controlPlaneOperation(input, root) {
   if (syntax.segments.length > 1) {
     const operations = syntax.segments.map((segment) =>
       readOnlyShellSegment(segment) ? { kind: "read-only" } : singleControlPlaneOperation(segment, root));
-    if (operations.some((operation) => !operation || !["read-only", "recovery"].includes(operation.kind))) {
+    if (operations.some((operation) => !operation)) {
       return null;
     }
-    return operations.some((operation) => operation.kind === "recovery")
-      ? { kind: "recovery", compound: true }
-      : { kind: "read-only", compound: true };
+    const activeOperations = operations.filter((operation) => operation.kind !== "read-only");
+    if (activeOperations.length === 0) return { kind: "read-only", compound: true };
+    const forbidden = activeOperations.find((operation) => operation.kind === "forbidden");
+    if (forbidden) return { ...forbidden, compound: true };
+    if (activeOperations.length === 1) return { ...activeOperations[0], compound: true };
+    if (activeOperations.every((operation) => operation.kind === "recovery")) {
+      return { kind: "recovery", compound: true };
+    }
+    return { kind: "forbidden", command: "compound" };
   }
 
   return singleControlPlaneOperation(command, root);
@@ -675,6 +681,39 @@ function explicitToolTargets(input) {
   return unique(targets.map((target) => String(target).trim()).filter(Boolean));
 }
 
+function shellPathArguments(segment) {
+  const targets = [];
+  for (const match of String(segment || "").matchAll(
+    /-(?:LiteralPath|Path|FilePath|Destination|DestinationPath|Target|TargetPath)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi
+  )) {
+    targets.push(match[1] || match[2] || match[3]);
+  }
+  const positional = String(segment || "").match(
+    /^\s*(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni|rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/i
+  );
+  if (positional) targets.push(positional[1] || positional[2] || positional[3]);
+  for (const match of String(segment || "").matchAll(/\bgit\s+(?:restore|switch)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi)) {
+    const target = match[1] || match[2] || match[3];
+    if (target && !target.startsWith("-")) targets.push(target);
+  }
+  for (const match of String(segment || "").matchAll(/\bgit\s+checkout\s+(?:--\s+)?(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi)) {
+    const target = match[1] || match[2] || match[3];
+    if (target && !target.startsWith("-")) targets.push(target);
+  }
+  return targets;
+}
+
+function mutatingShellSegment(segment) {
+  const text = String(segment || "");
+  return /^(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni)\b/i.test(text) ||
+    /^\[System\.IO\.(?:File|Directory)\]::(?:WriteAllText|WriteAllBytes|AppendAllText|Create|Delete|Move|Copy|CreateDirectory|Delete)\b/i.test(text) ||
+    /^(?:rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i.test(text) ||
+    /^sed\s+-i\b/i.test(text) ||
+    /^git\s+(?:apply|restore|checkout|switch)\b/i.test(text) ||
+    /^node(?:\.exe)?\s+(?:--eval|-e)\b[\s\S]*\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|copyFile(?:Sync)?|rename(?:Sync)?|unlink(?:Sync)?|rmSync|mkdirSync|rmdirSync)\s*\(/i.test(text) ||
+    /^python(?:\.exe)?\s+-c\b[\s\S]*(?:\bopen\s*\([^)]*["'][wa+]|write_(?:text|bytes)\s*\(|unlink\s*\(|rename\s*\(|mkdir\s*\(|rmdir\s*\(|shutil\.(?:copy|copyfile|copytree|move|rmtree))/i.test(text);
+}
+
 function shellFileMutation(input) {
   const name = normalizedToolName(input);
   if (!/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) {
@@ -682,42 +721,14 @@ function shellFileMutation(input) {
   }
   const command = shellCommandText(input);
   const syntax = shellSyntax(command);
-  const powerShellMutation = syntax.segments.some((segment) =>
-    /^(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni)\b/i.test(segment) ||
-    /^\[System\.IO\.(?:File|Directory)\]::(?:WriteAllText|WriteAllBytes|AppendAllText|Create|Delete|Move|Copy|CreateDirectory|Delete)\b/i.test(segment));
-  const portableMutation = syntax.segments.some((segment) =>
-    /^(?:rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i.test(segment) ||
-    /^sed\s+-i\b/i.test(segment) ||
-    /^git\s+(?:apply|restore|checkout|switch)\b/i.test(segment)) ||
-    syntax.redirections.length > 0;
-  const inlineCodeMutation = syntax.segments.some((segment) =>
-    /^node(?:\.exe)?\s+(?:--eval|-e)\b[\s\S]*\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|copyFile(?:Sync)?|rename(?:Sync)?|unlink(?:Sync)?|rmSync|mkdirSync|rmdirSync)\s*\(/i.test(segment) ||
-    /^python(?:\.exe)?\s+-c\b[\s\S]*(?:\bopen\s*\([^)]*["'][wa+]|write_(?:text|bytes)\s*\(|unlink\s*\(|rename\s*\(|mkdir\s*\(|rmdir\s*\(|shutil\.(?:copy|copyfile|copytree|move|rmtree))/i.test(segment));
-  if (!powerShellMutation && !portableMutation && !inlineCodeMutation) {
+  const mutatingSegments = syntax.segments.filter((segment) => mutatingShellSegment(segment));
+  if (mutatingSegments.length === 0 && syntax.redirections.length === 0) {
     return { mutates: false, targets: [], opaque: false };
   }
 
   const targets = [];
-  for (const match of command.matchAll(
-    /-(?:LiteralPath|Path|FilePath|Destination|DestinationPath|Target|TargetPath)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi
-  )) {
-    targets.push(match[1] || match[2] || match[3]);
-  }
+  for (const segment of mutatingSegments) targets.push(...shellPathArguments(segment));
   targets.push(...syntax.redirections);
-  if (targets.length === 0) {
-    const positional = command.match(
-      /^\s*(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni|rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/i
-    );
-    if (positional) targets.push(positional[1] || positional[2] || positional[3]);
-  }
-  for (const match of command.matchAll(/\bgit\s+(?:restore|switch)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi)) {
-    const target = match[1] || match[2] || match[3];
-    if (target && !target.startsWith("-")) targets.push(target);
-  }
-  for (const match of command.matchAll(/\bgit\s+checkout\s+(?:--\s+)?(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi)) {
-    const target = match[1] || match[2] || match[3];
-    if (target && !target.startsWith("-")) targets.push(target);
-  }
   return {
     mutates: true,
     targets: unique(targets.map((target) => String(target || "").trim()).filter(Boolean)),
@@ -787,8 +798,19 @@ function protectedWorkflowStateMutation(input, root) {
     return true;
   }
   const name = normalizedToolName(input);
-  return /shell|bash|powershell|cmd|exec_command|shell_command/.test(name) &&
-    /(?:^|[\s"'`])\.codex-context[\\/]workflow-state\.yaml(?:[\s"'`]|$)/i.test(shellCommandText(input));
+  if (!/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) return false;
+  const shellMutation = shellFileMutation(input);
+  if (shellMutation.targets.some((target) => {
+    const relative = projectRelativeTarget(target, root);
+    return relative === ".codex-context/workflow-state.yaml";
+  })) {
+    return true;
+  }
+  if (!shellMutation.opaque) return false;
+  return shellSyntax(shellCommandText(input)).segments
+    .filter((segment) => mutatingShellSegment(segment))
+    .some((segment) =>
+      /(?:^|[\s"'`(])\.codex-context[\\/]workflow-state\.yaml(?:[\s"',)`]|$)/i.test(segment));
 }
 
 function shellSyntax(command) {
@@ -1524,10 +1546,15 @@ export function postToolUse(input, root, ctx) {
     }
     const fingerprint = projectChangeFingerprint(root, changed);
     const execution = toolExecutionStatus(input);
+    const responseProvided = input?.tool_response !== undefined ||
+      input?.toolResponse !== undefined ||
+      input?.tool_result !== undefined ||
+      input?.toolResult !== undefined;
     const currentHashes = refreshFileHashes(ctx);
     const baselineHashes = intent.value?.baseline_hashes || {};
-    const refreshedTouched = execution.known && execution.ok
-      ? CHANGE_REFRESH_FILES.filter((name) => baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
+    const refreshedTouched = (!responseProvided || execution.ok)
+      ? CHANGE_REFRESH_FILES.filter((name) =>
+        baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
       : [];
     const nextValue = updateRuntimeReceipt(ctx, "change-state", (existing) => {
       const existingValue = existing.ok ? existing.value : null;
