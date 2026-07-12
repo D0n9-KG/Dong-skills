@@ -244,8 +244,15 @@ export function removeRecoveryReceipt(ctx, sessionKey = "", options = {}) {
   return removeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey), options);
 }
 
+function hasScopedRecoveryReceipt(ctx) {
+  const dir = runtimeDirectory(ctx);
+  if (!fs.existsSync(dir)) return false;
+  return fs.readdirSync(dir).some((name) => /^recovery-[a-f0-9]{16}\.json$/i.test(name));
+}
+
 export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
-  const receipt = readRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey));
+  let receipt = readRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey));
+  let fallbackToUnscoped = false;
   if (!receipt.ok) {
     return {
       ok: false,
@@ -253,10 +260,15 @@ export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
     };
   }
   if (!receipt.exists) {
-    return {
-      ok: false,
-      reason: "context recovery has not been acknowledged in this session"
-    };
+    const unscoped = sessionKey ? readRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", "")) : receipt;
+    if (!sessionKey || !unscoped.ok || !unscoped.exists || hasScopedRecoveryReceipt(ctx)) {
+      return {
+        ok: false,
+        reason: "context recovery has not been acknowledged in this session"
+      };
+    }
+    receipt = unscoped;
+    fallbackToUnscoped = true;
   }
 
   const value = receipt.value || {};
@@ -268,10 +280,12 @@ export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
     };
   }
   if (sessionKey && value.session_key_hash !== stableFingerprint(String(sessionKey))) {
-    return {
-      ok: false,
-      reason: "context recovery receipt belongs to a different session"
-    };
+    if (!fallbackToUnscoped || value.session_key_hash) {
+      return {
+        ok: false,
+        reason: "context recovery receipt belongs to a different session"
+      };
+    }
   }
   if (!state.handoff_hash || state.handoff_hash === "null" || value.handoff_hash !== state.handoff_hash) {
     return {

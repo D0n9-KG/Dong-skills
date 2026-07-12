@@ -1,7 +1,7 @@
 # Handoff 摘要
 
 ## 目标
-修复 Dong Skills 在真实旧项目使用中暴露的状态治理问题：active state 文件不能因为 Stop/hook/runtime/Dong Skills 维护日志而失去当前项目焦点，压缩或新 session 恢复时应优先看到当前项目事实、下一步和真正未解决问题。
+修复 Dong Skills 在真实项目运行中暴露的恢复门问题：`context-recovery-eval` 成功后，后续 `workflow-state transition wayfinder-start` 不应继续被 PreToolUse 判定为“本 session 没有 recovery acknowledgement”。同时保持 session 隔离，避免一个 session 的恢复确认被另一个 session 复用。
 
 ## 最新用户指令
 用户确认这些主要问题有价值，要求针对性修复。
@@ -14,12 +14,11 @@
 - 非目标：不修改 `scientific_Graph` 旧项目；不把 semantic warning 升级成硬失败；不引入新依赖或常驻进程。
 
 ## 计划状态
-- 旧项目样本问题归因：已完成。
-- asset-governance semantic drift/raw footprint：已实现。
-- health semantic warnings：已实现。
-- release-check maxBuffer：已实现。
-- 技能文档和 bootstrap 镜像同步：已完成。
-- 测试与发布复核：已完成一轮，正在做最终提交前复核。
+- recovery receipt 写入/校验路径定位：已完成。
+- safe unscoped fallback：已实现并同步 bootstrap 镜像。
+- 复合只读命令分类边界：已补回归测试。
+- session 隔离不被 fallback 破坏：已通过回归测试。
+- 发布级复核：进行中。
 - Git checkpoint：待最终复核后提交推送。
 
 ## 已修改文件
@@ -52,23 +51,16 @@
 - raw 资产即使 ignored，也需要在体积过大时提示 owner/reason/retention。
 
 ## 验证证据
-- `node --test tests/domains/assets-worktree.test.mjs`: pass，9/9。
-- `node --test tests/domains/health-release.test.mjs`: pass，23/23。
-- `node --test tests/domains/core.test.mjs`: pass，24/24。
-- `node --test tests/domains/workflow-hooks.test.mjs`: pass，92/92。
-- `node scripts/run-domain-tests.mjs`: pass，219/219，11 domains。
-- `node scripts/project-ops-health.mjs .`: pass，仅 liveness warning。
-- `node scripts/asset-governance.mjs .`: pass，仅非阻断建议。
-- `node scripts/release-check.mjs .`: pass。
-- `git diff --check`: pass。
+- `node --test tests/domains/workflow-hooks.test.mjs --test-name-pattern "compound read-only diagnostics|unscoped recovery eval receipt|recovery acknowledgements remain scoped|recovery receipt is invalidated|recovery receipt covers transitive"`: pass，93/93。
+- 覆盖点：unscoped `recovery.json` fallback、session-scoped recovery 隔离、runtime hash 失效、transitive runtime hash、复合只读 workflow-state 诊断。
 
 ## Git 存档
-- 最新提交: `2e88132 feat(governance): detect semantic state drift`
-- 已包含文件: 语义状态治理代码、技能文档、bootstrap 镜像、测试和状态文件。
-- 推送状态: 已推送到 `origin/main`；本次 follow-up 将修复状态文件字段与隐私扫描。
+- 最新提交: `d905759 chore(state): close semantic governance checkpoint`
+- 已包含文件: 上一轮语义状态治理代码、技能文档、bootstrap 镜像、测试和状态文件。
+- 推送状态: 上一轮已推送到 `origin/main`；本次 recovery receipt 修复待提交推送。
 - 有意保留未提交的文件: 无。
 - 暂缓原因: 无。
-- 下次存档: follow-up 复核通过后立即提交推送。
+- 下次存档: recovery receipt 修复发布检查通过后立即提交推送。
 
 ## 当前 Git 状态
 - 分支：`main`

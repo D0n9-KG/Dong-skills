@@ -3145,7 +3145,8 @@ test("compound read-only diagnostics bypass recovery and mutation gates", () => 
 
   for (const command of [
     "Get-Content .codex-context/handoff-summary.md; git status --short; node .codex/hooks/project-ops.mjs health-check",
-    "node .codex/hooks/project-ops.mjs context-recovery-eval; Get-Content .codex-context/workflow-state.yaml; git status --short"
+    "node .codex/hooks/project-ops.mjs context-recovery-eval; Get-Content .codex-context/workflow-state.yaml; git status --short",
+    "Get-Content .codex-context/workflow-state.yaml; Select-String -Path .codex-context/workflow-state.yaml -Pattern phase; git status --short"
   ]) {
     const output = runHook(project, {
       hook_event_name: "PreToolUse",
@@ -3167,6 +3168,41 @@ test("compound read-only diagnostics bypass recovery and mutation gates", () => 
   });
   assert.equal(nestedMutation.hookSpecificOutput?.permissionDecision, "deny");
   assert.match(nestedMutation.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+});
+
+test("unscoped recovery eval receipt can authorize same-session workflow transitions when hashes match", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const sessionId = "unscoped-recovery-transition";
+  runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
+
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  assert.ok(fs.existsSync(path.join(runtimeDir, "recovery.json")));
+  assert.equal(
+    fs.readdirSync(runtimeDir).some((name) => /^recovery-[a-f0-9]{16}\.json$/i.test(name)),
+    false
+  );
+
+  const transition = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: sessionId,
+    tool_name: "shell_command",
+    tool_use_id: "wayfinder-start-transition",
+    tool_input: { command: "node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start" }
+  });
+  assert.deepEqual(transition, {});
 });
 
 test("closure maintenance does not create a second Stop freshness cycle", () => {

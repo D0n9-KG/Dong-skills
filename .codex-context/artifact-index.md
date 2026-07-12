@@ -26,5 +26,10 @@
 ## 原始输出
 - 本轮未新增需要长期保存的 raw 输出。
 
+## Recovery receipt 修复
+- `.codex/scripts/lib/runtime.mjs`: 在 session-scoped recovery receipt 缺失且无其他 scoped recovery receipt 时，允许严格匹配的 unscoped `recovery.json` 作为 fallback。
+- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/runtime.mjs`: 同步 bootstrap runtime 镜像。
+- `tests/domains/workflow-hooks.test.mjs`: 新增 unscoped recovery receipt 授权 workflow transition、复合只读 workflow-state 诊断、session 隔离不被 fallback 破坏的回归覆盖。
+
 ## 最新刷新
 2026-07-12：记录语义状态治理修复的代码、技能文档、bootstrap 镜像和测试资产。

@@ -42,3 +42,8 @@
 - Verdict: Ready for final re-run, commit, and push if the fresh release check remains green。
 - Blocking findings: none in the completed verification set。
 - Residual risks: semantic drift 规则是启发式 warning，不能替代人工判断；旧项目需要重新 bootstrap 才能拿到新规则。
+## 当前任务：Recovery receipt 作用域修复
+- `node --test tests/domains/workflow-hooks.test.mjs --test-name-pattern "compound read-only diagnostics|unscoped recovery eval receipt|recovery acknowledgements remain scoped|recovery receipt is invalidated|recovery receipt covers transitive"`
+  - Result: pass
+  - Evidence: workflow-hooks 93/93 pass；覆盖 unscoped recovery fallback、session scoped isolation、runtime hash invalidation、transitive runtime hash、compound read-only diagnostics。
+  - Date: 2026-07-12.

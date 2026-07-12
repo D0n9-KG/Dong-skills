@@ -7,7 +7,7 @@
 用户确认这些实际使用层面的问题很有价值，要求全部针对性修复。
 
 ## 当前阶段
-实现已完成，正在做状态闭环、发布复核、Git 提交和推送。
+恢复 receipt 作用域修复已实现，针对性 workflow-hooks 回归已通过；正在做发布级复核、提交和推送。
 
 ## 当前假设
 - 本轮属于 Dong Skills 自身维护，风险等级按 Lane 3 处理。
@@ -21,11 +21,14 @@
 - `asset-governance` CLI 已新增 `--raw-total-warn-mb` 和 `--raw-largest-warn-mb`。
 - `release-check` 已增加 32MB command buffer，避免 domain-sharded tests 输出较大时误失败。
 - `codex-asset-governance`、`codex-docs-stewardship`、`codex-project-governance`、根/bootstrap `AGENTS.project-ops.snippet.md` 已同步新约束：active state 应以当前项目事实为主，不把维护日志当作恢复主线。
+- 已修复 `context-recovery-eval` 成功后 workflow transition 仍被 PreToolUse 认为没有 recovery acknowledgement 的问题：当 session-scoped receipt 缺失且不存在其他 session-scoped recovery receipt 时，允许严格匹配 task identity、handoff hash、runtime hash 的 unscoped `recovery.json` 作为安全 fallback。
+- 保留多 session 隔离：一旦已有 session-scoped recovery receipt，其他 session 不能复用 unscoped fallback；旧的 session-scoped 隔离回归测试已通过。
+- 已补只读复合诊断回归：读取 `workflow-state.yaml`、`Select-String`、`git status` 组合不会被误判为直接编辑 workflow-state。
 
 ## 下一步动作
-1. 运行发布级复核：diff check、domain tests、health、asset-governance、release-check。
-2. 若通过，提交并推送 `feat(governance): detect semantic state drift`。
-3. 最终汇报修复内容、验证证据、旧项目同步方式。
+1. 运行发布级复核：diff check、workflow-hooks、health、release-check。
+2. 若通过，提交并推送 `fix(recovery): honor unscoped recovery receipts safely`。
+3. 最终汇报恢复门修复内容、验证证据、旧项目同步方式。
 
 ## 最后更新
 2026-07-12。
