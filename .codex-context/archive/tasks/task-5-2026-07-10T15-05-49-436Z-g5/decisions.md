@@ -1,0 +1,109 @@
+# Decisions
+
+## Accepted
+- Dong Skills installs skills globally under `.agents/skills`.
+- Dong Skills does not install global hooks.
+- Project hooks are installed per repository through the kit installer or the onboarding skill bootstrap.
+- `codex-codebase-onboarding` is the normal new-project entrypoint because it can bootstrap missing governance files and then map the codebase.
+- `codex-git-checkpoint` is part of the curated skill set and handles checkpoint commit, commit-message quality, optional push, and handoff deferral.
+- Hooks require a meaningful `Git Checkpoint` handoff note when dirty or unpushed Git state exists, instead of forcing automatic commits.
+- Split hook runtime code lives under `.codex/scripts/lib/`; the hook file itself stays thin.
+- `.codex-context/archive/` is durable on-demand history and is excluded from active context-budget estimates.
+- `codex-architecture-governance` and `codex-docs-stewardship` are main curated skills, not optional external modules.
+- CE-inspired additions are adopted selectively: strategy anchor, structured solution memory, persona review panel, session-history metadata scan, and product evidence capture.
+- `codex-solution-memory` owns full `docs/solutions/` documents and `CONCEPTS.md`; `codex-learning-memory` remains limited to compact instincts.
+- Session history tooling must report metadata/keyword counts first and avoid raw transcript output.
+- Automatic recovery output includes `.codex-context/solution-index.md` as active context.
+- `STRATEGY.md`, `CONCEPTS.md`, and full `docs/solutions/` bodies remain on-demand recovery inputs.
+- Bootstrap asset parity drift is a health/release failure, not a warning.
+- Windows `commandWindows` hook invocations use PowerShell `-EncodedCommand`; inline nested `-Command "$root = ... 2>$null"` is rejected because Codex may execute the configured command through an outer PowerShell layer that expands variables first.
+- `codex-codebase-onboarding` runs a health check even when all bootstrap files exist, then reruns bootstrap once if stale hook commands, helper scripts, templates, or managed guidance are detected.
+- `PreCompact` uses different behavior for manual and automatic compaction: explicit manual compaction still hard-blocks stale governance state, while automatic or unknown-trigger compaction writes an emergency handoff and returns `continue: true`.
+- Automatic `PreCompact` prepends an emergency notice to `.codex-context/handoff-summary.md`, preserves meaningful existing handoff content below it, and stores a raw `.codex-context/raw/precompact-auto-*.md` backup for audit/recovery.
+- Dong Skills has first-class asset lifecycle governance through `codex-asset-governance` and `asset-governance.mjs`.
+- Dong Skills meta-learning uses deterministic source repo discovery and falls back to `.codex-context/dong-skills-outbox.md` when the real source repo cannot be found.
+- Installed skill copies under `%USERPROFILE%\.agents\skills` or `%USERPROFILE%\.codex\skills` are not valid Dong Skills source repos.
+- Global install writes `%USERPROFILE%\.agents\skills\.dong-skills-source.json` as local runtime metadata so project sessions can find the real Dong Skills backlog.
+- Asset governance classifies accumulated material as Keep, Update, Consolidate, Replace, Delete, Stale, or Raw-Prune.
+- `asset-governance --apply` is allowed to prune generated `precompact-auto-*.md` snapshots that exceed retention, but must not delete `observations.jsonl`.
+- Severe active state bloat or tracked raw/runtime artifacts can block Stop through asset governance; lower-severity lifecycle findings remain audit advisories.
+- `PostCompact` must emit common hook output only. Full recovery context remains owned by `SessionStart` when the start source is `compact`.
+- Dong Skills keeps a lightweight workflow rather than importing the full Superpowers ritual, but non-trivial work now requires explicit scope, design/spec approval, plan, execution approval, verification, and checkpoint boundaries.
+- `executing-plans` treats a written plan as insufficient by itself; execution requires `## Execution Approval` in `.codex-context/plan-progress.md` unless the user explicitly requested plan-then-execute.
+- `verification-before-completion` is a hard gate, but expressed as concise Dong Skills rules instead of the heavier upstream Superpowers wording.
+- The kit will not add a broad pre-edit hook for every file change at this stage; phase boundaries are enforced through skills, project state, and existing PostToolUse/Stop checks.
+- Bootstrap writes managed Markdown with explicit UTF-8 helpers and snippet trimming so Chinese `AGENTS.md` content is preserved and repeated bootstrap runs are idempotent.
+- Brainstorming uses Living Spec mode: confirmed decisions can be written before approval as `Living Draft / Not Approved`, while implementation still waits for final approval.
+- Brainstorming should ask exactly one important question per assistant message when clarifying scope or design.
+- Learning observation dedupe is topic-based only for repeated status follow-ups; it should not silently discard new substantive observations on the same topic.
+- `state-prune --verification --archive --keep-latest N --apply` is the standard one-step verification bloat cleanup path.
+- Borrowed workflow skills should stay lighter than their upstream originals, but lightening must not remove gates that prevent drift, weak plans, missing reproduction, missing tests, optional high-risk review, unsafe branch finishing, or forgotten solution-memory evaluation.
+- `spec.md` `Approval Status` and `plan-progress.md` `Execution Approval` are required state schema fields, not optional prose. New templates include them and health checks flag old projects missing them.
+- Release checks include a text readability scan for active Dong Skills assets so mojibake or replacement-character regressions are caught before publishing.
+- Final discussion approval is not the same as written-spec approval. `brainstorming` must mark the final written spec as `Pending written-spec approval` until the user approves the written file or inline written spec.
+- Plans must record `Execution Mode`; Codex Goal mode is never inferred from vague continuation or plan-then-execute language.
+- `plan-then-execute` defaults to Traditional task-by-task execution unless the user explicitly selects Codex Goal mode.
+- Codex Goal mode is allowed only with an approved written spec, approved plan, explicit user selection, Goal objective, runtime constraints, checkpoint cadence, state update requirements, and stop conditions.
+- Dong Skills remains a Codex-specific release line for now. Claude Code compatibility requires a separate adapter and is not mixed into the Codex project layout.
+- Deleted project files should use a stable filesystem freshness basis, such as nearest existing ancestor mtime, rather than `Date.now()`, so state files can become fresh after one update.
+- `session-history` should accept an explicit project root argument consistently with other `project-ops.mjs` CLI modes.
+- Direct use of a shipped CLI, local API, generated artifact, or real workflow can count as product evidence; generic test framework output must not be relabeled as a demo.
+- Codex Goal mode requires an actual goal mechanism exposed in the current session. If `create_goal` / `update_goal`-style tools are unavailable, Goal mode is unavailable and the agent must ask before falling back.
+- Comet is borrowed as a workflow-state pattern only: Dong Skills uses `.codex-context/workflow-state.yaml` plus `workflow-state` commands, not OpenSpec change directories or `.comet.yaml`.
+- `workflow-state.yaml` records phase, next skill, blocking decision, and verification/review/checkpoint status; it is not a per-file artifact freshness log.
+- Missing `workflow-state.yaml` is now reported by status/recover/check/hooks instead of being silently recreated; explicit `workflow-state init` is the intentional initialization path.
+- `PostToolUse` matches shell/Bash/PowerShell-style Codex tools in addition to edit/write/apply_patch tools, while actual blocking still depends on Git-detected non-context file changes.
+- Release privacy scanning includes `tests/`; test fixtures that intentionally contain secret-like text must use a narrow `codex-release-check: allow-secret-fixture` marker.
+- Release large-file scanning blocks oversized text assets, while `.codex-context/raw/` and `.codex-context/archive/` remain governed by raw/archive lifecycle rules.
+- Windows installation uses strict UTF-8 reads and UTF-8 no-BOM writes; unreadable legacy-encoded managed files should fail explicitly rather than be silently corrupted.
+- Global skill replacement during Windows install uses staging and backup directories under the target skills root instead of delete-then-copy.
+- Ponytail is adopted selectively as anti-overengineering guidance, not imported wholesale.
+- Dong Skills mandatory Simplicity Gate has exactly three required rungs: avoid building, standard library, and native platform.
+- Ponytail's one-line and minimum-implementation rungs are not mandatory Dong Skills gates; they can appear only as advisory `shrink` findings.
+- `codex-simplicity-review` is a focused overengineering review skill that complements, but does not replace, `codex-review-panel`.
+- Accepted simplifications with known ceilings use `dong-debt: <ceiling>; revisit when <trigger>` comments near the code, and asset governance reports markers without treating them as active project memory.
+- Hook status output is allowed to show root, workflow phase, next skill, decision state, learning state, asset state, checkpoint state, and latest changed file; high-frequency PostToolUse must use a lightweight status path rather than full asset-governance scans.
+- Long discussion and investigation recovery uses a dedicated `.codex-context/working-notes.md` file instead of folding agent exploration notes into `current-state.md` or `handoff-summary.md`.
+- `.codex-context/discussion-state.json` is a runtime-only dirty marker, ignored by Git and blocked by release checks if tracked.
+- Hooks do not call a model to summarize discussion or analysis. They only mark dirty state, compare freshness, and write deterministic emergency snapshots.
+- `UserPromptSubmit` can mark active discussion/spec/planning/debugging state dirty and requires refreshing `spec.md`, `current-state.md`, `decisions.md`, `open-questions.md`, and `handoff-summary.md`.
+- `PostToolUse` can mark investigation state dirty for read/search/web/browser/codegraph and common shell exploration commands, requiring `working-notes.md`, `current-state.md`, and `handoff-summary.md` before stopping or compacting.
+- SessionStart recovery order includes `decisions.md`, `open-questions.md`, and `working-notes.md` before plan/artifact files so a compacted session can recover the current discussion before executing.
+
+## Rejected
+- Global hook dispatcher as the main release mechanism.
+- Requiring a manual project installer run for every new repository after the skills are already installed.
+- Automatic commits without diff review and scope confirmation.
+- Treating architecture/docs cleanup as only a final manual tidy-up step.
+- Wholesale import of CE platform-specific skills such as Slack, Rails/Xcode, image generation, promotion/social copy, and fully autonomous workflows.
+- Inline Windows hook commands containing PowerShell variables in `.codex/hooks.json`.
+- Hard-blocking automatic `PreCompact` as the default safety mechanism, because it can leave Codex stopped under context pressure without reliable chat-visible feedback.
+- Reusing `SessionStart` `hookSpecificOutput.additionalContext` for `PostCompact`, because Codex rejects event-specific output on `PostCompact`.
+- Treating `continue`, vague acknowledgment, or a written plan as automatic permission to implement.
+- Generic raw cleanup that deletes `observations.jsonl`.
+- Keeping duplicate or obsolete durable docs in archive folders when Git history is sufficient.
+- Treating `.codex-context/dong-skills-outbox.md` as project memory or an active project instinct.
+- Treating user-reported Dong Skills optimization backlog items as complete merely because they were recorded.
+- Treating a discussion-approved design as enough to start planning before the written spec is reviewed.
+- Treating Goal mode as a default or automatic escalation for long tasks.
+- Adding cross-platform installers in this pass.
+- Adding Claude Code `.claude` / `CLAUDE.md` adapter files to the Codex-only release line.
+- Importing Comet/OpenSpec wholesale for Dong Skills.
+- Blocking every source edit until `workflow-state.yaml` mtime is refreshed.
+- Importing Ponytail mode switching (`lite/full/ultra/off`) into Dong Skills.
+- Making Ponytail's one-line/minimum-implementation rungs mandatory in Dong Skills.
+- Running full asset-governance inside every PostToolUse hook just to enrich status output.
+- Model-in-hook summarization for PreCompact or UserPromptSubmit.
+- Storing hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning in `working-notes.md`.
+
+## 已接受
+- 采用轻量本地 Markdown `codex-wayfinder`，一次 session 只解决一个 frontier ticket；不引入 issue-tracker runtime。
+- `codex-review-panel` 保留 persona lenses，但 Standards 与 Spec 作为独立 verdict，禁止跨轴合并重排。
+- installer 与 bootstrap 共用集合级回滚语义和基于目标路径的有界文件锁；Preview 不写目标。
+- health 动态加载 workflow runtime parser/schema，避免枚举复制漂移。
+- 测试物理拆为 8 个领域文件，由 `scripts/run-domain-tests.mjs` 校验唯一归属并以并发 4 执行。
+- SkillOpt 真实 run 必须有 train 与 held-out/val 任务、非空受支持 judge，并在调用后端前 fail closed。
+
+
+## 已拒绝
+- 暂无。

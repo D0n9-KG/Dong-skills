@@ -73,11 +73,15 @@ export function mtimeMs(file) {
 }
 
 export function latestChangedMtime(root, files) {
-  let latest = 0;
+  return latestChangedInfo(root, files).mtime;
+}
+
+export function latestChangedInfo(root, files) {
+  let latest = { file: "", mtime: 0 };
   for (const file of files) {
     const abs = path.join(root, file);
-    if (fs.existsSync(abs)) latest = Math.max(latest, mtimeMs(abs));
-    else latest = Math.max(latest, nearestExistingAncestorMtime(abs));
+    const current = fs.existsSync(abs) ? mtimeMs(abs) : nearestExistingAncestorMtime(abs);
+    if (current > latest.mtime) latest = { file, mtime: current };
   }
   return latest;
 }

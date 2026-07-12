@@ -1,49 +1,58 @@
 # 验证
 
-## 当前任务：Dong Skills 语义状态治理修复
-- `node --test tests/domains/assets-worktree.test.mjs`
+## Task Identity
+- task_id: task-6-2026-07-12T15-42-07-054Z
+- task_generation: 6
+
+## 已运行命令
+- `node --test --test-name-pattern "compound shell redirection into raw|Stop checkpoint diagnostics use the same freshness" tests/domains/workflow-hooks.test.mjs`
   - Result: pass
-  - Evidence: 9/9 tests passed；覆盖 asset-governance semantic state drift 与 raw footprint advisories。
-  - Date: 2026-07-12.
-- `node --test tests/domains/health-release.test.mjs`
+  - Evidence: 原始两个失败场景修复后 2/2 通过。
+  - Date: 2026-07-12
+- 相邻 hook 回归筛选
   - Result: pass
-  - Evidence: 23/23 tests passed；覆盖 health semantic warnings 不 fail 与 release-check maxBuffer。
-  - Date: 2026-07-12.
-- `node --test tests/domains/core.test.mjs`
-  - Result: pass
-  - Evidence: 24/24 tests passed。
-  - Date: 2026-07-12.
+  - Evidence: governance edit、read-only compound、change-state refresh、closure maintenance、deferred checkpoint 等 8/8 通过。
+  - Date: 2026-07-12
 - `node --test tests/domains/workflow-hooks.test.mjs`
   - Result: pass
-  - Evidence: 92/92 tests passed。
-  - Date: 2026-07-12.
-- `node scripts/run-domain-tests.mjs`
-  - Result: pass
-  - Evidence: 219/219 tests across 11 domains passed。
-  - Date: 2026-07-12.
+  - Evidence: 97 tests，97 pass，0 fail。
+  - Date: 2026-07-12
 - `node scripts/project-ops-health.mjs .`
   - Result: pass
-  - Evidence: static configuration pass、runtime parity pass、Issues none；仅 hook liveness runtime-mismatch warning。
-  - Date: 2026-07-12.
-- `node scripts/asset-governance.mjs .`
-  - Result: pass
-  - Evidence: Blocking issues none；仅建议 verification command entries 10→8 和复核 on-demand state freshness。
-  - Date: 2026-07-12.
+  - Evidence: static configuration 和 runtime parity 通过；仅有旧 runtime liveness warning。
+  - Date: 2026-07-12
 - `node scripts/release-check.mjs .`
   - Result: pass
-  - Evidence: health-check、context budget、Node/PowerShell syntax、domain-sharded tests、privacy scan、readability scan、large-file scan、runtime-artifact scan 全部通过。
-  - Date: 2026-07-12.
+  - Evidence: health、context budget、语法、PowerShell parse、domain-sharded tests、privacy、readability、large-file、runtime artifact 全部通过。
+  - Date: 2026-07-12
 - `git diff --check`
-  - Result: pass。
-  - Date: 2026-07-12.
-
-## Review Evidence
-- Scope: asset-governance、project-ops-health、release-check、状态治理技能文档、bootstrap 镜像、领域测试。
-- Verdict: Ready for final re-run, commit, and push if the fresh release check remains green。
-- Blocking findings: none in the completed verification set。
-- Residual risks: semantic drift 规则是启发式 warning，不能替代人工判断；旧项目需要重新 bootstrap 才能拿到新规则。
-## 当前任务：Recovery receipt 作用域修复
-- `node --test tests/domains/workflow-hooks.test.mjs --test-name-pattern "compound read-only diagnostics|unscoped recovery eval receipt|recovery acknowledgements remain scoped|recovery receipt is invalidated|recovery receipt covers transitive"`
   - Result: pass
-  - Evidence: workflow-hooks 93/93 pass；覆盖 unscoped recovery fallback、session scoped isolation、runtime hash invalidation、transitive runtime hash、compound read-only diagnostics。
-  - Date: 2026-07-12.
+  - Evidence: 无 whitespace error。
+  - Date: 2026-07-12
+- 根运行时与 bootstrap 镜像逐文件 diff
+  - Result: pass
+  - Evidence: `core.mjs`、`git.mjs`、`events.mjs` 无差异。
+  - Date: 2026-07-12
+
+## 产品证据
+- PreToolUse fixture：未 recovery 的复合命令写入 `.codex-context/raw/pretooluse-danger-probe.txt`
+  - Result: pass
+  - Evidence: 返回 `permissionDecision=deny`，理由指向 context recovery。
+  - Date: 2026-07-12
+- Stop fixture：当前 Git 状态与 receipt-only 文件 mtime 不同
+  - Result: pass
+  - Evidence: stale 详情正确指向实际参与判定的 `receipt-only.txt`。
+  - Date: 2026-07-12
+
+## 尚未验证
+- 无。
+
+## 审查证据
+- 范围：根运行时、bootstrap 镜像、两个新增回归及 task-scoped 状态。
+- 视角：Correctness、Testing、Maintainability、Simplicity、Project Standards；因涉及 hook trust boundary，追加 Security 与 Reliability。
+- Standards Verdict: Ready。未发现 P0-P3 运行时问题；审查中发现并清理了 EOF 空行和重复 risks 占位章节。
+- Spec Verdict: Ready。两个验收场景均由独立失败用例覆盖，未扩大到完整 shell sandbox。
+- 阻塞发现：无。
+- 残余风险：旧项目必须重新 bootstrap；hooks 仍是治理控制面而非完整安全沙箱。
+- 修复要求：无进一步代码修复。
+- 复核时间：2026-07-12，verification-pass 之后重新确认。

@@ -746,6 +746,10 @@ function projectRelativeTarget(target, root) {
 
 function governanceArtifactPath(relative) {
   const normalized = String(relative || "").toLowerCase();
+  if (normalized === ".codex-context/raw" ||
+      normalized.startsWith(".codex-context/raw/")) {
+    return false;
+  }
   return normalized.startsWith(".codex-context/") ||
     normalized === "strategy.md" ||
     normalized.startsWith("docs/codex/plans/") ||
@@ -1648,7 +1652,9 @@ function hookStatusText(root, ctx, latest = 0, files = [], options = {}) {
   const workflow = options.workflow || workflowStatus(root, ctx);
   const learning = options.learning === false ? null : (options.learning || learningStatus(ctx));
   const assets = options.assets === false ? null : (options.assets || assetGovernanceStatus(root, ctx));
-  const checkpoint = options.checkpoint === false ? null : (options.checkpoint || gitCheckpointStatus(root, ctx, latest));
+  const checkpoint = options.checkpoint === false
+    ? null
+    : (options.checkpoint || gitCheckpointStatus(root, ctx, latest, files));
   const discussion = options.discussion === false ? null : (options.discussion || discussionStateStatus(root, ctx, workflow));
   const state = workflow.state || {};
   const consistencyIssues = workflow.consistency?.issues?.length || 0;
@@ -1953,7 +1959,8 @@ export function preCompact(input, root, ctx) {
   const learning = learningStatus(ctx);
   issues.push(...learning.issues);
 
-  const checkpoint = gitCheckpointStatus(root, ctx, latest);
+  const checkpointFiles = [...new Set([...changed, ...statusFiles])];
+  const checkpoint = gitCheckpointStatus(root, ctx, latest, checkpointFiles);
   if (!checkpoint.ok) issues.push(checkpoint.summary);
   issues.push(...workflow.issues);
   const discussion = discussionStateStatus(root, ctx, workflow);
@@ -2026,7 +2033,9 @@ export function stop(input, root, ctx) {
     receiptHasRefresh(changeState.value, ctx, REQUIRED_FILES.handoff)
     ? 0
     : latest;
-  const checkpoint = checkpointRequired ? gitCheckpointStatus(root, ctx, checkpointEvidenceLatest) : null;
+  const checkpoint = checkpointRequired
+    ? gitCheckpointStatus(root, ctx, checkpointEvidenceLatest, checkpointEvidenceLatest ? changed : [])
+    : null;
   const discussion = discussionStateStatus(root, ctx, workflow);
   const statusLatest = Math.max(latest, discussion.latest);
 

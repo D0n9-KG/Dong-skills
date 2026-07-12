@@ -3171,6 +3171,25 @@ test("compound read-only diagnostics bypass recovery and mutation gates", () => 
   assert.match(nestedMutation.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
 });
 
+test("compound shell redirection into raw does not bypass recovery as governance repair", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  runHook(project, { hook_event_name: "SessionStart", session_id: "raw-write", source: "resume" });
+
+  const output = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "raw-write",
+    tool_name: "shell_command",
+    tool_use_id: "compound-raw-redirection",
+    tool_input: {
+      command: "Get-Content README.md; 'probe' > .codex-context/raw/pretooluse-danger-probe.txt"
+    }
+  });
+
+  assert.equal(output.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(output.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+});
+
 test("unscoped recovery eval receipt can authorize same-session workflow transitions when hashes match", () => {
   const project = tempProject();
   readyHealthFixture(project);
@@ -3532,6 +3551,59 @@ test("deferred checkpoint freshness is measured against project mutations only",
 
   const output = runHook(project, { hook_event_name: "Stop" });
   assert.deepEqual(output, {});
+});
+
+test("Stop checkpoint diagnostics use the same freshness file set as the stale decision", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project, `- Latest commit: baseline
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: user explicitly requested no commit and no push
+- Next checkpoint: only after a new user request
+`);
+  write(path.join(project, "work.txt"), "before\n");
+  write(path.join(project, "receipt-only.txt"), "before\n");
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, "checkpoint-freshness");
+
+  const mutation = {
+    tool_name: "apply_patch",
+    tool_use_id: "checkpoint-receipt-only-mutation",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: receipt-only.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", session_id: "checkpoint-freshness", ...mutation });
+  write(path.join(project, "receipt-only.txt"), "after\n");
+  runHook(project, {
+    hook_event_name: "PostToolUse",
+    session_id: "checkpoint-freshness",
+    ...mutation,
+    tool_response: { is_error: false }
+  });
+
+  write(path.join(project, "receipt-only.txt"), "before\n");
+  write(path.join(project, "work.txt"), "dirty\n");
+  const workMtime = new Date(Date.now() - 5000);
+  fs.utimesSync(path.join(project, "work.txt"), workMtime, workMtime);
+  const handoffMtime = new Date(Date.now() - 3000);
+  fs.utimesSync(path.join(project, ".codex-context", "handoff-summary.md"), handoffMtime, handoffMtime);
+  const receiptOnlyMtime = new Date(Date.now() - 1000);
+  fs.utimesSync(path.join(project, "receipt-only.txt"), receiptOnlyMtime, receiptOnlyMtime);
+
+  const output = runHook(project, { hook_event_name: "Stop", session_id: "checkpoint-freshness" });
+  assert.equal(output.decision, "block");
+  assert.match(output.reason, /handoff-summary\.md is older than changed files/);
+  assert.match(output.reason, /latest changed file: receipt-only\.txt/);
 });
 
 test("unknown tools record real project changes without a pre-execution block", () => {

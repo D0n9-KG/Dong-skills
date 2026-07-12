@@ -1,5 +1,7 @@
-# Open Questions
+# 开放问题
 
-- None blocking for this implementation.
-- Follow-up after real use: tune the exploration command matcher if it becomes too noisy or misses a common read/search path.
-- Follow-up after old-project refreshes: confirm Codex `/hooks` shows the updated project-local hooks and that Stop/PreCompact status output is visible.
+## Task Identity
+- task_id: task-6-2026-07-12T15-42-07-054Z
+- task_generation: 6
+
+- 无。

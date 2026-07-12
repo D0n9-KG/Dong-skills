@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { latestChangedMtime, mtimeMs, readText } from "./core.mjs";
+import { latestChangedInfo, latestChangedMtime, mtimeMs, readText } from "./core.mjs";
 import { meaningful, sectionContent, validateGitCheckpointSection } from "./markdown.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 
@@ -186,7 +186,7 @@ function formatMtime(ms) {
   return new Date(ms).toISOString();
 }
 
-export function gitCheckpointStatus(root, ctx, latest) {
+export function gitCheckpointStatus(root, ctx, latest, freshnessFiles = []) {
   const statusResult = gitStatusResult(root);
   const statusFiles = statusResult.files.filter((file) => !isProjectOpsRuntimePath(file));
   const branch = gitCurrentBranch(root);
@@ -205,17 +205,23 @@ export function gitCheckpointStatus(root, ctx, latest) {
   const handoff = readText(handoffFile);
   const checkpoint = sectionContent(handoff, "Git Checkpoint");
   const handoffMtime = mtimeMs(handoffFile);
-  const checkpointFresh = latest ? handoffMtime >= latest - 1000 : true;
+  const suppliedFreshness = freshnessFiles.length
+    ? latestChangedInfo(root, freshnessFiles)
+    : { file: "", mtime: latest || 0 };
+  const freshnessLatest = suppliedFreshness.mtime || latest || 0;
+  const checkpointFresh = freshnessLatest ? handoffMtime >= freshnessLatest - 1000 : true;
   const checkpointValidation = validateGitCheckpointSection(checkpoint);
   const checkpointRecorded = meaningful(checkpoint) && checkpointFresh && checkpointValidation.ok;
   const nonGovernanceStatusFiles = statusFiles.filter((file) => !isGovernancePath(file));
-  const latestChanged = latestFileMtime(root, nonGovernanceStatusFiles.length ? nonGovernanceStatusFiles : statusFiles);
+  const latestChanged = freshnessFiles.length
+    ? suppliedFreshness
+    : latestFileMtime(root, nonGovernanceStatusFiles.length ? nonGovernanceStatusFiles : statusFiles);
 
   if (needsCheckpoint && meaningful(checkpoint) && !checkpointFresh) {
     checkpointDetails.push([
       "handoff-summary.md is older than changed files",
       `latest changed file: ${latestChanged.file || "unknown"}`,
-      `latest mtime: ${formatMtime(latestChanged.mtime || latest)}`,
+      `latest mtime: ${formatMtime(freshnessLatest)}`,
       `handoff mtime: ${formatMtime(handoffMtime)}`,
       "refresh handoff-summary.md after verification/artifact/current-state updates"
     ].join("; "));
