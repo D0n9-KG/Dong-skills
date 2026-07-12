@@ -18,7 +18,7 @@
 - `tests/domains/health-release.test.mjs`: 增加 health warning 不 fail 回归测试，并锁定 release-check maxBuffer。
 
 ## 外部样本
-- `C:\Users\D0n9\Desktop\scientific_Graph`: 只读检查的旧项目样本；用于发现真实使用中的状态语义漂移，不在本轮修改。
+- `scientific_Graph` 旧项目样本: 只读检查的旧项目样本；用于发现真实使用中的状态语义漂移，不在本轮修改。
 
 ## 验证产物
 - 待本轮最终复核运行后写入 `.codex-context/verification.md`。

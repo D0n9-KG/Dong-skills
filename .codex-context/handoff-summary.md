@@ -63,12 +63,12 @@
 - `git diff --check`: pass。
 
 ## Git 存档
-- 最新远端基线：`origin/main` 上一轮 Dong Skills 提交已同步。
-- 本轮计划提交信息：`feat(governance): detect semantic state drift`。
-- 推送状态：待最终复核后推送。
-- 有意保留未提交的文件：无。
-- 暂缓原因：无。
-- 下次存档：最终复核通过后立即提交推送。
+- 最新提交: `2e88132 feat(governance): detect semantic state drift`
+- 已包含文件: 语义状态治理代码、技能文档、bootstrap 镜像、测试和状态文件。
+- 推送状态: 已推送到 `origin/main`；本次 follow-up 将修复状态文件字段与隐私扫描。
+- 有意保留未提交的文件: 无。
+- 暂缓原因: 无。
+- 下次存档: follow-up 复核通过后立即提交推送。
 
 ## 当前 Git 状态
 - 分支：`main`
