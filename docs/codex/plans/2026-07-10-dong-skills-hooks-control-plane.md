@@ -32,7 +32,7 @@ Verification:
 3. Split Stop findings into hard, phase-boundary, and advisory levels.
 4. Remove learning and non-severe asset hygiene from normal Stop blockers.
 5. Emit only issue-specific remediation actions.
-6. Re-evaluate Stop on `stop_hook_active`; use a bounded continuation receipt instead of unconditional allow.
+6. Re-evaluate repeated Stop issues with a bounded continuation receipt instead of unconditional allow; do not require the host to provide `stop_hook_active`.
 
 Verification:
 - Fast writes cannot bypass state requirements.

@@ -1390,14 +1390,6 @@ function refreshFileHashes(ctx) {
   );
 }
 
-function mentionedRefreshFiles(input) {
-  const text = toolInputText(input).replace(/\\/g, "/").toLowerCase();
-  return CHANGE_REFRESH_FILES.filter((name) => {
-    const normalized = name.toLowerCase();
-    return text.includes(normalized) || text.includes(`.codex-context/${normalized}`);
-  });
-}
-
 function writeArtifactReminder(root, ctx, changed, latest) {
   const reason = [
     "Codex Project Ops: non-context files changed, but .codex-context/artifact-index.md is not fresh.",
@@ -1505,7 +1497,6 @@ export function postToolUse(input, root, ctx) {
     }
   }
 
-  const touched = mentionedRefreshFiles(input);
   const pendingChange = readRuntimeReceipt(ctx, "change-state");
   const pendingChangeValue = pendingChange.ok ? pendingChange.value : null;
   const pendingChangeFiles = pendingChangeValue?.task_id === state.task_id &&
@@ -1536,7 +1527,7 @@ export function postToolUse(input, root, ctx) {
     const currentHashes = refreshFileHashes(ctx);
     const baselineHashes = intent.value?.baseline_hashes || {};
     const refreshedTouched = execution.known && execution.ok
-      ? touched.filter((name) => baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
+      ? CHANGE_REFRESH_FILES.filter((name) => baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
       : [];
     const nextValue = updateRuntimeReceipt(ctx, "change-state", (existing) => {
       const existingValue = existing.ok ? existing.value : null;
@@ -2081,13 +2072,14 @@ export function stop(input, root, ctx) {
       String(previousValue?.task_generation) === String(state.task_generation);
     const sameIssue = sameTask && previousValue?.fingerprint === fingerprint;
     const previousCount = sameIssue ? Number(previousValue?.count || 0) : 0;
-    const exhausted = Boolean(input.stop_hook_active && sameIssue && previousCount >= 2);
+    const exhausted = Boolean(sameIssue && previousCount >= 2);
     return {
       schema: "dong-skills.stop-continuation.v1",
       task_id: state.task_id || "missing",
       task_generation: String(state.task_generation || "missing"),
       fingerprint,
       count: exhausted ? previousCount : previousCount + 1,
+      same_issue: sameIssue,
       exhausted,
       issues,
       updated_at: new Date().toISOString()
@@ -2100,7 +2092,7 @@ export function stop(input, root, ctx) {
   }
 
   const systemMessage = [
-    input.stop_hook_active
+    continuation.same_issue
       ? "Project issues are still unresolved after Stop continuation."
       : "Before stopping, refresh Codex Project Ops state.",
     hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" }),

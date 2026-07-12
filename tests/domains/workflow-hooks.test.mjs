@@ -1939,6 +1939,37 @@ test("Stop rechecks unresolved issues when stop_hook_active is true", () => {
   assert.equal(receipt.task_id, "task-1");
 });
 
+test("Stop continuation exhausts even when host omits stop_hook_active", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  write(path.join(project, "work.txt"), "baseline\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: no remote
+- Files included: baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  sleep(1100);
+  write(path.join(project, "work.txt"), "changed without state refresh\n");
+
+  const first = runHook(project, { hook_event_name: "Stop", session_id: "host-without-retry-flag" });
+  assert.equal(first.decision, "block");
+
+  const second = runHook(project, { hook_event_name: "Stop", session_id: "host-without-retry-flag" });
+  assert.equal(second.decision, "block");
+  assert.match(second.reason, /still unresolved after Stop continuation/i);
+
+  const third = runHook(project, { hook_event_name: "Stop", session_id: "host-without-retry-flag" });
+  assert.notEqual(third.decision, "block");
+  assert.match(third.systemMessage, /unresolved after the bounded Stop continuations/i);
+  assert.match(third.systemMessage, /must disclose these gaps/i);
+});
+
 test("Stop continuation budgets remain isolated across concurrent sessions", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -3188,6 +3219,63 @@ test("closure maintenance does not create a second Stop freshness cycle", () => 
   sleep(1200);
   assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
   sleep(1200);
+  assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
+});
+
+test("batched governance refreshes close change-state by content hash", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  readyState(project, `- Latest commit: baseline
+- Push state: not pushed because work is intentionally deferred
+- Files included: none
+- Files intentionally left uncommitted: work.txt
+- Deferred reason: user explicitly requested no commit and no push
+- Next checkpoint: only after a new user request
+`);
+  write(path.join(project, "work.txt"), "before\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const mutation = {
+    tool_name: "apply_patch",
+    tool_use_id: "batched-refresh-project-mutation",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...mutation });
+  write(path.join(project, "work.txt"), "after\n");
+  runHook(project, { hook_event_name: "PostToolUse", ...mutation, tool_response: { is_error: false } });
+
+  const refresh = {
+    tool_name: "apply_patch",
+    tool_use_id: "batched-refresh-governance",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: .codex-context/current-state.md\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...refresh });
+  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
+    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Batched refresh for ${name}.\n`, "utf8");
+  }
+  runHook(project, { hook_event_name: "PostToolUse", ...refresh, tool_response: { is_error: false } });
+
+  const receipt = readJson(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json"));
+  assert.deepEqual(Object.keys(receipt.refreshed_hashes).sort(), [
+    "artifact-index.md",
+    "current-state.md",
+    "handoff-summary.md",
+    "verification.md"
+  ]);
   assert.deepEqual(runHook(project, { hook_event_name: "Stop" }), {});
 });
 
