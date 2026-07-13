@@ -71,6 +71,7 @@ test("simple PowerShell read-only pipelines and Git diagnostics bypass recovery"
   for (const command of [
     "Get-Content README.md | Select-Object -First 1",
     "Get-ChildItem -Force | Select-Object Name,Length",
+    "Get-Process node -ErrorAction SilentlyContinue | Select-Object Id,CPU,StartTime,Path",
     "$files=@('README.md','.codex-context/spec.md'); Get-FileHash -Algorithm SHA256 -LiteralPath $files | Select-Object Path,Hash | Format-Table -AutoSize",
     "git status --short; git remote -v; git worktree list --porcelain"
   ]) {
@@ -94,6 +95,7 @@ test("PowerShell pipeline transforms with executable expressions remain gated", 
     "Get-Content README.md | Select-Object $(Remove-Item work.txt)",
     "Get-Content README.md | Select-Object @{Name='x';Expression={Remove-Item work.txt}}",
     "Get-Content README.md | Select-Object & Remove-Item work.txt",
+    "Get-Process node -ErrorAction SilentlyContinue; Stop-Process -Id 12345",
     "$files=@($(Remove-Item work.txt)); Get-FileHash -LiteralPath $files",
     "$files=Get-ChildItem; Get-FileHash -LiteralPath $files"
   ]) {
@@ -113,6 +115,7 @@ test("verified work outside the project root is not governed by the current proj
   readyHealthFixture(project);
   setWorkflowPhase(project, "planning", "writing-plans");
   const external = tempProject();
+  git(external, ["init"]);
   const externalFile = path.join(external, "work.txt");
 
   const patch = runHook(project, {
@@ -162,6 +165,28 @@ test("verified work outside the project root is not governed by the current proj
   });
   assert.deepEqual(externalGitCheckpoint, {});
 
+  const explicitExternalGitCheckpoint = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "external-work",
+    tool_name: "shell_command",
+    tool_use_id: "explicit-external-git-checkpoint",
+    tool_input: {
+      command: `git -C "${external.replace(/\\/g, "/")}" add -- .`
+    }
+  });
+  assert.deepEqual(explicitExternalGitCheckpoint, {});
+
+  const ambiguousBareGitCheckpoint = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "external-work",
+    tool_name: "shell_command",
+    tool_use_id: "ambiguous-bare-git-checkpoint",
+    tool_input: {
+      command: "git add -- ."
+    }
+  });
+  assert.equal(ambiguousBareGitCheckpoint.hookSpecificOutput?.permissionDecision, "deny");
+
   const redirectedGit = runHook(project, {
     hook_event_name: "PreToolUse",
     session_id: "external-work",
@@ -173,6 +198,20 @@ test("verified work outside the project root is not governed by the current proj
     }
   });
   assert.equal(redirectedGit.hookSpecificOutput?.permissionDecision, "deny");
+
+  const aliasParent = tempProject();
+  const projectAlias = path.join(aliasParent, "project-alias");
+  fs.symlinkSync(project, projectAlias, process.platform === "win32" ? "junction" : "dir");
+  const aliasRedirectedGit = runHook(projectAlias, {
+    hook_event_name: "PreToolUse",
+    session_id: "external-work",
+    tool_name: "shell_command",
+    tool_use_id: "alias-redirected-git-checkpoint",
+    tool_input: {
+      command: `git -C "${project.replace(/\\/g, "/")}" add -- .`
+    }
+  });
+  assert.equal(aliasRedirectedGit.hookSpecificOutput?.permissionDecision, "deny");
 
   const opaqueRelativeCommand = runHook(project, {
     hook_event_name: "PreToolUse",

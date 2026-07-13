@@ -20,13 +20,13 @@
 
 ## 计划状态
 
-- Tasks 1-8 已完成；Task 9 首次 live 暴露 literal assignment 与 external Git workdir 两个误判，现已完成根因修复和两轮全量回归，等待关闭旧 hooks、checkpoint、重新安装与再次 live。
+- Tasks 1-8 已完成；Task 9 最终 live 又发现宿主不传递嵌套 `workdir` 和通用 PowerShell 查询误挡。源码修复与全量验证已通过，等待 checkpoint、重新安装和最终重启 live。
 - 下游研究 workflow 保持 Wayfinder，不以刷新研究文档满足错误 hook debt。
 
 ## 已做决策
 
 - recovery unscoped receipt 只允许单次 claim，promotion 失败 fail-closed。
-- external scope 只信任可验证目标/命令，不凭单一外部路径无条件豁免。
+- external scope 只信任可验证目标/命令；真实宿主缺失 `workdir` 时，使用显式 `git -C <absolute external repo>` 并解析真实 Git root，不凭聊天或调用端未暴露元数据豁免。
 - `{}` 以内容 hash 判定 refresh，显式失败/no-op 不计。
 - tool/subagent-originated prompt 不得写 parent discussion、approval 或 learning。
 - 非结构化 prompt 不再拥有审批、scope reopen、mutation、Stop 或 PreCompact 权限权威。
@@ -54,25 +54,24 @@
 - 12-boundary architecture audit 无 unresolved High/Critical。
 - source health Issues none；旧 runtime liveness receipt 仅为 runtime-mismatch warning，且 health 明确不代表 host trust。
 - asset-governance Blocking issues none；`git diff --check` pass。
-- 首次 installer/static 证据仍有效；两次 classifier 修复后均重新取得 241/241 与 release-check pass，需重新安装后取得新的 live coverage。
+- 首次 installer/static 证据仍有效；最新 external Git / PowerShell diagnostic 修复已重新取得 241/241 与 release-check pass，需重新安装后取得新的 live coverage。
 
 ## Git Checkpoint
 
 - 最新提交：`db9e3c93cdb38b5750db6377c7c12fa9a2308680 fix(hooks): remove prompt semantic authority`。
 - 推送状态：not-run；用户未要求 push。
 - 已包含文件：Tasks 1-8 runtime、bootstrap、skills、tests、spec/plan/review 与验证状态。
-- 有意保留未提交的文件：literal assignment classifier、正反例测试和 Task 9 调试/验证状态。
-- 暂缓原因：正在创建本轮修复 checkpoint；不 push。
-- 下次存档：当前修复先独立 checkpoint；最终 live 回归后再记录 Task 9 closure。
+- 有意保留未提交的文件：checkpoint transition 与第二次 installer 证据状态，待最终 live 后统一 closure checkpoint。
+- 暂缓原因：Task 9 live 尚未闭环；不 push。
+- 下次存档：最终 live 回归后记录 Task 9 closure。
 
 ## 下一步动作
 
-1. 用户临时关闭当前项目 hooks。
-2. checkpoint literal assignment 与 external Git scope 修复，不 push。
-3. installer Preview/Apply 更新下游并保持 context hash。
-4. 用户重启 Codex，重新启用/trust hooks。
-5. 重复原始复合读取、external Git、critical coverage 与连续 Stop freshness。
-6. live 通过后完成 Task 9 并返回科研 Wayfinder。
+1. 用户临时关闭下游 hooks。
+2. 完成源码 checkpoint、installer Preview/Apply 与静态验证。
+3. 用户重启并重新启用/trust hooks；复核显式 `git -C`、PowerShell 只读诊断、危险负例和 critical coverage。
+4. 连续两次 Stop 不重复 freshness debt。
+5. live 通过后完成 Task 9 closure checkpoint 并返回科研 Wayfinder。
 
 ## 优先重读文件
 

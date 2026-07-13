@@ -64,7 +64,7 @@
 
 ## 当前步骤
 
-- Task 9 首次 live 回归暴露 literal assignment classifier 缺口；根因修复与全量验证已通过，当前准备 checkpoint、重新安装并再次重启 live 验证。
+- 最终 live 发现宿主不暴露嵌套 shell `workdir`，且通用 PowerShell 只读诊断仍被窄白名单误挡；源码修复和全量验证已通过，等待关闭下游 hooks 后 checkpoint、重新安装与最终 live。
 
 ## 存档记录
 
@@ -108,6 +108,22 @@
 - External Git fix：外部 workdir + repo-local Git allowlist；重定向当前项目或未知子命令继续 deny。
 - Verification：PowerShell targeted 2/2、external Git 正反例、host-wrapper 5/5、全部 domains 241/241、release-check pass；控制面第二次修改后完整重跑。
 - Next task：临时关闭旧 hooks，checkpoint、installer Preview/Apply、重启并重复原始 live 命令、external Git 和 Stop freshness。
+
+### Checkpoint 6
+- Source checkpoint：`b2b84b3 fix(hooks): respect safe diagnostics and external git`，未 push。
+- Installer：Preview/Apply pass；下游 distribution=`b6aad5432e5ef5b5fe665ac31d4a5ca0a4459e587e889058c965dbf7e2ddbcad`。
+- Context preservation：第二次安装前后六文件 SHA256 全部一致。
+- Static verification：health/runtime parity pass，Issues none；事务与 staging 无残留。
+- Remaining risk：需重启 host 后重复 literal assignment、external Git、critical coverage 与连续 Stop。
+- Next task：最终重启 live 回归。
+
+### Checkpoint 7（待提交）
+- Live evidence：literal-assignment 原始命令通过；裸 `git add -- .` 即使调用端指定外部 `workdir` 仍被下游科研 workflow 拒绝。
+- Root cause：当前 Codex 宿主未向项目 hook 暴露嵌套 shell 的外部 `workdir`；旧 host-wrapper fixture 假设 top-level `workdir` 存在，不能代表真实宿主。
+- Fix：增加宿主无关且可验证的 `git -C <absolute external repository>` 路径，只放行 repo-local Git allowlist；当前项目、相对路径、`--git-dir`、`--work-tree` 与未知子命令继续 deny。
+- Additional diagnostic fix：PowerShell 查询命令按保守 read-only verb 集合分类，不再逐句扩充命令；混入 `Stop-Process` 等控制/写操作仍 deny。
+- Verification：host-wrapper 5/5、全部 domains 241/241、`release-check` pass。
+- Remaining：source checkpoint、installer Preview/Apply、重启 live、连续 Stop。
 
 ## 验证
 

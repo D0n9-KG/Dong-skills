@@ -54,9 +54,14 @@
 - 源码 checkpoint 已创建：`db9e3c93cdb38b5750db6377c7c12fa9a2308680 fix(hooks): remove prompt semantic authority`，未 push。
 - Task 9 live 回归发现的复合只读 literal assignment 误判已修复；workflow 已通过 `debugging-resolved` 返回 `execution`。
 - 修复不按 `$files` 或具体措辞白名单：只识别简单局部变量和无插值字面量标量/数组；unsafe assignment 继续 gated。
-- external root 的 Git checkpoint 缺口也已修复：仅允许显式外部 `workdir` 的 repo-local Git allowlist，拒绝 `-C`/git-dir/work-tree 重定向和未知子命令。
+- 最终 live 证明当前宿主不会把嵌套 shell 的外部 `workdir` 暴露给 hook，因此仅依赖 `workdir` 的 external Git 合同不能在真实宿主稳定工作。
+- 新修复增加显式 `git -C <绝对外部 Git 仓库>` 路径：真实解析仓库 root 后仅放行 repo-local Git allowlist；当前项目、相对路径、`--git-dir`、`--work-tree` 和未知子命令继续 deny。
+- 同轮修复通用 PowerShell 只读诊断：按保守 read-only verb 集合识别 `Get-*`/`Select-*` 等查询；混入 `Stop-Process` 等操作仍 gated。
 - 新鲜验证：host-wrapper 5/5、全部 domains 241/241、`release-check` pass、runtime/bootstrap parity pass；两轮控制面修改后均重新全量验证。
-- 当前下一步：用户临时关闭当前已加载的旧 hooks，checkpoint 本轮修复并重新安装；重启后重复原始 live 命令、external Git 与连续 Stop/freshness。
+- 上一轮 live wrapper checkpoint 为 `b2b84b3 fix(hooks): respect safe diagnostics and external git`，未 push；本轮新增修复尚未 checkpoint。
+- 当前下游仍是 distribution `b6aad5432e5ef5b5fe665ac31d4a5ca0a4459e587e889058c965dbf7e2ddbcad`。
+- 新鲜验证：host-wrapper 5/5、全部 domains 241/241、`release-check` pass。
+- 当前下一步：用户临时关闭下游 hooks；源码 checkpoint、installer Preview/Apply 后重启，复核显式 `git -C`、PowerShell 只读诊断、危险负例与连续 Stop/freshness。
 
 ## 最后更新
 

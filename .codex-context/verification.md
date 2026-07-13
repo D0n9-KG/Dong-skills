@@ -21,7 +21,17 @@
 
 ## Not Yet Verified
 
-- literal assignment classifier 修复后的 targeted/full regression、重新安装，以及下游 live PreToolUse/PostToolUse/Stop coverage 与连续两次 Stop freshness。
+- 最新 external Git / PowerShell diagnostic 修复的 source checkpoint、重新安装，以及下游 live PreToolUse/PostToolUse/Stop coverage 与连续两次 Stop freshness。
+
+## Final Host Metadata Regression
+
+- Live positive：原始 literal-assignment 复合读取通过。
+- Live failure：调用端指定外部 `workdir` 后执行裸 `git add -- .` 仍被科研项目 Lane 1 gate 拒绝。
+- Root cause：真实宿主 payload 未向项目 hook 暴露嵌套 shell `workdir`；旧自动化使用 top-level `workdir`，覆盖了不存在于该宿主路径的元数据。
+- Test-first external Git：新增无 `workdir` 的 `git -C <absolute external repo> add -- .` 正例先红后绿；无路径的裸 Git 继续 deny，`git -C <current project>` 继续 deny。
+- Test-first PowerShell diagnostics：`Get-Process | Select-Object` 先红后绿；`Get-Process; Stop-Process` 继续 deny。
+- Fresh full verification：`node --test tests/domains/host-wrapper.test.mjs` 5/5；`node scripts/run-domain-tests.mjs` 241/241；`node scripts/release-check.mjs .` pass。
+- Remaining gap：尚未 checkpoint、安装与真实宿主复验。
 
 ## Live Failure Reproduction
 
@@ -46,6 +56,14 @@
 - Negative：`git -C <current-project> add -- .` 继续 deny；`--git-dir`、`--work-tree` 和未知子命令不在 allowlist。
 - `node --test tests/domains/host-wrapper.test.mjs`：5/5 pass。
 - 第二轮 `node scripts/run-domain-tests.mjs`：241/241 pass；第二轮 `node scripts/release-check.mjs .`：pass。
+
+## Second Installer Evidence
+
+- Source checkpoint：`b2b84b3 fix(hooks): respect safe diagnostics and external git`，未 push。
+- Installer Preview/Apply：pass；下游 distribution=`b6aad5432e5ef5b5fe665ac31d4a5ca0a4459e587e889058c965dbf7e2ddbcad`。
+- Context preservation：六个核心 context 文件安装前后 SHA256 全部一致。
+- Static health/runtime parity：pass，Issues none；liveness 为预期 `runtime-mismatch`。
+- Transaction、`.previous-*`、`.staging-*`：无残留。
 
 ## 命令证据
 

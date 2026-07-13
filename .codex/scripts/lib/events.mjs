@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { assetGovernanceStatus } from "./assets.mjs";
 import { fileFresh, latestChangedMtime, mtimeMs, readText, shortList, writeJson, writeTextAtomic } from "./core.mjs";
 import { changedPathsNeedVerification, gitChangedFiles, gitCheckpointStatus, gitDiffFilesResult, gitHeadResult, gitStatusFiles, gitStatusResult, isGovernancePath } from "./git.mjs";
@@ -42,6 +43,18 @@ const EVIDENCE_REQUIRED_PHASES = new Set(["execution", "debugging", "verificatio
 const CHECKPOINT_REQUIRED_PHASES = new Set(["delivery", "handoff", "complete"]);
 const DECISION_EVENTS = new Set(Object.values(DECISION_TRANSITIONS).flat());
 const WORKFLOW_REPAIR_EVENTS = new Set(["brainstorming-start", "spec-living", "plan-start"]);
+const POWERSHELL_READ_ONLY_VERBS = new Set([
+  "compare",
+  "format",
+  "get",
+  "group",
+  "measure",
+  "resolve",
+  "select",
+  "sort",
+  "test",
+  "where"
+]);
 
 export function sessionStart(input, root, ctx) {
   removeRecoveryReceipt(ctx, "", { required: true });
@@ -400,6 +413,46 @@ function repositoryLocalGitOperation(command) {
   });
 }
 
+function verifiedExternalGitOperation(command, root) {
+  const syntax = shellSyntax(command);
+  if (!syntax.segments.length || syntax.redirections.length > 0) return false;
+  const allowed = new Set([
+    "add",
+    "branch",
+    "commit",
+    "diff",
+    "log",
+    "ls-files",
+    "remote",
+    "rev-parse",
+    "show",
+    "status",
+    "tag"
+  ]);
+  return syntax.segments.every((segment) => {
+    if (/\$\(|<\(|>\(|[{}]|`|(?:^|\s)&(?:\s|$)/.test(segment)) return false;
+    if (/(?:^|\s)(?:--git-dir(?:=|\s)|--work-tree(?:=|\s))/i.test(segment)) return false;
+    const match = segment.match(
+      /^\s*git(?:\.exe)?\s+-C\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))\s+([A-Za-z][A-Za-z-]*)(?:\s|$)/i
+    );
+    if (!match || !allowed.has(match[4].toLowerCase())) return false;
+    const requestedRoot = match[1] || match[2] || match[3];
+    if (!path.isAbsolute(requestedRoot)) return false;
+    try {
+      const realTarget = fs.realpathSync.native(requestedRoot);
+      if (!pathOutsideProject(realTarget, root)) return false;
+      const repositoryRoot = execFileSync("git", ["-C", realTarget, "rev-parse", "--show-toplevel"], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"]
+      }).trim();
+      const realRepositoryRoot = fs.realpathSync.native(repositoryRoot);
+      return pathOutsideProject(realRepositoryRoot, root);
+    } catch {
+      return false;
+    }
+  });
+}
+
 function toolExplicitlyOutsideProject(input, root) {
   const name = normalizedToolName(input);
   const targets = explicitToolTargets(input);
@@ -410,11 +463,12 @@ function toolExplicitlyOutsideProject(input, root) {
   const commandText = shellCommandText(input);
   const absolutePaths = shellAbsolutePaths(commandText);
   if (absolutePaths.some((target) => !pathOutsideProject(target, root))) return false;
-  const workdir = explicitToolWorkdir(input);
-  if (!workdir || !pathOutsideProject(workdir, root)) return false;
   const command = commandText.replace(/\\/g, "/").toLowerCase();
   const normalizedRoot = path.resolve(root).replace(/\\/g, "/").toLowerCase();
   if (command.includes(normalizedRoot)) return false;
+  if (verifiedExternalGitOperation(commandText, root)) return true;
+  const workdir = explicitToolWorkdir(input);
+  if (!workdir || !pathOutsideProject(workdir, root)) return false;
   if (repositoryLocalGitOperation(commandText)) return true;
   const mutation = shellFileMutation(input);
   if (mutation.mutates) {
@@ -679,6 +733,11 @@ function readOnlyPowerShellLiteralAssignment(segment) {
   return Boolean(match && powerShellLiteralList(match[1]));
 }
 
+function readOnlyPowerShellCommand(segment) {
+  const match = String(segment || "").match(/^\s*([A-Za-z]+)-[A-Za-z][A-Za-z0-9-]*(?:\s|$)/);
+  return Boolean(match && POWERSHELL_READ_ONLY_VERBS.has(match[1].toLowerCase()));
+}
+
 function readOnlyShellSegment(segment) {
   if (readOnlyPowerShellLiteralAssignment(segment)) return true;
   if (/\$\(|<\(|>\(|[{}]|(?:^|\s)&(?:\s|$)/.test(segment)) return false;
@@ -686,6 +745,7 @@ function readOnlyShellSegment(segment) {
       /^git\s+remote\s+(?:-v|--verbose|show|get-url)(?:\s|$)/i.test(segment)) {
     return true;
   }
+  if (readOnlyPowerShellCommand(segment)) return true;
   return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|get-filehash|select-object|sort-object|measure-object|format-table|format-list|out-string|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
 }
 

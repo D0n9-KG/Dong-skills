@@ -19,7 +19,8 @@
 - `tests/domains/workflow-governance.test.mjs`：canonical decision evidence 与 transition 回归。
 - `tests/domains/host-wrapper.test.mjs`：真实宿主 wrapper 回归。
 - `.codex/scripts/lib/events.mjs` literal-assignment parser：允许简单局部变量的无插值字面量标量/数组作为 read-only compound setup；unsafe expressions 仍 gated。
-- `.codex/scripts/lib/events.mjs` external Git scope：显式外部 `workdir` 下仅放行 repo-local Git allowlist；拒绝 root redirection 与未知子命令。
+- `.codex/scripts/lib/events.mjs` external Git scope：保留显式外部 `workdir` 支持，并新增宿主无关的 `git -C <绝对外部 Git 仓库>` 验证路径；只放行 repo-local Git allowlist，拒绝当前项目、相对路径、git-dir/work-tree 与未知子命令。
+- `.codex/scripts/lib/events.mjs` PowerShell diagnostics：按保守 read-only verb 集合识别查询命令；scriptblock、subexpression、控制/写命令仍 gated。
 - `tests/domains/skills-contracts.test.mjs`：root `AGENTS.md` managed block、root snippet 与 bootstrap snippet parity。
 - `docs/codex/reviews/2026-07-13-dong-skills-agent-architecture-audit.md`：12 个 agent architecture 边界的 severity、修复、证据与 residual risk。
 
@@ -35,4 +36,4 @@
 
 ## 下一里程碑
 
-- 首次 live 暴露的 literal assignment 与 external Git workdir 缺口均已修复并两次全量验证；下一步关闭旧 hooks、checkpoint、重新安装新 distribution，再完成 live 回归。
+- 最终 live 又暴露宿主 metadata 与通用只读诊断边界；新源码 241/241、release-check pass，下一步 checkpoint、重新安装并最终重启 live。
