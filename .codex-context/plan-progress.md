@@ -60,11 +60,11 @@
 - [x] Task 6：删除过期 receipt/regex 路径并更新指导。
 - [x] Task 7：完整回归与稳定性循环。
 - [x] Task 8：整体 Dong Skills agent-architecture audit 并修复高严重度 finding。
-- [ ] Task 9：installer 与下游 live 回归。
+- [x] Task 9：installer 与下游 live 回归。
 
 ## 当前步骤
 
-- 最终 live 发现宿主不暴露嵌套 shell `workdir`，且通用 PowerShell 只读诊断仍被窄白名单误挡；源码修复和全量验证已通过，等待关闭下游 hooks 后 checkpoint、重新安装与最终 live。
+- Tasks 1-9 全部完成；进入 verification/review/delivery closure。
 
 ## 存档记录
 
@@ -124,6 +124,14 @@
 - Additional diagnostic fix：PowerShell 查询命令按保守 read-only verb 集合分类，不再逐句扩充命令；混入 `Stop-Process` 等控制/写操作仍 deny。
 - Verification：host-wrapper 5/5、全部 domains 241/241、`release-check` pass。
 - Remaining：source checkpoint、installer Preview/Apply、重启 live、连续 Stop。
+
+### Checkpoint 8（closure）
+- Source checkpoint：`210e80b fix(hooks): make external diagnostics host-safe`，未 push。
+- Installer：distribution `e4befba294f31322ee94ba21f69e80e4f151f181206e6da212800b177b5f8416`；六个核心下游 context 文件安装前后 hash 一致；static health/runtime parity pass。
+- Live positive：recovery、literal assignment、`Get-Process | Select-Object`、显式 external `git -C <source> add -- .` 通过。
+- Live negative：当前项目 `git -C`、`--git-dir` 和混入 `Remove-Item` 的复合命令均被 PreToolUse deny。
+- Stop：critical coverage complete；连续第二次 Stop 无新 continuation receipt、无重复 freshness debt。
+- Next：verification/review/delivery transition 与最终 closure checkpoint；不 push。
 
 ## 验证
 

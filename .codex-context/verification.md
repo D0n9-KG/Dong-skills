@@ -21,7 +21,7 @@
 
 ## Not Yet Verified
 
-- 最新 external Git / PowerShell diagnostic 修复的 source checkpoint、重新安装，以及下游 live PreToolUse/PostToolUse/Stop coverage 与连续两次 Stop freshness。
+- None。
 
 ## Final Host Metadata Regression
 
@@ -31,7 +31,18 @@
 - Test-first external Git：新增无 `workdir` 的 `git -C <absolute external repo> add -- .` 正例先红后绿；无路径的裸 Git 继续 deny，`git -C <current project>` 继续 deny。
 - Test-first PowerShell diagnostics：`Get-Process | Select-Object` 先红后绿；`Get-Process; Stop-Process` 继续 deny。
 - Fresh full verification：`node --test tests/domains/host-wrapper.test.mjs` 5/5；`node scripts/run-domain-tests.mjs` 241/241；`node scripts/release-check.mjs .` pass。
-- Remaining gap：尚未 checkpoint、安装与真实宿主复验。
+- 该 gap 已 superseded；checkpoint、安装与真实宿主复验均已完成。
+
+## Final Distribution Live Evidence
+
+- Source checkpoint：`210e80b fix(hooks): make external diagnostics host-safe`，未 push。
+- Distribution：`e4befba294f31322ee94ba21f69e80e4f151f181206e6da212800b177b5f8416`。
+- Context preservation：下游六个核心 context 文件安装前后 SHA256 全部一致。
+- Static：workflow migrate/status、health/runtime parity、recovery、next、asset-governance、context-budget 与 `git diff --check` pass；Issues none。
+- Live positive：literal-assignment 复合读取、`Get-Process | Select-Object`、`git -C <absolute external source> add -- .` pass。
+- Live negative：混入 `Remove-Item`、当前项目 `git -C`、`--git-dir` 均被 PreToolUse deny。
+- Stop：critical event coverage complete；第二次 Stop 后无新 `stop-continuation` receipt，未重复产生 freshness debt。
+- Closure release：首次运行因 handoff 的 checkpoint 字段标签不符合 schema 而失败；改为受支持的 `最新提交` 后，source health、core 25/25 与完整 `node scripts/release-check.mjs .` 重新运行并通过。
 
 ## Live Failure Reproduction
 
@@ -116,7 +127,12 @@
 - `docs/codex/reviews/2026-07-13-dong-skills-agent-architecture-audit.md` 覆盖 12 个边界。
 - 两个隔离只读子代理分别审查 instructions/memory/recovery/loops 与 execution/rendering/installer/persistence；结果由主代理逐项验证，审后已关闭。
 - 无 unresolved High/Critical；accepted medium/low findings 均有 targeted test 和全量回归。
+- Final Task 9 review（verification closure 后）：复核 `210e80b` 的安全、正确性、简洁性与 bootstrap parity，无 unresolved finding。
+- External Git 只接受绝对路径、`realpath` 后的外部真实 Git root 和固定 repo-local allowlist；当前项目、junction/path alias、相对路径、`--git-dir`、`--work-tree`、unknown subcommand 与 shell executable expression 均保持拒绝。
+- PowerShell diagnostics 使用保守 read-only verb set，并在 segment 级拒绝 scriptblock、subexpression 和混入控制/写命令；未增加依赖或新的持久状态类型。
+- Final evidence：host-wrapper 5/5、domain runner 241/241、release-check、root/bootstrap parity、真实宿主 live positive/negative 与连续 Stop 均通过。
+- Post-verification closure review：重新检查 closure-only 文档变更与最终 release 输出；checkpoint schema 已修正，health Issues none，core 25/25、完整 release-check pass，无新增 finding。
 
 ## 剩余验证缺口
 
-- Task 9 只剩重启/trust 后的下游 live host：critical coverage、复合只读诊断、PreToolUse/PostToolUse 和连续 Stop/freshness。
+- None。

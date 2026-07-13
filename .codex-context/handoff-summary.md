@@ -20,7 +20,7 @@
 
 ## 计划状态
 
-- Tasks 1-8 已完成；Task 9 最终 live 又发现宿主不传递嵌套 `workdir` 和通用 PowerShell 查询误挡。源码修复与全量验证已通过，等待 checkpoint、重新安装和最终重启 live。
+- Tasks 1-9 全部完成；distribution `e4befba...` 的安装、静态验证、live 正反例、critical coverage 与连续 Stop 均通过。
 - 下游研究 workflow 保持 Wayfinder，不以刷新研究文档满足错误 hook debt。
 
 ## 已做决策
@@ -54,24 +54,23 @@
 - 12-boundary architecture audit 无 unresolved High/Critical。
 - source health Issues none；旧 runtime liveness receipt 仅为 runtime-mismatch warning，且 health 明确不代表 host trust。
 - asset-governance Blocking issues none；`git diff --check` pass。
-- 首次 installer/static 证据仍有效；最新 external Git / PowerShell diagnostic 修复已重新取得 241/241 与 release-check pass，需重新安装后取得新的 live coverage。
+- 最新 external Git / PowerShell diagnostic 修复已取得 241/241、release-check、installer/static 和真实宿主 live coverage。
 
 ## Git Checkpoint
 
-- 最新提交：`db9e3c93cdb38b5750db6377c7c12fa9a2308680 fix(hooks): remove prompt semantic authority`。
+- 最新提交：`210e80b fix(hooks): make external diagnostics host-safe`。
 - 推送状态：not-run；用户未要求 push。
 - 已包含文件：Tasks 1-8 runtime、bootstrap、skills、tests、spec/plan/review 与验证状态。
-- 有意保留未提交的文件：checkpoint transition 与第二次 installer 证据状态，待最终 live 后统一 closure checkpoint。
-- 暂缓原因：Task 9 live 尚未闭环；不 push。
-- 下次存档：最终 live 回归后记录 Task 9 closure。
+- 有意保留未提交的文件：本轮 workflow closure 状态，待最终 checkpoint。
+- 暂缓原因：仅等待 workflow verification/review/delivery transition；不 push。
+- 下次存档：本轮创建 Task 9 closure checkpoint。
 
 ## 下一步动作
 
-1. 用户临时关闭下游 hooks。
-2. 完成源码 checkpoint、installer Preview/Apply 与静态验证。
-3. 用户重启并重新启用/trust hooks；复核显式 `git -C`、PowerShell 只读诊断、危险负例和 critical coverage。
-4. 连续两次 Stop 不重复 freshness debt。
-5. live 通过后完成 Task 9 closure checkpoint 并返回科研 Wayfinder。
+1. 完成 workflow verification/review/delivery transition。
+2. 创建 Task 9 closure checkpoint，不 push。
+3. 清理下游 active state 中已结束的 Dong Skills 调试叙述。
+4. 重新开启下游 hooks，返回科研 Wayfinder。
 
 ## 优先重读文件
 

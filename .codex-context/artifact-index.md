@@ -3,7 +3,7 @@
 ## 当前任务资产
 
 - `.codex-context/spec.md`：已批准的 prompt semantic authority removal Product Contract。
-- `.codex-context/plan-progress.md`：Lane 3 Traditional execution；Tasks 1-8 完成，Task 9 installer/static 完成、live 待重启。
+- `.codex-context/plan-progress.md`：Lane 3 Traditional execution；Tasks 1-9 全部完成，进入 workflow closure。
 - `docs/codex/plans/2026-07-13-remove-prompt-semantic-authority.md`：当前 implementation-ready 详细计划。
 - `docs/codex/plans/2026-07-13-dong-skills-host-stability.md`：上一轮宿主稳定性计划，作为历史证据。
 - `.codex/scripts/lib/runtime.mjs`：recovery claim/promotion 与 legacy decision receipt 清理；旧 decision/advance receipt 写入/校验已删除。
@@ -36,4 +36,4 @@
 
 ## 下一里程碑
 
-- 最终 live 又暴露宿主 metadata 与通用只读诊断边界；新源码 241/241、release-check pass，下一步 checkpoint、重新安装并最终重启 live。
+- distribution `e4befba...` 的 installer、static、live positive/negative、critical coverage 与连续 Stop 全部通过；下一步 workflow closure checkpoint。
