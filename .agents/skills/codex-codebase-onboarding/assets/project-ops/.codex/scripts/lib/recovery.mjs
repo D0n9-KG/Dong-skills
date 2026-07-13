@@ -44,16 +44,16 @@ function sectionExcerpt(markdown, heading, max) {
 function handoffRecoveryExcerpt(ctx) {
   const markdown = readText(path.join(ctx, REQUIRED_FILES.handoff));
   const sections = [
-    ["PreCompact Emergency Notice", 520],
-    ["PreCompact Issues", 420],
     ["Objective", 280],
     ["Latest User Instruction", 360],
+    ["Next Action", 320],
     ["Plan Status", 360],
     ["Git Checkpoint", 520],
-    ["Next Action", 320],
     ["Files To Re-read First", 420],
     ["Open Questions And Assumptions", 360],
-    ["Verification Evidence", 420]
+    ["Verification Evidence", 420],
+    ["PreCompact Emergency Notice", 520],
+    ["PreCompact Issues", 420]
   ];
   const selected = sections
     .map(([heading, max]) => sectionExcerpt(markdown, heading, max))
@@ -84,7 +84,7 @@ export function sessionRecoveryContext(root, ctx, eventName) {
   const learning = learningStatus(ctx);
   const learningSummary = learning.ok
     ? "No pending learning review."
-    : `Pending learning review: ${learning.issues.join("; ")}.`;
+    : `Learning advisory: ${learning.issues.join("; ")}. Review it at a meaningful milestone; it does not block recovery.`;
   const checkpointSummary = gitCheckpointStatus(root, ctx, 0).summary;
   const workspaceSummary = worktreeSummary(detectWorktree(root));
   const wayfinderSummary = activeWayfinderSummary(root, ctx);
@@ -107,28 +107,7 @@ export function sessionRecoveryContext(root, ctx, eventName) {
     recoverWorkflowContext(root, ctx),
     "",
     "Current state excerpt:",
-    excerpt(ctx, REQUIRED_FILES.current, 1000),
-    "",
-    "Working notes excerpt:",
-    excerpt(ctx, REQUIRED_FILES.workingNotes, 1000),
-    "",
-    "Decisions excerpt:",
-    excerpt(ctx, REQUIRED_FILES.decisions, 700),
-    "",
-    "Open questions excerpt:",
-    excerpt(ctx, REQUIRED_FILES.questions, 700),
-    "",
-    "Worktree state excerpt:",
-    excerpt(ctx, REQUIRED_FILES.worktree, 800),
-    "",
-    "Plan excerpt:",
-    excerpt(ctx, REQUIRED_FILES.plan, 700),
-    "",
-    "Solution index excerpt:",
-    excerpt(ctx, REQUIRED_FILES.solutions, 700),
-    "",
-    "Learned instincts excerpt:",
-    excerpt(ctx, REQUIRED_FILES.instincts, 900)
+    excerpt(ctx, REQUIRED_FILES.current, 1000)
   ].filter((part) => part !== "");
 
   return {

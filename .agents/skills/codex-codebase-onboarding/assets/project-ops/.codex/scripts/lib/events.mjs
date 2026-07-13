@@ -14,12 +14,9 @@ import {
 } from "./learning.mjs";
 import { sessionRecoveryContext } from "./recovery.mjs";
 import {
-  advanceDecisionReceiptStatus,
-  decisionReceiptStatus,
   hookSessionKey,
   readRuntimeReceipt,
   recoveryReceiptStatus,
-  removeAdvanceDecisionReceipt,
   removeDecisionReceipt,
   removeRecoveryReceipt,
   removeRuntimeReceipt,
@@ -27,14 +24,12 @@ import {
   stableFingerprint,
   updateRuntimeReceipt,
   withRuntimeLock,
-  writeDecisionReceipt,
-  writeAdvanceDecisionReceipt,
   writeRecoveryReceipt,
   writeRuntimeReceipt
 } from "./runtime.mjs";
 import { activeWayfinderStatus, evaluateRecovery } from "./recovery-eval.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
-import { DECISION_TRANSITIONS, reopenWorkflowAfterProjectMutation, workflowContextHash, workflowStatus } from "./workflow.mjs";
+import { canonicalDecisionEvidenceStatus, DECISION_TRANSITIONS, reopenWorkflowAfterProjectMutation, workflowContextHash, workflowStatus } from "./workflow.mjs";
 
 const DISCUSSION_STATE_FILE = "discussion-state.json";
 const CHANGE_REFRESH_FILES = [
@@ -43,11 +38,10 @@ const CHANGE_REFRESH_FILES = [
   REQUIRED_FILES.verification,
   REQUIRED_FILES.handoff
 ];
-const ACTIVE_DISCUSSION_PHASES = new Set(["discovery", "wayfinding", "brainstorming", "spec", "planning", "debugging"]);
-const ACTIVE_INVESTIGATION_PHASES = new Set(["discovery", "wayfinding", "brainstorming", "spec", "planning", "execution", "debugging"]);
-const EXECUTION_DIRECTIVE_PHASES = new Set(["execution", "debugging", "verification", "review", "delivery", "handoff"]);
 const EVIDENCE_REQUIRED_PHASES = new Set(["execution", "debugging", "verification", "review", "delivery"]);
 const CHECKPOINT_REQUIRED_PHASES = new Set(["delivery", "handoff", "complete"]);
+const DECISION_EVENTS = new Set(Object.values(DECISION_TRANSITIONS).flat());
+const WORKFLOW_REPAIR_EVENTS = new Set(["brainstorming-start", "spec-living", "plan-start"]);
 
 export function sessionStart(input, root, ctx) {
   removeRecoveryReceipt(ctx, "", { required: true });
@@ -109,48 +103,6 @@ function workflowStateFor(root, ctx) {
   return workflowStatus(root, ctx).state || {};
 }
 
-function discussionWorkflowActive(state) {
-  return ACTIVE_DISCUSSION_PHASES.has(state.phase) ||
-    ["living-draft", "pending-approval"].includes(state.spec_status) ||
-    ["clarify-scope", "written-spec-approval", "execution-approval", "user-choice"].includes(state.decision_required);
-}
-
-function investigationWorkflowActive(state) {
-  return ACTIVE_INVESTIGATION_PHASES.has(state.phase) ||
-    ["living-draft", "pending-approval"].includes(state.spec_status);
-}
-
-function discussionRefreshFiles(root, ctx, state) {
-  switch (state.phase) {
-    case "discovery":
-      return [REQUIRED_FILES.current, REQUIRED_FILES.questions, REQUIRED_FILES.handoff];
-    case "wayfinding": {
-      const wayfinder = activeWayfinderStatus(root, ctx);
-      return unique([
-        wayfinder.active ? wayfinder.reference : "",
-        REQUIRED_FILES.workingNotes,
-        REQUIRED_FILES.current,
-        REQUIRED_FILES.handoff
-      ]);
-    }
-    case "brainstorming":
-    case "spec":
-      return [
-        REQUIRED_FILES.spec,
-        REQUIRED_FILES.current,
-        REQUIRED_FILES.decisions,
-        REQUIRED_FILES.questions,
-        REQUIRED_FILES.handoff
-      ];
-    case "planning":
-      return [REQUIRED_FILES.plan, REQUIRED_FILES.current, REQUIRED_FILES.handoff];
-    case "debugging":
-      return [REQUIRED_FILES.workingNotes, REQUIRED_FILES.current, REQUIRED_FILES.handoff];
-    default:
-      return [REQUIRED_FILES.current, REQUIRED_FILES.handoff];
-  }
-}
-
 function executionEvidenceRequired(state, files) {
   return EVIDENCE_REQUIRED_PHASES.has(state.phase) || changedPathsNeedVerification(files);
 }
@@ -160,217 +112,16 @@ function checkpointReviewRequired(state, files) {
 }
 
 function promptIsSubstantive(prompt) {
-  return String(prompt || "").trim().length >= 2;
-}
-
-function promptIsBareContinuation(prompt) {
-  return /^(?:继续(?:吧|执行)?|接着(?:做|来)?|往下(?:做)?|continue|go on|proceed)[。.!！\s]*$/i.test(String(prompt || "").trim());
-}
-
-function promptIsStatusInquiry(prompt) {
-  const text = String(prompt || "").trim();
-  if (/^(?:(?:现在|目前|当前)\s*)?(?:(?:进展|进度|状态|情况)(?:到哪(?:里|儿)?|如何|怎么样)?|做到哪(?:里|儿)?|到哪(?:里|儿)?|遇到什么问题|出了什么问题|为什么停了|what(?:'s| is) the status|where are we|what happened)(?:了|呢|吗)?[？?。.!！\s]*$/i.test(text)) {
-    return true;
-  }
-  if (/(?:修复|修改|调整|更新|实现|添加|新增|删除|移除|重写|fix|change|update|implement|add|remove|delete)/i.test(text)) {
-    return false;
-  }
-  const reviewCue = /(?:复核|核对|确认|检查|查看|看一下|review|check|confirm)/i.test(text);
-  const observationCue = /(?:没有看到|没看到|看不到|未看到|是否|有没有|有无|是不是|正常|生效|触发|记录|coverage|覆盖)/i.test(text);
-  const runtimeSubject = /(?:stop(?:\s*hooks?)?|hooks?|coverage|覆盖|liveness|freshness|运行态|状态|记录|触发)/i.test(text);
-  return text.length <= 160 && reviewCue && observationCue && runtimeSubject;
-}
-
-function promptIsProjectOpsOnly(prompt) {
-  const text = String(prompt || "").trim();
-  const strongSubject = /(?:dong\s*-?\s*skills|codex\s+project\s+ops|project\s+ops)/i.test(text);
-  const hookSubject = /(?:(?:stop|precompact|postcompact|subagent|userpromptsubmit|pretooluse|posttooluse)\s*hooks?|workflow-state|context-recovery|asset-governance|project-ops|hooks?)/i.test(text);
-  const governanceCue = /(?:提醒|门禁|限制|干扰|辅助|治理|安装|更新|修复|关闭|开启|启用|停用|trust|coverage|liveness|freshness|runtime|dirty|状态|复核|检查|问题|原则)/i.test(text);
-  const businessCue = /(?:研究|实验|论文|方法|模型|数据|评测|指标|baseline|业务|产品|页面|接口|功能|数据库|用户流程)/i.test(text);
-  return (strongSubject || (hookSubject && governanceCue)) && !businessCue;
-}
-
-function promptLooksLikeQuestionOrReview(prompt) {
-  const text = String(prompt || "").trim();
-  return /[？?]\s*$/.test(text) ||
-    /(?:是否|能否|可否|吗(?:[。.!！\s]|$))/.test(text) ||
-    /(?:请|帮我|麻烦).{0,10}(?:确认|检查|评估|说明|解释|比较|review|check|confirm|evaluate)/i.test(text);
-}
-
-function promptChangesApprovedScope(prompt) {
-  const text = String(prompt || "");
-  return /(?:调整|修改|变更|扩大|缩小|提高|降低|新增|增加|删除|移除|取消).{0,12}(?:范围|需求|目标|验收标准|优先级|非目标)|(?:范围|需求|目标|验收标准|优先级|非目标).{0,12}(?:调整|修改|变更|扩大|缩小|提高|降低|新增|增加|删除|移除|取消)/i.test(text) ||
-    /(?:api|接口|函数|方法|命令|cli|页面|组件|字段|格式|输出|返回|endpoint|function|command|page|component|field|format|output|return).{0,28}(?:改成|改为|换成|新增|增加|删除|移除|支持|禁用|不再|必须|只允许|change|switch|add|remove|delete|support|disable|must)/i.test(text) ||
-    /(?:这轮|本轮|当前|现在|暂时).{0,16}(?:不用|不需要|不做|不实现|不支持|不考虑)|(?:不用|不需要|不做|不实现|不支持|不考虑).{0,16}(?:这轮|本轮|当前|现在|暂时|了)/i.test(text) ||
-    /(?:先|暂时).{0,8}(?:不做|不实现|不支持|不考虑)|(?:先)?只做|仅做/i.test(text) ||
-    /(?:放到|留到|推迟到|延后到).{0,20}(?:下一轮|下轮|下个|后续|以后)|(?:下一轮|下轮|下个|后续|以后).{0,20}(?:再做|再实现|再支持|再考虑)/i.test(text) ||
-    /(?:优先|先做|先完成).{0,32}(?:以后再|后面再|下一轮再|下轮再|稍后再|暂缓|延后|放到)/i.test(text) ||
-    /(?:only|defer|deferred|postpone|postponed|out of scope|not in this (?:iteration|release|milestone))/i.test(text);
-}
-
-function promptIsLearningOnly(prompt, cue) {
-  if (!cue || promptChangesApprovedScope(prompt)) return false;
-  const text = String(prompt || "");
-  const futurePreference = /(?:以后|今后|下次|往后|记住|from now on|in the future|next time|always|never)/i.test(text);
-  const codexProcessPreference =
-    /(?:验证.{0,20}声称|声称.{0,20}(?:完成|修复)|不要假设|别假设|先.{0,12}(?:测试|验证)|回复|回答|提交|审查|计划|文档|记忆|verify.{0,20}claim|claim.{0,20}(?:complete|fixed)|do not assume|test first|response|commit|review|plan|docs|memory)/i.test(text);
-  const projectObject =
-    /(?:api|接口|函数|方法|命令|cli|页面|组件|字段|格式|json|xml|数据库|数据表|endpoint|function|command|page|component|field|format|database)/i.test(text);
-  return futurePreference && codexProcessPreference && !projectObject;
-}
-
-function executionDirectiveRefreshFiles(state, scopeChange) {
-  const files = {
-    execution: [REQUIRED_FILES.plan, REQUIRED_FILES.current, REQUIRED_FILES.handoff],
-    debugging: [REQUIRED_FILES.workingNotes, REQUIRED_FILES.current, REQUIRED_FILES.handoff],
-    verification: [REQUIRED_FILES.verification, REQUIRED_FILES.current, REQUIRED_FILES.handoff],
-    review: [REQUIRED_FILES.verification, REQUIRED_FILES.current, REQUIRED_FILES.handoff],
-    delivery: [REQUIRED_FILES.current, REQUIRED_FILES.handoff],
-    handoff: [REQUIRED_FILES.current, REQUIRED_FILES.handoff]
-  }[state.phase] || [REQUIRED_FILES.current, REQUIRED_FILES.handoff];
-  return unique(scopeChange ? [REQUIRED_FILES.spec, REQUIRED_FILES.plan, ...files] : files);
-}
-
-const RECEIPT_REQUIRED_EVENTS = new Set(Object.values(DECISION_TRANSITIONS).flat());
-
-function decisionEvidenceHash(root, ctx, state, decision) {
-  const names = {
-    "written-spec-approval": [REQUIRED_FILES.spec],
-    "execution-approval": [REQUIRED_FILES.plan],
-    "verification-gap-acceptance": [REQUIRED_FILES.verification],
-    "verification-failure-choice": [REQUIRED_FILES.verification],
-    "user-choice": [REQUIRED_FILES.current, REQUIRED_FILES.handoff]
-  }[decision] || [REQUIRED_FILES.current];
-  return stableFingerprint({
-    task_id: state.task_id,
-    task_generation: String(state.task_generation),
-    decision,
-    files: names.map((name) => ({ name, content: readText(path.join(ctx, name)) }))
-  });
-}
-
-function promptRejectsDecision(prompt) {
-  return /(?:不批准|不要批准|别批准|暂不批准|先不批准|先不要|不同意|尚未同意|未同意|不能确认|无法确认|拒绝|不接受|暂不接受|不要继续|暂不执行|先别执行|不要开始|先别开始|需要修改|仍需修改|还需修改|先修改|调整后|not approve|do not approve|cannot confirm|do not accept|reject|do not proceed|do not start|not yet execute)/i.test(prompt);
-}
-
-function promptRequestsVerificationRetry(prompt) {
-  return /(?:不接受|拒绝).{0,24}(?:缺口|gap)|(?:缺口|gap).{0,24}(?:不接受|拒绝)|(?:继续修复|修复后再|重试|retry|fix)/i.test(prompt);
-}
-
-function promptRequestsPlanThenExecute(prompt) {
-  const text = String(prompt || "").trim();
-  if (!text || promptRetractsPlanThenExecute(text)) return false;
-  return /plan-then-execute|(?:先|首先|先做|先写|制定|完成).{0,40}(?:计划|plan).{0,80}(?:再|然后|随后|后|then|and).{0,40}(?:执行|实现|execute|implement)|(?:计划|plan).{0,40}(?:后直接|然后|then|and).{0,40}(?:执行|实现|execute|implement)/i.test(text);
-}
-
-function promptRetractsPlanThenExecute(prompt) {
-  const text = String(prompt || "").trim();
-  return /(?:不要|别|先别|暂不|不再|停止).{0,24}(?:执行|实现|execute|implement)|(?:只要|只写|只做).{0,16}(?:计划|plan)|plan\s+only/i.test(text);
-}
-
-function promptRetractsSpecSkip(prompt) {
-  const text = String(prompt || "").trim();
-  return /(?:不要|不能|不应|不该).{0,12}(?:跳过|略过|省略).{0,24}(?:brainstorm(?:ing)?|头脑风暴|需求澄清|规格讨论|方案讨论)|(?:do not|don't|must not|should not).{0,24}(?:skip|bypass).{0,24}(?:brainstorm(?:ing)?|spec discussion)/i.test(text);
-}
-
-function promptRequestsSpecSkip(prompt) {
-  const text = String(prompt || "").trim();
-  if (!text || promptRetractsSpecSkip(text)) return false;
-  return /(?:跳过|略过|省略|无需|不用|不需要).{0,24}(?:brainstorm(?:ing)?|头脑风暴|需求澄清|规格讨论|方案讨论)|(?:brainstorm(?:ing)?|头脑风暴|需求澄清|规格讨论|方案讨论).{0,24}(?:跳过|略过|省略|无需|不用|不需要)|(?:skip|bypass).{0,24}(?:brainstorm(?:ing)?|spec discussion)/i.test(text);
-}
-
-function planThenExecuteRecorded(ctx) {
-  const markdown = readText(path.join(ctx, REQUIRED_FILES.plan));
-  const approval = sectionContent(markdown, "Execution Approval");
-  const mode = sectionContent(markdown, "Execution Mode");
-  return /plan-then-execute|先计划.*执行|计划后执行/i.test(approval) &&
-    /traditional|task-by-task|逐项|传统/i.test(mode);
-}
-
-function userDecisionFromPrompt(prompt, state) {
-  const text = String(prompt || "").trim();
-  const decision = state.decision_required;
-  if (!DECISION_TRANSITIONS[decision] || !text) return null;
-  if (promptLooksLikeQuestionOrReview(text)) return null;
-  if (["verification-gap-acceptance", "verification-failure-choice"].includes(decision) &&
-      promptRequestsVerificationRetry(text)) {
-    return { event: "verification-retry", decision };
-  }
-  if (promptRejectsDecision(text)) return null;
-  const bareAffirmative = /^(?:可以|同意|批准|确认|好的|好|yes|approved|approve|go ahead)[。.!！\s]*$/i.test(text);
-  if (decision === "written-spec-approval") {
-    const explicitSpecSkip =
-      /(?:跳过|无需|不需要).{0,10}(?:书面)?规格|(?:书面)?规格.{0,10}(?:跳过|无需|不需要)|skip.{0,10}(?:written\s+)?spec/i.test(text);
-    const negatedSpecSkip =
-      /(?:不要|别|暂不|先不|先别).{0,10}(?:跳过|省略).{0,10}(?:书面)?规格|(?:书面)?规格.{0,10}(?:不要|别|暂不|先不|先别).{0,10}(?:跳过|省略)/i.test(text);
-    const explicitSpecApproval =
-      /(?:我|我们)?(?:批准|同意|接受|确认通过).{0,12}(?:这份|当前|该)?(?:书面)?规格|(?:这份|当前|该)?(?:书面)?规格.{0,12}(?:批准|通过|没问题|可以了)|(?:approve|accept).{0,16}(?:written\s+)?spec/i.test(text);
-    if (explicitSpecSkip && !negatedSpecSkip) return { event: "spec-skipped", decision };
-    if (bareAffirmative || explicitSpecApproval) return { event: "spec-approved", decision };
-  }
-  if (decision === "execution-approval") {
-    const goalMode = /(?:codex\s*goal|goal\s*mode|目标模式)/i;
-    const goalNegated =
-      /(?:不要|不用|不使用|别用|暂不|不选).{0,12}(?:codex\s*goal|goal\s*mode|目标模式)|(?:codex\s*goal|goal\s*mode|目标模式).{0,12}(?:不要|不用|不使用|别用|暂不|不选)/i.test(text);
-    const traditionalMode = /(?:传统(?:方式|模式)?|正常执行|按计划执行|task-by-task)/i.test(text);
-    const traditionalApproved =
-      /(?:可以|同意|批准|确认|接受|开始|继续).{0,20}(?:按|用)?(?:传统(?:方式|模式)?|正常执行|按计划执行|task-by-task)|(?:传统(?:方式|模式)?|正常执行|按计划执行|task-by-task).{0,20}(?:执行|开始|批准|同意|可以)/i.test(text);
-    const goalApproved =
-      /(?:使用|选择|批准|同意|进入|启动|按).{0,16}(?:codex\s*goal|goal\s*mode|目标模式)|(?:codex\s*goal|goal\s*mode|目标模式).{0,16}(?:执行|开始|启动|批准|同意|可以)/i.test(text);
-    if (traditionalMode && (traditionalApproved || goalNegated)) {
-      return { event: "execution-approved-traditional", decision };
-    }
-    if (goalMode.test(text) && !goalNegated && goalApproved) {
-      return { event: "execution-approved-goal", decision };
-    }
-  }
-  if (decision === "verification-gap-acceptance" &&
-      /(?:接受|同意|确认).*(?:缺口|gap)|(?:缺口|gap).*(?:接受|同意|确认)/i.test(text)) {
-    return { event: "verification-gap-accepted", decision };
-  }
-  if (decision === "verification-failure-choice") {
-    if (/(?:接受|同意).*(?:缺口|gap)|(?:缺口|gap).*(?:接受|同意)/i.test(text)) {
-      return { event: "verification-gap-accepted", decision };
-    }
-  }
-  if (decision === "user-choice" && /(?:恢复|继续|resume)/i.test(text)) {
-    return { event: "resume", decision };
-  }
-  return null;
-}
-
-function discussionRequiredTarget(root, ctx, name) {
-  const normalized = String(name || "").trim();
-  const nested = /[\\/]/.test(normalized);
-  const target = nested ? path.resolve(root, normalized) : path.resolve(ctx, normalized);
-  const relative = path.relative(root, target);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) return null;
-  return target;
+  return String(prompt || "").trim().length > 0;
 }
 
 function writeDiscussionMarker(root, ctx, input, patch) {
   const file = discussionStateFile(ctx);
   return withRuntimeLock(ctx, "discussion-state", () => {
     const previous = readJsonFile(file).value || {};
-    const preservePreviousRequirements =
-      previous.status === "dirty" &&
-      previous.source &&
-      patch.source &&
-      previous.source !== patch.source;
-    const requiredFiles = unique([
-      ...(preservePreviousRequirements && Array.isArray(previous.required_files) ? previous.required_files : []),
-      ...(patch.required_files || [])
-    ]);
-    const baselineHashes = {};
-    for (const name of requiredFiles) {
-      const target = discussionRequiredTarget(root, ctx, name);
-      baselineHashes[name] = target && fs.existsSync(target)
-        ? stableFingerprint(fs.readFileSync(target))
-        : "missing";
-    }
     const now = new Date().toISOString();
     const marker = {
-      status: patch.status || "dirty",
+      status: "advisory",
       updated_at: now,
       source: patch.source,
       reason: patch.reason,
@@ -379,38 +130,15 @@ function writeDiscussionMarker(root, ctx, input, patch) {
       decision_required: patch.decision_required,
       prompt_excerpt: patch.prompt_excerpt || previous.prompt_excerpt || undefined,
       tool_name: patch.tool_name || previous.tool_name || undefined,
-      enforce_before_mutation: Boolean(
-        patch.enforce_before_mutation ||
-        (previous.status === "dirty" && previous.enforce_before_mutation)
-      ),
-      requires_scope_reopen: Boolean(
-        patch.requires_scope_reopen ||
-        (previous.status === "dirty" && previous.requires_scope_reopen)
-      ),
-      scope_reopened_at: patch.scope_reopened_at || previous.scope_reopened_at || undefined,
+      enforce_before_mutation: false,
+      requires_scope_reopen: false,
       cwd_relative: input?.cwd ? path.relative(root, path.resolve(input.cwd)).replace(/\\/g, "/") || "." : previous.cwd_relative || ".",
-      required_files: requiredFiles,
-      baseline_hashes: baselineHashes,
-      next_action: [
-        "Refresh the listed files with confirmed user decisions, current question, and externalized investigation findings.",
-        "Do not store hidden chain-of-thought; write checked facts, rejected paths, current hypothesis, conclusion, and next verification step."
-      ].join(" ")
+      required_files: [],
+      baseline_hashes: {},
+      next_action: "Treat this as a redacted recovery hint only. Record real decisions through canonical Workflow Decision fields and real project changes through mutation evidence."
     };
     writeTextAtomic(file, `${JSON.stringify(marker, null, 2)}\n`);
     return marker;
-  });
-}
-
-function acknowledgeScopeReopen(ctx) {
-  const file = discussionStateFile(ctx);
-  return withRuntimeLock(ctx, "discussion-state", () => {
-    const parsed = readJsonFile(file);
-    if (!parsed.ok || !parsed.exists || !parsed.value?.requires_scope_reopen) return;
-    writeTextAtomic(file, `${JSON.stringify({
-      ...parsed.value,
-      requires_scope_reopen: false,
-      scope_reopened_at: new Date().toISOString()
-    }, null, 2)}\n`);
   });
 }
 
@@ -427,123 +155,21 @@ export function userPromptSubmit(input, root, ctx) {
   const workflow = workflowStatus(root, ctx);
   const state = workflow.state || {};
   const messages = [];
-  const sessionKey = hookSessionKey(input);
   const cue = classifyLearningCue(prompt);
-  let executionDirectiveRecorded = false;
-  if (promptRequestsPlanThenExecute(prompt)) {
-    writeAdvanceDecisionReceipt(
-      root,
-      ctx,
-      state,
-      "execution-approval",
-      ["execution-approved-traditional"]
-    );
-    messages.push("Codex Project Ops recorded plan-then-execute intent for Traditional task-by-task execution; it is bound to the target task and does not authorize Goal mode.");
-  } else if (promptRetractsPlanThenExecute(prompt)) {
-    removeAdvanceDecisionReceipt(ctx, "execution-approval", { required: true });
-    messages.push("Codex Project Ops removed the earlier plan-then-execute intent.");
-  }
-  if (promptRequestsSpecSkip(prompt)) {
-    writeAdvanceDecisionReceipt(
-      root,
-      ctx,
-      state,
-      "written-spec-approval",
-      ["spec-skipped"]
-    );
-    messages.push("Codex Project Ops recorded explicit skip-brainstorming intent for spec-skipped; it is bound to the target task and does not approve execution.");
-  } else if (promptRetractsSpecSkip(prompt)) {
-    removeAdvanceDecisionReceipt(ctx, "written-spec-approval", { required: true });
-    messages.push("Codex Project Ops removed the earlier skip-brainstorming intent.");
-  }
-  if (promptIsSubstantive(prompt) && DECISION_TRANSITIONS[state.decision_required]) {
-    removeDecisionReceipt(ctx, sessionKey, { required: true });
-  }
-  const decision = userDecisionFromPrompt(prompt, state);
-
-  if (decision) {
-    writeDecisionReceipt(
-      root,
-      ctx,
-      state,
-      sessionKey,
-      decision.decision,
-      [decision.event],
-      decisionEvidenceHash(root, ctx, state, decision.decision)
-    );
-    messages.push(`Codex Project Ops recorded user approval for ${decision.event}; the receipt is bound to this task, session, and current evidence.`);
-  }
-
-  if (promptIsSubstantive(prompt) && state.phase === "complete") {
+  if (promptIsSubstantive(prompt)) {
     writeDiscussionMarker(root, ctx, input, {
-      status: "pending-new-task",
       source: "UserPromptSubmit",
-      reason: "first substantive prompt after a completed workflow",
+      reason: state.phase === "complete"
+        ? "first prompt after a completed workflow"
+        : "latest user prompt recovery hint",
       phase: state.phase,
       spec_status: state.spec_status,
       decision_required: state.decision_required,
-      prompt_excerpt: sanitizeLearningExcerpt(prompt),
-      required_files: [
-        REQUIRED_FILES.current,
-        REQUIRED_FILES.spec,
-        REQUIRED_FILES.plan,
-        REQUIRED_FILES.handoff
-      ]
+      prompt_excerpt: sanitizeLearningExcerpt(prompt)
     });
-    messages.push([
-      "Codex Project Ops recorded a pending new task.",
-      "Run workflow-state transition new-task before discovery or mutation so prior approvals and completion evidence cannot leak into the new task."
-    ].join(" "));
-  }
-
-  if (promptIsSubstantive(prompt) &&
-      !promptIsBareContinuation(prompt) &&
-      !promptIsStatusInquiry(prompt) &&
-      !promptIsProjectOpsOnly(prompt) &&
-      !promptIsLearningOnly(prompt, cue) &&
-      state.decision_required === "none" &&
-      EXECUTION_DIRECTIVE_PHASES.has(state.phase)) {
-    const scopeChange = promptChangesApprovedScope(prompt);
-    const requiredFiles = executionDirectiveRefreshFiles(state, scopeChange);
-    writeDiscussionMarker(root, ctx, input, {
-      source: "UserPromptSubmit",
-      reason: scopeChange
-        ? "latest user prompt changes the approved scope or execution contract"
-        : "latest user prompt changes execution guidance",
-      phase: state.phase,
-      spec_status: state.spec_status,
-      decision_required: state.decision_required,
-      prompt_excerpt: sanitizeLearningExcerpt(prompt),
-      required_files: requiredFiles,
-      enforce_before_mutation: scopeChange,
-      requires_scope_reopen: scopeChange
-    });
-    executionDirectiveRecorded = true;
-    messages.push(scopeChange
-      ? "Codex Project Ops recorded an execution-time scope change. Reopen scope with workflow-state transition brainstorming-start, then refresh the listed state files before further project mutations."
-      : `Codex Project Ops recorded updated execution guidance. Refresh the phase-relevant records before further project mutations: ${requiredFiles.join(", ")}.`);
-  }
-
-  if (promptIsSubstantive(prompt) &&
-      !promptIsBareContinuation(prompt) &&
-      !promptIsStatusInquiry(prompt) &&
-      !promptIsProjectOpsOnly(prompt) &&
-      !executionDirectiveRecorded &&
-      discussionWorkflowActive(state)) {
-    const requiredFiles = discussionRefreshFiles(root, ctx, state);
-    writeDiscussionMarker(root, ctx, input, {
-      source: "UserPromptSubmit",
-      reason: "latest user prompt may change discussion/spec state",
-      phase: state.phase,
-      spec_status: state.spec_status,
-      decision_required: state.decision_required,
-      prompt_excerpt: sanitizeLearningExcerpt(prompt),
-      required_files: requiredFiles
-    });
-    messages.push([
-      "Codex Project Ops marked discussion state dirty.",
-      `Before stopping or compacting, refresh the phase-relevant records: ${requiredFiles.join(", ")}.`
-    ].join(" "));
+    messages.push(state.phase === "complete"
+      ? "Codex Project Ops recorded a redacted advisory for recovery. Start a canonical new task before project mutation; the prompt itself did not authorize that transition."
+      : "Codex Project Ops recorded a redacted discussion advisory. It does not authorize transitions, reopen scope, require state refresh, or block mutation, Stop, or PreCompact.");
   }
 
   if (cue) {
@@ -552,7 +178,7 @@ export function userPromptSubmit(input, root, ctx) {
       messages.push([
         "Codex Project Ops captured a raw learning observation.",
         "Do not treat it as active memory yet.",
-        "Before compaction or stopping, evaluate it with codex-learning-memory and refresh learned-instincts.md."
+        "Review it with codex-learning-memory at a meaningful milestone; it does not block Stop or PreCompact."
       ].join(" "));
     }
   }
@@ -678,6 +304,9 @@ function workflowStateOperation(args) {
   }
   if (command === "transition") {
     return { kind: "transition", command, event: String(tokens[1] || "") };
+  }
+  if (command === "decision") {
+    return { kind: "decision", command, event: String(tokens[1] || "") };
   }
   if (["init", "migrate"].includes(command)) return { kind: "repair", command };
   return { kind: "forbidden", command };
@@ -1111,6 +740,7 @@ function toolControlClass(input, root = "") {
   if (!name) return "unknown";
   const controlPlane = root ? controlPlaneOperation(input, root) : null;
   if (controlPlane?.kind === "transition") return "workflow-transition";
+  if (controlPlane?.kind === "decision") return "workflow-decision";
   if (controlPlane?.kind === "forbidden") return "workflow-admin";
   if (controlPlane) return "control-plane";
 
@@ -1174,11 +804,38 @@ export function preToolUse(input, root, ctx) {
     denyPreToolUse("Arbitrary workflow-state mutation is not allowed. Use a validated workflow-state transition.");
     return;
   }
+  if (controlClass === "workflow-decision") {
+    const workflow = workflowStatus(root, ctx);
+    const state = workflow.state || {};
+    const operation = controlPlaneOperation(input, root);
+    if (!workflow.ok) {
+      denyPreToolUse(`Workflow state is not valid: ${workflow.issues.join("; ")}`);
+      return;
+    }
+    const recovery = recoveryReceiptStatus(root, ctx, state, hookSessionKey(input));
+    if (!recovery.ok) {
+      denyPreToolUse(`Context recovery gate: ${recovery.reason}. Run context-recovery-eval before recording workflow decision evidence.`);
+      return;
+    }
+    const pending = String(state.decision_required || "none");
+    if (pending !== "none") {
+      if ((DECISION_TRANSITIONS[pending] || []).includes(operation?.event)) return;
+      denyPreToolUse(`The pending decision ${pending} does not allow transition ${operation?.event || "missing"}.`);
+      return;
+    }
+    const candidates = Object.entries(DECISION_TRANSITIONS)
+      .filter(([, events]) => events.includes(operation?.event))
+      .map(([decision]) => decision);
+    if (candidates.length === 1) return;
+    denyPreToolUse(`Transition ${operation?.event || "missing"} does not identify one canonical workflow decision.`);
+    return;
+  }
   if (controlClass === "control-plane") return;
   if (controlClass === "workflow-transition") {
     const workflow = workflowStatus(root, ctx);
     const state = workflow.state || {};
     const operation = controlPlaneOperation(input, root);
+    if (WORKFLOW_REPAIR_EVENTS.has(operation?.event)) return;
     if (!workflow.ok) {
       denyPreToolUse(`Workflow state is not valid: ${workflow.issues.join("; ")}`);
       return;
@@ -1200,56 +857,27 @@ export function preToolUse(input, root, ctx) {
         denyPreToolUse(`A user decision is still required: ${state.decision_required}. Use only its validated resolution transition.`);
         return;
       }
-      let receipt = decisionReceiptStatus(
+      const canonicalEvidence = canonicalDecisionEvidenceStatus(
         root,
         ctx,
         state,
-        sessionKey,
         state.decision_required,
-        operation?.event,
-        decisionEvidenceHash(root, ctx, state, state.decision_required)
+        operation?.event
       );
-      if (!receipt.ok &&
-          state.decision_required === "execution-approval" &&
-          operation?.event === "execution-approved-traditional" &&
-          planThenExecuteRecorded(ctx)) {
-        receipt = advanceDecisionReceiptStatus(
-          root,
-          ctx,
-          state,
-          state.decision_required,
-          operation.event
-        );
-      }
-      if (!receipt.ok &&
-          state.decision_required === "written-spec-approval" &&
-          operation?.event === "spec-skipped") {
-        receipt = advanceDecisionReceiptStatus(
-          root,
-          ctx,
-          state,
-          state.decision_required,
-          operation.event
-        );
-      }
-      if (!receipt.ok) {
-        denyPreToolUse(`A matching user decision receipt is required: ${receipt.reason}.`);
+      if (canonicalEvidence.ok) return;
+      denyPreToolUse(`Matching canonical Workflow Decision evidence is required: ${canonicalEvidence.reason}.`);
+      return;
+    } else if (DECISION_EVENTS.has(operation?.event)) {
+      const decisions = Object.entries(DECISION_TRANSITIONS)
+        .filter(([, events]) => events.includes(operation.event))
+        .map(([decision]) => decision);
+      if (decisions.length === 1) {
+        const canonicalEvidence = canonicalDecisionEvidenceStatus(root, ctx, state, decisions[0], operation.event);
+        if (canonicalEvidence.ok) return;
+        denyPreToolUse(`Matching canonical Workflow Decision evidence is required: ${canonicalEvidence.reason}.`);
         return;
       }
-    } else if (RECEIPT_REQUIRED_EVENTS.has(operation?.event)) {
-      if (operation?.event === "spec-skipped") {
-        const receipt = advanceDecisionReceiptStatus(
-          root,
-          ctx,
-          state,
-          "written-spec-approval",
-          operation.event
-        );
-        if (receipt.ok) return;
-        denyPreToolUse(`Transition ${operation.event} requires explicit skip-brainstorming intent: ${receipt.reason}.`);
-        return;
-      }
-      denyPreToolUse(`Transition ${operation.event} requires a pending user decision and matching user decision receipt.`);
+      denyPreToolUse(`Transition ${operation.event} requires an unambiguous pending canonical decision for the active task.`);
       return;
     }
     return;
@@ -1301,18 +929,6 @@ export function preToolUse(input, root, ctx) {
   if (!recovery.ok) {
     denyPreToolUse(`Context recovery gate: ${recovery.reason}. Run context-recovery-eval and resolve every failed probe before modifying the project.`);
     return;
-  }
-  const discussion = discussionStateStatus(root, ctx, workflow);
-  if (discussion.marker?.enforce_before_mutation) {
-    if (discussion.marker.requires_scope_reopen &&
-        ["execution", "debugging", "verification", "review", "delivery", "handoff"].includes(state.phase)) {
-      denyPreToolUse("The latest user directive changes approved scope. Run workflow-state transition brainstorming-start before further project mutations.");
-      return;
-    }
-    if (!discussion.ok) {
-      denyPreToolUse(`The latest user directive is not externalized yet: ${discussion.issues.join("; ")}.`);
-      return;
-    }
   }
   if (["discovery", "wayfinding", "brainstorming", "spec", "planning"].includes(state.phase)) {
     const laneLabel = `Lane ${String(state.work_lane || "lane-1").slice(-1)}`;
@@ -1536,24 +1152,13 @@ export function postToolUse(input, root, ctx) {
   const operation = controlPlaneOperation(input, root);
 
   if (controlClass === "workflow-transition") {
-    if (toolExecutionStatus(input).ok && RECEIPT_REQUIRED_EVENTS.has(operation?.event)) {
+    if (toolExecutionStatus(input).ok) {
       removeDecisionReceipt(ctx, hookSessionKey(input));
-    }
-    if (toolExecutionStatus(input).ok &&
-        ["execution-approved-traditional", "execution-approved-goal", "spec-skipped"].includes(operation?.event)) {
-      removeAdvanceDecisionReceipt(
-        ctx,
-        operation?.event === "spec-skipped" ? "written-spec-approval" : "execution-approval"
-      );
-    }
-    if (toolExecutionStatus(input).ok &&
-        ["brainstorming-start", "spec-living"].includes(operation?.event)) {
-      acknowledgeScopeReopen(ctx);
     }
     return;
   }
 
-  if (controlClass === "control-plane") {
+  if (["control-plane", "workflow-decision"].includes(controlClass)) {
     if (operation?.kind === "recovery" && toolExecutionStatus(input).ok) {
       const evaluation = evaluateRecovery(root, ctx);
       const workflow = workflowStatus(root, ctx);
@@ -1610,6 +1215,16 @@ export function postToolUse(input, root, ctx) {
   const invocationChanged = intent.files.some((file) => !isGovernancePath(file)) ||
     !statusUnchanged ||
     !fingerprintUnchanged;
+  const pendingChange = readRuntimeReceipt(ctx, "change-state");
+  const pendingChangeValue = pendingChange.ok ? pendingChange.value : null;
+  const pendingChangeActive = pendingChangeValue?.task_id === state.task_id &&
+    String(pendingChangeValue?.task_generation) === String(state.task_generation) &&
+    Array.isArray(pendingChangeValue?.changed_files) &&
+    pendingChangeValue.changed_files.length > 0;
+  if (!invocationChanged && !pendingChangeActive) {
+    removeMutationIntent(ctx, input);
+    return;
+  }
   if (controlClass === "verification" && !invocationChanged) {
     removeMutationIntent(ctx, input);
     return;
@@ -1624,8 +1239,6 @@ export function postToolUse(input, root, ctx) {
     }
   }
 
-  const pendingChange = readRuntimeReceipt(ctx, "change-state");
-  const pendingChangeValue = pendingChange.ok ? pendingChange.value : null;
   const pendingChangeFiles = pendingChangeValue?.task_id === state.task_id &&
     String(pendingChangeValue?.task_generation) === String(state.task_generation) &&
     Array.isArray(pendingChangeValue?.changed_files)
@@ -1778,7 +1391,7 @@ function hookStatusText(root, ctx, latest = 0, files = [], options = {}) {
   return lines.join("\n");
 }
 
-function discussionStateStatus(root, ctx, workflow = null) {
+function discussionStateStatus(root, ctx) {
   const file = discussionStateFile(ctx);
   if (!fs.existsSync(file)) {
     return {
@@ -1787,89 +1400,29 @@ function discussionStateStatus(root, ctx, workflow = null) {
       latest: 0,
       marker: null,
       requiredFiles: [],
-      summary: "Discussion state ok: no dirty marker."
+      summary: "Discussion advisory absent."
     };
   }
 
   const parsed = readJsonFile(file);
   if (!parsed.ok) {
-    const issue = `${DISCUSSION_STATE_FILE} is invalid: ${parsed.error}. Repair or remove the corrupt discussion marker`;
     return {
-      ok: false,
-      issues: [issue],
+      ok: true,
+      issues: [],
       latest: mtimeMs(file),
       marker: null,
       requiredFiles: [],
-      summary: `Discussion state needs repair: ${issue}. Repair or remove the corrupt discussion marker.`
+      summary: `${DISCUSSION_STATE_FILE} is malformed and ignored as non-authoritative advisory: ${parsed.error}`
     };
   }
   const marker = parsed.value || {};
-  if (marker.status !== "dirty") {
-    return {
-      ok: true,
-      issues: [],
-      latest: mtimeMs(file),
-      marker,
-      requiredFiles: [],
-      summary: "Discussion state ok: marker is not dirty."
-    };
-  }
-
-  const state = workflow?.state || workflowStateFor(root, ctx);
-  if (!marker.enforce_before_mutation &&
-      !discussionWorkflowActive(state) &&
-      !investigationWorkflowActive(state)) {
-    return {
-      ok: true,
-      issues: [],
-      latest: mtimeMs(file),
-      marker,
-      requiredFiles: [],
-      summary: `Discussion state ok: inactive phase ${state.phase || "missing"}.`
-    };
-  }
-
-  const latest = Math.max(mtimeMs(file), Date.parse(marker.updated_at || "") || 0);
-  const requiredFiles = unique(Array.isArray(marker.required_files) ? marker.required_files : []);
-  const baselineHashes = marker.baseline_hashes && typeof marker.baseline_hashes === "object"
-    ? marker.baseline_hashes
-    : null;
-  const issues = [];
-
-  for (const name of requiredFiles) {
-    const target = discussionRequiredTarget(root, ctx, name);
-    if (!target) {
-      issues.push(`${name} escapes the project root`);
-      continue;
-    }
-    const currentHash = fs.existsSync(target) ? stableFingerprint(fs.readFileSync(target)) : "missing";
-    if (baselineHashes && Object.prototype.hasOwnProperty.call(baselineHashes, name)) {
-      if (currentHash === baselineHashes[name]) {
-        issues.push(`${name} content has not changed since the latest discussion or investigation marker`);
-      }
-    } else if (latest && mtimeMs(target) < latest - 1000) {
-      issues.push(`${name} is older than latest discussion or investigation marker`);
-    }
-  }
-
-  if (requiredFiles.includes(REQUIRED_FILES.workingNotes)) {
-    const notes = readText(path.join(ctx, REQUIRED_FILES.workingNotes));
-    const useful = ["Current Findings", "Current Hypothesis", "Rejected Paths", "Open Investigation Questions", "Next Verification Step"]
-      .some((heading) => meaningful(sectionContent(notes, heading)));
-    if (!useful) {
-      issues.push("working-notes.md has no externalized investigation findings, hypothesis, rejected paths, open questions, or next verification step");
-    }
-  }
-
   return {
-    ok: issues.length === 0,
-    issues,
-    latest,
+    ok: true,
+    issues: [],
+    latest: mtimeMs(file),
     marker,
-    requiredFiles,
-    summary: issues.length
-      ? `Discussion state needs refresh: ${issues.join("; ")}.`
-      : "Discussion state ok: required files are fresh."
+    requiredFiles: [],
+    summary: "Discussion marker is advisory-only and does not create freshness debt."
   };
 }
 
@@ -2054,7 +1607,6 @@ export function preCompact(input, root, ctx) {
   }
 
   const learning = learningStatus(ctx);
-  issues.push(...learning.issues);
 
   const checkpointFiles = [...new Set([...changed, ...statusFiles])];
   const checkpoint = gitCheckpointStatus(root, ctx, latest, checkpointFiles);
@@ -2093,7 +1645,7 @@ export function preCompact(input, root, ctx) {
       "Codex Project Ops blocked compaction.",
       hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion, eventName: "PreCompact" }),
       `Issues: ${issues.join("; ")}.`,
-      "Refresh current-state.md, plan-progress.md, artifact-index.md, spec.md, decisions.md, open-questions.md, working-notes.md, handoff-summary.md, Git Checkpoint, and learned-instincts.md as applicable. Then compact again."
+      "Update only the files or evidence named by the current issues. Learning review and ordinary asset advisories do not block compaction. Then compact again."
     ].join("\n")
   });
 }

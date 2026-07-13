@@ -23,7 +23,7 @@ Also stop if `.codex-context/spec.md` has no approved scope for the current task
 
 Confirm the plan's artifact readiness before execution. `requirements-only` means return to `writing-plans`; only `implementation-ready` plans may execute. Legacy plans without an Artifact Readiness field may proceed only after the executor confirms that the Product Contract, Planning Contract, Verification Contract, Definition of Done, and launch-blocking questions are fully resolved and records that assessment.
 
-Treat approved `spec.md` and `plan-progress.md` content as immutable execution inputs. A normal workflow context hash refresh records current recovery state; it does not authorize changed scope or plan content. If the spec must change, run `brainstorming-start` and reapprove the written spec. If only the implementation plan must change, run `plan-start`, refresh the plan, and obtain fresh execution approval.
+Treat approved `spec.md` and the plan contract as immutable execution inputs. The plan contract includes substantive `plan-progress.md` content and any linked detailed plan; task checkbox state, `Current Step`, and the dedicated `Checkpoints` section are progress metadata and may change during execution. Changing task text, runtime constraints, verification commands, scope, linked-plan content, or other substantive plan fields invalidates execution approval. A normal workflow context hash refresh records current recovery state; it does not reapprove changed scope or plan content. If the spec must change, run `brainstorming-start` and reapprove the written spec. If only the implementation plan must change, run `plan-start`, refresh the plan, and obtain fresh execution approval.
 
 When workflow state is available, run this before editing implementation files:
 
@@ -128,7 +128,7 @@ Goal mode runtime constraints:
 
 ## Checkpoints
 
-Use a checkpoint after each meaningful task:
+Record checkpoints under the dedicated `## Checkpoints` / `## 存档记录` section of `plan-progress.md`. Do not place them inside `## Tasks`, where they can obscure the approved task contract. Use this shape after each meaningful task:
 
 ```markdown
 ### Checkpoint
@@ -162,7 +162,7 @@ Stop and surface the issue when:
 - The workspace is detached HEAD or a host-managed worktree but the plan assumes a normal branch merge or cleanup.
 - The next step would delete data, rewrite history, force-push, or perform another destructive action without explicit approval.
 
-When the stop condition is an external blocker and no workflow decision is already pending, update `current-state.md` and `handoff-summary.md`, then run `node .codex/hooks/project-ops.mjs workflow-state transition blocked`. After the user explicitly chooses to continue and the matching decision receipt exists, run `node .codex/hooks/project-ops.mjs workflow-state transition resume` before editing again. Do not leave the workflow in `execution` while reporting that it is blocked.
+When the stop condition is an external blocker and no workflow decision is already pending, update `current-state.md` and `handoff-summary.md`, then run `node .codex/hooks/project-ops.mjs workflow-state transition blocked`. After the user explicitly chooses to continue, run `workflow-state decision resume` and then `workflow-state transition resume` before editing again. Do not leave the workflow in `execution` while reporting that it is blocked.
 
 ## Completion
 

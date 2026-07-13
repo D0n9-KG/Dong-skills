@@ -26,6 +26,7 @@ const ROOTLESS_FIRST_ARGS = {
     "status",
     "get",
     "set",
+    "decision",
     "transition",
     "check",
     "next",

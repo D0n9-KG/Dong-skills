@@ -160,6 +160,9 @@ Living Draft / Not Approved。最终讨论通过后使用 Pending written-spec a
 ## 当前步骤
 [只写一个当前活动步骤，或“无”。]
 
+## 存档记录
+[执行期 checkpoint 只追加在本节；任务勾选、当前步骤和本节内容不改变已批准 plan contract。]
+
 ## 验证
 - [命令 / 检查及预期信号。]
 

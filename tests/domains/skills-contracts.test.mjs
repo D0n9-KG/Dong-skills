@@ -202,10 +202,12 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(router, /codex-loop-design-check/);
   assert.match(router, /requesting-code-review/);
   assert.match(router, /workflow-state transition spec-skipped/);
+  assert.match(router, /workflow-state decision spec-skipped/);
   assert.match(router, /workflow-state transition mechanical-exception/);
   assert.match(router, /workflow-state transition debugging-start/);
   assert.match(router, /workflow-state transition debugging-resolved/);
   assert.match(router, /pure continuation or status question/);
+  assert.doesNotMatch(router, /decision receipt/i);
 
   const governance = readSkill("codex-project-governance");
   assert.match(governance, /workflow-state\.yaml/);
@@ -226,6 +228,9 @@ test("borrowed workflow skills retain required upstream gates", () => {
   assert.match(governance, /bounded continuation receipt/);
   assert.match(governance, /static hook configuration, root\/bootstrap runtime parity, and recent liveness/);
   assert.match(governance, /discussion-state\.json/);
+  assert.match(governance, /workflow-state decision <transition>/);
+  assert.match(governance, /does not infer approvals, scope changes, execution directives, or freshness debt/);
+  assert.doesNotMatch(governance, /decision receipt/i);
   assert.match(governance, /working-notes\.md/);
   assert.match(governance, /codex-skill-evolution/);
   assert.match(governance, /SkillOpt-Sleep/);
@@ -247,6 +252,11 @@ test("borrowed workflow skills retain required upstream gates", () => {
     "utf8"
   );
   assert.equal(agentsSnippet, bootstrapAgentsSnippet);
+  const rootAgents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  const managedBlock = rootAgents.match(/<!-- codex-project-ops:start -->\s*([\s\S]*?)\s*<!-- codex-project-ops:end -->/);
+  assert.ok(managedBlock, "root AGENTS.md must contain the Dong Skills managed block");
+  const normalizeManagedText = (value) => String(value).replace(/\r\n?/g, "\n").trim();
+  assert.equal(normalizeManagedText(managedBlock[1]), normalizeManagedText(agentsSnippet));
   for (const guidance of [readme, agentsSnippet]) {
     assert.match(guidance, /session-scoped/);
     assert.match(

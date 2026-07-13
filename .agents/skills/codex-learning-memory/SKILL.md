@@ -20,9 +20,9 @@ Learning is curated, not fully automatic.
 - Raw observations are not active memory and must not be treated as rules.
 - Raw observations contain a short redacted excerpt plus a prompt fingerprint; do not reconstruct or store secrets from the original prompt.
 - Active instincts are created only after this skill applies the quality gate below.
-- After reviewing raw observations, refresh `.codex-context/learned-instincts.md`; its timestamp is the hook-visible signal that pending learning review was handled.
+- After reviewing raw observations, refresh `.codex-context/learned-instincts.md`; its timestamp records the last curated review.
 
-If a hook blocks Stop or PreCompact because learning review is pending, read the newest raw observations, decide Save / Improve then Save / Absorb into Existing / Drop, then update `learned-instincts.md` with the result.
+Learning review is advisory and must not block Stop or PreCompact. At a meaningful milestone, before a long pause when the observations matter, or when the user explicitly asks, read the newest raw observations, decide Save / Improve then Save / Absorb into Existing / Drop, then update `learned-instincts.md` with the result.
 
 ## Storage
 

@@ -249,7 +249,7 @@ test("hook launcher dispatches using hook input cwd rather than launcher cwd", (
   assert.deepEqual(JSON.parse(out), { root: "target" });
 });
 
-test("workflow-state exposes deterministic transition, next, recover, and hash commands", () => {
+test("workflow-state exposes deterministic decision, transition, next, recover, and hash commands", () => {
   const project = tempProject();
   git(project, ["init"]);
 
@@ -289,13 +289,40 @@ test("workflow-state exposes deterministic transition, next, recover, and hash c
   assert.match(state, /phase: spec/);
   assert.match(state, /spec_status: pending-approval/);
 
+  out = execFileSync(process.execPath, [workflowState, project, "decision", "spec-approved"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /\[DECISION\] written-spec-approval -> spec-approved/);
+  assert.match(out, /evidence_file: \.codex-context\/spec\.md/);
+  assert.match(out, /target_hash: [a-f0-9]{64}/);
+
+  const pendingState = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  assert.match(pendingState, /phase: spec/);
+  assert.match(pendingState, /decision_required: written-spec-approval/);
+  const decisionSpec = fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8");
+  assert.match(decisionSpec, /## Workflow Decision/);
+  assert.match(decisionSpec, /- schema: dong-skills\.workflow-decision\.v1/);
+  assert.match(decisionSpec, /- decision: written-spec-approval/);
+  assert.match(decisionSpec, /- transition: spec-approved/);
+
+  out = execFileSync(process.execPath, [workflowState, project, "transition", "spec-approved"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(out, /phase: planning/);
+  assert.doesNotMatch(fs.readFileSync(path.join(project, ".codex-context", "spec.md"), "utf8"), /## Workflow Decision/);
+
   out = execFileSync(process.execPath, [workflowState, project, "recover"], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /Workflow recovery/);
-  assert.match(out, /next: manual/);
+  assert.match(out, /phase: planning/);
+  assert.match(out, /next: auto/);
 
   out = execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
     cwd: root,
@@ -349,6 +376,54 @@ test("project hook forwards workflow-state commands", () => {
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /NEXT: auto/);
+});
+
+test("PreToolUse permits only the canonical decision command matching the pending decision", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  readyState(project, `- Latest commit: none\n- Push state: deferred\n- Files intentionally left uncommitted: work.txt\n- Deferred reason: fixture\n- Next checkpoint: later`);
+  write(path.join(project, ".codex-context", "decisions.md"), "# Decisions\n\n## Accepted\n- Resume the fixture workflow.\n");
+  write(path.join(project, ".codex-context", "risks.md"), "# Risks\n\n## Risks\n- Fixture-only workflow risk.\n");
+
+  const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^phase:.*$/m, "phase: blocked")
+      .replace(/^next_skill:.*$/m, "next_skill: using-superpowers")
+      .replace(/^decision_required:.*$/m, "decision_required: user-choice")
+      .replace(/^resume_phase:.*$/m, "resume_phase: execution")
+      .replace(/^resume_skill:.*$/m, "resume_skill: executing-plans")
+  );
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, "decision-command-session");
+
+  const allowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "decision-command-session",
+    tool_name: "shell_command",
+    tool_use_id: "decision-command",
+    tool_input: {
+      command: "node .codex/hooks/project-ops.mjs workflow-state decision resume"
+    }
+  });
+  assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny", JSON.stringify(allowed));
+
+  const wrong = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "decision-command-session",
+    tool_name: "shell_command",
+    tool_use_id: "decision-command-wrong",
+    tool_input: {
+      command: "node .codex/hooks/project-ops.mjs workflow-state decision spec-approved"
+    }
+  });
+  assert.equal(wrong.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(wrong.hookSpecificOutput.permissionDecisionReason, /pending decision|user-choice/i);
 });
 
 test("workflow-state checks report missing state without recreating it", () => {
@@ -600,7 +675,7 @@ test("Stop still requires verification and checkpoint for code changes during di
   assert.match(output.reason, /Git checkpoint needs review:/);
 });
 
-test("SessionStart recovery includes tail handoff sections", () => {
+test("SessionStart recovery keeps handoff tail without duplicating on-demand state excerpts", () => {
   const project = tempProject();
   const longBody = Array.from({ length: 80 }, (_, index) => `- file-${index}.txt`).join("\n");
   write(path.join(project, ".codex-context", "handoff-summary.md"), `# Handoff Summary
@@ -695,11 +770,12 @@ note: fixture
   assert.match(context, /## Git Checkpoint/);
   assert.match(context, /## Next Action\nResume final task\./);
   assert.match(context, /## Files To Re-read First\n- important\.md/);
-  assert.match(context, /Solution index excerpt:/);
-  assert.match(context, /docs\/solutions present: yes/);
-  assert.match(context, /Working notes excerpt:/);
-  assert.match(context, /Critical recovered investigation finding/);
-  assert.match(context, /Worktree state excerpt:/);
+  assert.doesNotMatch(context, /Solution index excerpt:/);
+  assert.doesNotMatch(context, /docs\/solutions present: yes/);
+  assert.doesNotMatch(context, /Working notes excerpt:/);
+  assert.doesNotMatch(context, /Critical recovered investigation finding/);
+  assert.doesNotMatch(context, /Worktree state excerpt:/);
+  assert.doesNotMatch(context, /Learned instincts excerpt:/);
 });
 
 test("context recovery requires a fresh hash bound to the active task identity", () => {
@@ -1260,7 +1336,7 @@ test("PostToolUse uses change receipts when code and artifact mtimes are identic
   assert.notEqual(allowedStop.decision, "block", JSON.stringify(allowedStop));
 });
 
-test("UserPromptSubmit marks discussion state during active brainstorming", () => {
+test("UserPromptSubmit records a redacted advisory during active brainstorming", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setWorkflowPhase(project, "brainstorming", "brainstorming");
@@ -1270,16 +1346,13 @@ test("UserPromptSubmit marks discussion state during active brainstorming", () =
     user_prompt: "确认采用 dedicated working-notes.md，token=secretfixture1234567890" // codex-release-check: allow-secret-fixture
   });
 
-  assert.match(output.hookSpecificOutput.additionalContext, /marked discussion state dirty/);
+  assert.match(output.hookSpecificOutput.additionalContext, /discussion advisory/i);
   const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
-  assert.equal(marker.status, "dirty");
+  assert.equal(marker.status, "advisory");
   assert.equal(marker.source, "UserPromptSubmit");
   assert.equal(marker.phase, "brainstorming");
-  assert.ok(marker.required_files.includes("spec.md"));
-  assert.ok(marker.required_files.includes("current-state.md"));
-  assert.ok(marker.required_files.includes("decisions.md"));
-  assert.ok(marker.required_files.includes("open-questions.md"));
-  assert.ok(marker.required_files.includes("handoff-summary.md"));
+  assert.equal(marker.enforce_before_mutation, false);
+  assert.deepEqual(marker.required_files, []);
   assert.doesNotMatch(marker.prompt_excerpt, /secretfixture1234567890/);
   assert.match(marker.prompt_excerpt, /\[redacted\]/);
 });
@@ -1300,7 +1373,7 @@ test("tool-originated subagent prompts do not contaminate parent discussion or l
   assert.equal(fs.existsSync(path.join(project, ".codex-context", "raw", "observations.jsonl")), false);
 });
 
-test("planning prompts require plan progress instead of unrelated spec artifacts", () => {
+test("planning prompts remain advisory and do not prescribe freshness files", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setWorkflowPhase(project, "planning", "writing-plans");
@@ -1311,15 +1384,12 @@ test("planning prompts require plan progress instead of unrelated spec artifacts
   });
 
   const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
-  assert.ok(marker.required_files.includes("plan-progress.md"));
-  assert.ok(marker.required_files.includes("current-state.md"));
-  assert.ok(marker.required_files.includes("handoff-summary.md"));
-  assert.equal(marker.required_files.includes("spec.md"), false);
-  assert.equal(marker.required_files.includes("decisions.md"), false);
-  assert.equal(marker.required_files.includes("open-questions.md"), false);
+  assert.equal(marker.status, "advisory");
+  assert.deepEqual(marker.required_files, []);
+  assert.equal(marker.enforce_before_mutation, false);
 });
 
-test("each new discussion prompt resets freshness baselines", () => {
+test("each new discussion prompt replaces the advisory excerpt without freshness baselines", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setWorkflowPhase(project, "brainstorming", "brainstorming");
@@ -1330,21 +1400,20 @@ test("each new discussion prompt resets freshness baselines", () => {
     user_prompt: "第一轮：采用本地 receipt。"
   });
   const first = readJson(markerFile);
-  for (const name of first.required_files) {
-    fs.appendFileSync(path.join(project, ".codex-context", name), "\n- First prompt refresh.\n", "utf8");
-  }
 
   runHook(project, {
     hook_event_name: "UserPromptSubmit",
     user_prompt: "第二轮：改为 session-scoped receipt。"
   });
   const second = readJson(markerFile);
-  assert.notEqual(second.baseline_hashes["spec.md"], first.baseline_hashes["spec.md"]);
-  assert.notEqual(second.baseline_hashes["current-state.md"], first.baseline_hashes["current-state.md"]);
+  assert.equal(first.status, "advisory");
+  assert.deepEqual(first.baseline_hashes, {});
+  assert.deepEqual(second.baseline_hashes, {});
+  assert.notEqual(second.updated_at, first.updated_at);
   assert.match(second.prompt_excerpt, /第二轮/);
 });
 
-test("Stop blocks stale discussion state even when no project files changed", () => {
+test("Stop allows a stale discussion advisory when no project files changed", () => {
   const project = tempProject();
   readyHealthFixture(project);
   git(project, ["init"]);
@@ -1360,57 +1429,8 @@ test("Stop blocks stale discussion state even when no project files changed", ()
   });
   backdateContextFiles(project, ["spec.md", "current-state.md", "decisions.md", "open-questions.md", "handoff-summary.md"]);
 
-  const blocked = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /No non-context files changed/);
-  assert.match(blocked.reason, /spec\.md content has not changed since the latest discussion or investigation marker/);
-  assert.match(blocked.reason, /decisions\.md content has not changed since the latest discussion or investigation marker/);
-  assert.match(blocked.reason, /Discussion: needs-state-refresh/);
-
-  write(path.join(project, ".codex-context", "spec.md"), "# Spec\n\n## Approval Status\nLiving Draft / Not Approved.\n\n## Open Questions\n- Continue discussion.\n");
-  write(path.join(project, ".codex-context", "current-state.md"), "# Current State\n\n## Next Action\nAsk the next discussion question.\n");
-  write(path.join(project, ".codex-context", "decisions.md"), "# Decisions\n\n## Accepted\n- Design boundary recorded.\n\n## Rejected\n- None.\n");
-  write(path.join(project, ".codex-context", "open-questions.md"), "# Open Questions\n\n- Continue discussion.\n");
-  write(path.join(project, ".codex-context", "handoff-summary.md"), `# Handoff Summary
-
-## Objective
-Discussion fixture.
-
-## Latest User Instruction
-Continue discussion.
-
-## Approved Scope / Spec
-Living draft.
-
-## Plan Status
-Brainstorming.
-
-## Files Modified
-None.
-
-## Decisions Made
-- Design boundary recorded.
-
-## Verification Evidence
-Not applicable.
-
-## Git Checkpoint
-- Latest commit: fixture
-- Push state: no remote
-- Files included: baseline fixture
-- Files intentionally left uncommitted: working-notes.md, current-state.md, and handoff-summary.md
-- Deferred reason: governance-only fixture refresh
-- Next checkpoint: after the fixture assertion
-
-## Next Action
-Ask the next question.
-
-## Files To Re-read First
-- .codex-context/spec.md
-`);
-
   const allowed = runHook(project, { hook_event_name: "Stop" });
-  assert.deepEqual(allowed, {});
+  assert.notEqual(allowed.decision, "block", JSON.stringify(allowed));
 });
 
 test("PostToolUse exploration does not create mandatory Stop state debt", () => {
@@ -1623,10 +1643,76 @@ test("PreCompact blocks when handoff is missing or stale", () => {
   assert.match(output.systemMessage, /handoff-summary\.md/);
 });
 
+test("PreCompact manual allows a discussion advisory when project state is otherwise fresh", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "fixture\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: not pushed
+- Files included: fixture baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
+  runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "继续比较两个设计方案。"
+  });
+
+  const output = runHook(project, { hook_event_name: "PreCompact", trigger: "manual" });
+  assert.notEqual(output.continue, false, JSON.stringify(output));
+});
+
+test("PreCompact manual treats pending learning review as advisory", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "fixture\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: not pushed
+- Files included: fixture baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
+  setWorkflowPhase(project, "brainstorming", "brainstorming");
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
+  const prompt = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    user_prompt: "以后都不要在没有验证的情况下声称已经修复。"
+  });
+  assert.match(prompt.hookSpecificOutput?.additionalContext || "", /captured a raw learning observation/i);
+
+  const output = runHook(project, { hook_event_name: "PreCompact", trigger: "manual" });
+  assert.notEqual(output.continue, false, JSON.stringify(output));
+});
+
 test("PreCompact automatic compaction captures stale discussion and working-notes state", () => {
   const project = tempProject();
   readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "fixture\n");
+  readyState(project, `- Latest commit: fixture
+- Push state: not pushed
+- Files included: fixture baseline
+- Files intentionally left uncommitted: none
+- Deferred reason: none
+- Next checkpoint: none
+`);
   setWorkflowPhase(project, "brainstorming", "brainstorming");
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
 
   runHook(project, {
     hook_event_name: "UserPromptSubmit",
@@ -1649,12 +1735,16 @@ test("PreCompact automatic compaction captures stale discussion and working-note
   const output = runHook(project, { hook_event_name: "PreCompact", trigger: "auto" });
   assert.equal(output.continue, true);
   assert.match(output.systemMessage, /allowed automatic compaction/);
-  assert.match(output.systemMessage, /spec\.md content has not changed since the latest discussion or investigation marker/);
+  assert.doesNotMatch(output.systemMessage, /content has not changed since the latest discussion or investigation marker/);
 
   const handoff = fs.readFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "utf8");
   assert.match(handoff, /## PreCompact Emergency Notice/);
   assert.match(handoff, /\.codex-context\/working-notes\.md/);
   assert.match(handoff, /\.codex-context\/discussion-state\.json/);
+
+  const recovery = runHook(project, { hook_event_name: "SessionStart", source: "compact" })
+    .hookSpecificOutput?.additionalContext || "";
+  assert.ok(recovery.indexOf("## Objective") < recovery.indexOf("## PreCompact Emergency Notice"));
 
   const rawFile = fs.readdirSync(path.join(project, ".codex-context", "raw"))
     .find((name) => /^precompact-auto-.*\.md$/.test(name));
@@ -1891,16 +1981,19 @@ test("hook input validation rejects event payloads missing required fields", () 
   });
 });
 
-test("Stop blocks a malformed discussion marker", () => {
+test("Stop treats a malformed discussion marker as advisory", () => {
   const project = tempProject();
   readyHealthFixture(project);
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "fixture"]);
   setWorkflowPhase(project, "brainstorming", "brainstorming");
   write(path.join(project, ".codex-context", "discussion-state.json"), "{ malformed");
 
   const output = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(output.decision, "block");
-  assert.match(output.reason, /discussion-state\.json is invalid/i);
-  assert.match(output.reason, /Repair or remove the corrupt discussion marker/);
+  assert.notEqual(output.decision, "block", JSON.stringify(output));
 });
 
 test("Stop rechecks unresolved issues when stop_hook_active is true", () => {
@@ -2101,7 +2194,7 @@ test("PreCompact blocks manual compaction when Git is unavailable", () => {
   assert.match(output.systemMessage, /Git status unavailable/i);
 });
 
-test("complete workflow records the first prompt of a new task before transition", () => {
+test("complete workflow records only an advisory before a canonical new-task transition", () => {
   const project = tempProject();
   readyHealthFixture(project);
   const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
@@ -2121,9 +2214,11 @@ test("complete workflow records the first prompt of a new task before transition
     hook_event_name: "UserPromptSubmit",
     prompt: "开始新的复杂任务，先确认目标和风险。"
   });
-  assert.match(output.hookSpecificOutput.additionalContext, /pending new task/i);
+  assert.match(output.hookSpecificOutput.additionalContext, /redacted advisory/i);
   const marker = readJson(path.join(project, ".codex-context", "discussion-state.json"));
-  assert.equal(marker.status, "pending-new-task");
+  assert.equal(marker.status, "advisory");
+  assert.equal(marker.enforce_before_mutation, false);
+  assert.deepEqual(marker.required_files, []);
   assert.match(marker.prompt_excerpt, /开始新的复杂任务/);
 
   const transition = runHook(project, {
@@ -2518,7 +2613,8 @@ test("PreToolUse enforces pending decisions and Lane 3 execution approval", () =
 test("PreToolUse allows validated verification failure resolution transitions", () => {
   const project = tempProject();
   readyHealthFixture(project);
-  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
+  const verificationFile = path.join(project, ".codex-context", "verification.md");
+  write(verificationFile, "# Verification\n\n## Commands Run\n- Fixture recovery check.\n");
   const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
   write(
     stateFile,
@@ -2532,24 +2628,47 @@ test("PreToolUse allows validated verification failure resolution transitions", 
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
-  runHook(project, { hook_event_name: "SessionStart", source: "resume" });
-  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
+  const sessionId = "verification-retry-session";
+  runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
+  acknowledgeSessionRecovery(project, sessionId);
   execFileSync(process.execPath, [workflowState, project, "transition", "verification-fail"], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
-  runHook(project, {
+  const prompt = runHook(project, {
     hook_event_name: "UserPromptSubmit",
+    session_id: sessionId,
     prompt: "继续修复后重试验证。"
   });
+  assert.match(prompt.hookSpecificOutput?.additionalContext || "", /advisory/i);
+
+  const targetContent = fs.readFileSync(verificationFile, "utf8").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").replace(/\s+$/, "") + "\n";
+  const targetHash = createHash("sha256").update(JSON.stringify({
+    task_id: "task-1",
+    task_generation: "1",
+    decision: "verification-failure-choice",
+    files: [{ name: "verification.md", content: targetContent }]
+  }), "utf8").digest("hex");
+  write(verificationFile, `${targetContent}
+## Workflow Decision
+- schema: dong-skills.workflow-decision.v1
+- decision: verification-failure-choice
+- transition: verification-retry
+- task_id: task-1
+- task_generation: 1
+- target_hash: ${targetHash}
+`);
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, sessionId, "recovery-after-verification-retry-decision");
 
   const allowed = runHook(project, {
     hook_event_name: "PreToolUse",
+    session_id: sessionId,
     tool_name: "shell_command",
     tool_use_id: "tool-verification-retry",
     tool_input: {
@@ -2612,6 +2731,7 @@ test("health reports recent liveness after a real hook event", () => {
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(out, /Recent hook liveness: recent/);
+  assert.match(out, /Host trust: not proven by health-check/);
   assert.match(out, /Last event: UserPromptSubmit/);
   assert.match(out, /Critical event coverage: incomplete/);
   assert.match(out, /Missing critical events: PreToolUse, PostToolUse, Stop/);
@@ -3839,6 +3959,38 @@ test("no-change verification does not turn pre-existing dirty files into new fre
     hook_event_name: "PostToolUse",
     ...verifyInput,
     tool_response: { exit_code: 0 }
+  });
+
+  assert.deepEqual(post, {});
+  assert.equal(
+    fs.existsSync(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json")),
+    false
+  );
+});
+
+test("ignored governance cleanup does not turn pre-existing dirty files into new freshness debt", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "before\n");
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  write(path.join(project, "work.txt"), "pre-existing dirty work\n");
+  write(path.join(project, ".codex-context", "discussion-state.json"), "{}\n");
+
+  const cleanupInput = {
+    tool_name: "apply_patch",
+    tool_use_id: "ignored-governance-cleanup",
+    tool_input: { patch: "*** Begin Patch\n*** Delete File: .codex-context/discussion-state.json\n*** End Patch" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...cleanupInput });
+  fs.rmSync(path.join(project, ".codex-context", "discussion-state.json"), { force: true });
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...cleanupInput,
+    tool_response: { is_error: false }
   });
 
   assert.deepEqual(post, {});

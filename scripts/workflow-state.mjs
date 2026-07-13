@@ -44,6 +44,7 @@ function usage() {
     "  status",
     "  get <field>",
     "  set <field> <value>",
+    "  decision <transition>",
     "  transition <event>",
     "  check [phase]",
     "  next",
@@ -94,6 +95,15 @@ try {
       if (!field || value === undefined) throw new Error("set requires <field> <value>");
       workflow.setWorkflowStateField(root, ctx, field, value);
       console.log(`[SET] ${field}=${value}`);
+      break;
+    }
+    case "decision": {
+      const event = args[0];
+      if (!event) throw new Error("decision requires a transition event");
+      const result = workflow.writeCanonicalDecisionEvidence(root, ctx, event);
+      console.log(`[DECISION] ${result.decision} -> ${result.event}`);
+      console.log(`evidence_file: ${path.relative(root, result.evidenceFile).replace(/\\/g, "/")}`);
+      console.log(`target_hash: ${result.targetHash}`);
       break;
     }
     case "transition": {

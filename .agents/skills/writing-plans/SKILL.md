@@ -20,7 +20,7 @@ Before planning, confirm one of these is true:
 
 If the task is behavior-changing or multi-file and no approved spec exists, return to `brainstorming`.
 
-When the user explicitly asked to skip brainstorming, first record the compact scope and acceptance criteria in `spec.md`, then run `workflow-state transition spec-skipped`. Do not silently edit `spec_status` or ask for the same skip approval again.
+When the user explicitly asked to skip brainstorming, first record the compact scope and acceptance criteria in `spec.md`, then run `workflow-state decision spec-skipped` followed by `workflow-state transition spec-skipped`. Do not silently edit `spec_status` or ask for the same skip approval again.
 
 When workflow state is available, run this before drafting the plan:
 
@@ -290,7 +290,7 @@ Which do you want?
 
 Only proceed to `executing-plans` after user approval or an explicit earlier instruction to plan-then-execute. If the user previously asked to plan-then-execute but did not explicitly choose Codex Goal mode, record `Execution Mode: Traditional task-by-task execution`.
 
-After the user chooses execution mode, update workflow state before executing:
+After the user chooses execution mode, write canonical evidence and then update workflow state before executing:
 
-- Traditional task-by-task execution: `node .codex/hooks/project-ops.mjs workflow-state transition execution-approved-traditional`
-- Codex Goal mode: `node .codex/hooks/project-ops.mjs workflow-state transition execution-approved-goal`
+- Traditional task-by-task execution: run `workflow-state decision execution-approved-traditional`, then `workflow-state transition execution-approved-traditional`.
+- Codex Goal mode: run `workflow-state decision execution-approved-goal`, then `workflow-state transition execution-approved-goal`.

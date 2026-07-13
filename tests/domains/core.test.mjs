@@ -39,6 +39,49 @@ const {
   writeDongProjectSkillsFixture
 } = support;
 
+function workflowField(project, name) {
+  const state = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  return state.match(new RegExp(`^${name}:\\s*(.+)$`, "m"))?.[1]?.trim() || "";
+}
+
+function stripWorkflowDecision(markdown) {
+  return String(markdown || "")
+    .replace(/(?:^|\n)## Workflow Decision\s*\n[\s\S]*?(?=\n## |$)/, "")
+    .replace(/\s+$/, "") + "\n";
+}
+
+function writeCanonicalDecision(project, fileName, decision, transition) {
+  const names = {
+    "written-spec-approval": ["spec.md"],
+    "execution-approval": ["plan-progress.md"],
+    "verification-gap-acceptance": ["verification.md"],
+    "verification-failure-choice": ["verification.md"],
+    "user-choice": ["current-state.md", "handoff-summary.md"]
+  }[decision];
+  const taskId = workflowField(project, "task_id");
+  const taskGeneration = workflowField(project, "task_generation");
+  const files = names.map((name) => ({
+    name,
+    content: stripWorkflowDecision(fs.readFileSync(path.join(project, ".codex-context", name), "utf8"))
+  }));
+  const targetHash = createHash("sha256").update(JSON.stringify({
+    task_id: taskId,
+    task_generation: taskGeneration,
+    decision,
+    files
+  }), "utf8").digest("hex");
+  const file = path.join(project, ".codex-context", fileName);
+  write(file, `${stripWorkflowDecision(fs.readFileSync(file, "utf8"))}
+## Workflow Decision
+- schema: dong-skills.workflow-decision.v1
+- decision: ${decision}
+- transition: ${transition}
+- task_id: ${taskId}
+- task_generation: ${taskGeneration}
+- target_hash: ${targetHash}
+`);
+}
+
 test("task templates remain valid JavaScript in source and bootstrap snapshot", () => {
   const templateFiles = [
     path.join(root, ".codex", "scripts", "lib", "templates.mjs"),
@@ -157,6 +200,89 @@ test("normalized document hashes ignore UTF-8 BOM and line-ending differences", 
   assert.match(output, /Workflow state ok/);
 });
 
+test("approved plan contracts allow progress updates but reject substantive linked-plan drift", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  const ctx = path.join(project, ".codex-context");
+  const planFile = path.join(ctx, "plan-progress.md");
+  const detailedPlan = path.join(project, "docs", "codex", "plans", "fixture-plan.md");
+
+  write(detailedPlan, `# Fixture Plan
+
+## Tasks
+- [ ] Implement the approved parser contract.
+
+## Current Step
+- Start the parser task.
+
+## Checkpoints
+### Checkpoint 1
+- Pending.
+`);
+  write(planFile, `${fs.readFileSync(planFile, "utf8")}
+## Current Plan
+- Detailed plan: \`docs/codex/plans/fixture-plan.md\`.
+
+## Tasks
+- [ ] Implement the approved parser contract.
+
+## Checkpoints
+### Checkpoint 1
+- Pending.
+`);
+  syncApprovalHashes(project);
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "dong-skills-test"]);
+  git(project, ["config", "user.name", "Dong Skills Test"]);
+  git(project, ["add", ".codex-context", "docs/codex/plans/fixture-plan.md"]);
+  git(project, ["commit", "-m", "record approved plan contract"]);
+
+  write(
+    planFile,
+    fs.readFileSync(planFile, "utf8")
+      .replace("- [ ] Implement the approved parser contract.", "- [x] Implement the approved parser contract.")
+      .replace("## Current Step\nContinue.", "## Current Step\nRun the parser tests.")
+      .replace("### Checkpoint 1\n- Pending.", "### Checkpoint 1\n- Parser task verified.")
+  );
+  write(
+    detailedPlan,
+    fs.readFileSync(detailedPlan, "utf8")
+      .replace("- [ ] Implement the approved parser contract.", "- [x] Implement the approved parser contract.")
+      .replace("- Start the parser task.", "- Run the parser tests.")
+      .replace("### Checkpoint 1\n- Pending.", "### Checkpoint 1\n- Parser task verified.")
+  );
+
+  execFileSync(process.execPath, [workflowState, project, "migrate"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.equal(workflowField(project, "document_hash_mode"), "approval-contract-v2");
+
+  let output = execFileSync(process.execPath, [workflowState, project, "status"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(output, /Workflow state ok/);
+
+  write(
+    detailedPlan,
+    fs.readFileSync(detailedPlan, "utf8").replace(
+      "Implement the approved parser contract.",
+      "Replace the parser with an unapproved remote service."
+    )
+  );
+  assert.throws(() => {
+    execFileSync(process.execPath, [workflowState, project, "status"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, (error) => /approved plan contract changed|obtain fresh approval/i.test(String(error.stdout || "")));
+});
+
 test("legacy document hash migration rebinds matching files and rejects drift", () => {
   for (const drifted of [false, true]) {
     const project = tempProject();
@@ -188,7 +314,7 @@ test("legacy document hash migration rebinds matching files and rejects drift", 
         stdio: ["ignore", "pipe", "pipe"]
       });
       state = fs.readFileSync(path.join(ctx, "workflow-state.yaml"), "utf8");
-      assert.match(state, /^document_hash_mode: normalized-v1$/m);
+      assert.match(state, /^document_hash_mode: approval-contract-v2$/m);
       const output = execFileSync(process.execPath, [workflowState, project, "status"], {
         cwd: root,
         encoding: "utf8",
@@ -267,7 +393,7 @@ test("legacy document hash migration accepts equivalent content from its recorde
   });
 
   const state = fs.readFileSync(stateFile, "utf8");
-  assert.match(state, /^document_hash_mode: normalized-v1$/m);
+  assert.match(state, /^document_hash_mode: approval-contract-v2$/m);
   assert.match(
     state,
     new RegExp(`^approved_spec_hash: ${createHash("sha256").update(spec, "utf8").digest("hex")}$`, "m")
@@ -288,7 +414,7 @@ test("project-ops wrapper routes rootless workflow migrate to the current projec
   });
 
   assert.match(output, /Migrated workflow-state\.yaml/);
-  assert.match(fs.readFileSync(stateFile, "utf8"), /^document_hash_mode: normalized-v1$/m);
+  assert.match(fs.readFileSync(stateFile, "utf8"), /^document_hash_mode: approval-contract-v2$/m);
 });
 
 test("validated work-lane transitions classify complex work before execution", () => {
@@ -386,6 +512,7 @@ test("execution failures use a recoverable debugging phase before returning to t
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
+  writeCanonicalDecision(project, "handoff-summary.md", "user-choice", "resume");
   execFileSync(process.execPath, [workflowState, project, "transition", "resume"], {
     cwd: root,
     encoding: "utf8",
@@ -684,6 +811,7 @@ note: execution
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
+  writeCanonicalDecision(project, "handoff-summary.md", "user-choice", "resume");
   execFileSync(process.execPath, [workflowState, project, "transition", "resume"], {
     cwd: root,
     encoding: "utf8",
@@ -744,6 +872,7 @@ test("verification failure choices use explicit validated transitions", () => {
   assert.match(state, /phase: debugging/);
   assert.match(state, /decision_required: verification-failure-choice/);
 
+  writeCanonicalDecision(project, "verification.md", "verification-failure-choice", "verification-retry");
   execFileSync(process.execPath, [workflowState, project, "transition", "verification-retry"], {
     cwd: root,
     encoding: "utf8",
@@ -760,6 +889,7 @@ test("verification failure choices use explicit validated transitions", () => {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
+  writeCanonicalDecision(project, "verification.md", "verification-failure-choice", "verification-gap-accepted");
   execFileSync(process.execPath, [workflowState, project, "transition", "verification-gap-accepted"], {
     cwd: root,
     encoding: "utf8",
@@ -1024,6 +1154,7 @@ note: fixture
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.match(reviewOut, /loop-review-approved/);
+  writeCanonicalDecision(project, "plan-progress.md", "execution-approval", "execution-approved-goal");
   execFileSync(process.execPath, [workflowState, project, "transition", "execution-approved-goal"], {
     cwd: root,
     encoding: "utf8",
@@ -1058,6 +1189,7 @@ note: fixture
       .replace(/execution_approval: approved-goal/, "execution_approval: pending")
       .replace(/loop_review_status: approved/, "loop_review_status: pending")
   );
+  writeCanonicalDecision(project, "plan-progress.md", "execution-approval", "execution-approved-traditional");
   execFileSync(process.execPath, [workflowState, project, "transition", "execution-approved-traditional"], {
     cwd: root,
     encoding: "utf8",

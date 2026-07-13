@@ -7,35 +7,49 @@
 
 ## 目标
 
-修复真实 Codex host 下的 recovery、命令分类、跨项目作用域、状态刷新和 subagent parent-state 污染，并安装验证到 `scientific_Graph`。
+根治自然语言 prompt 被升级为审批、scope、mutation、Stop/PreCompact 权限事实的问题，完成完整 Dong Skills 架构审计，并安装验证到 `scientific_Graph`。
 
 ## 当前结论
 
-- recovery receipt 已实现 single claim/promotion；promotion 失败先消费 unscoped receipt并 fail-closed。
-- stale scoped receipt 不再阻断 fresh unscoped recovery；跨 session 只能一个成功 claim。
-- 简单 PowerShell pipeline、Git diagnostics、Dong Skills 自身 domain/release 验证命令放行；scriptblock、子表达式、删除、未知脚本和目标不明操作保持 gate。
-- 外部作用域不再凭单个绝对路径无条件豁免，只接受显式 outside target、read-only/verification 或受控 external project control-plane。
-- PostToolUse 对 `{}` 响应按内容 hash 记录 state refresh；显式失败和 no-op 不计。
-- 带 tool/agent identity 的 UserPromptSubmit 不再写 parent discussion、approval 或 learning state。
+- `UserPromptSubmit` 对所有非空 prompt 只记录 redacted advisory，不生成 approval、spec skip、scope reopen、execution directive 或 freshness debt。
+- stale、legacy dirty、malformed discussion marker 均不能单独阻塞 mutation、Stop 或 PreCompact。
+- workflow transition 只接受 `Workflow Decision` 中的精确 schema、decision、transition、task identity 与 target hash。
+- 新增 `workflow-state decision <transition>`：原子写入 canonical evidence，不自动执行 transition；PreToolUse 只放行与当前 pending decision 匹配的受控命令。
+- decision transition 会消费 `Workflow Decision` section，并事务式更新 spec/execution 的结构化审批字段；错误证据或错误 event 保持拒绝。
+- prompt semantic regex 的权限调用、legacy decision/advance receipt 写入与校验已删除；只保留旧 receipt 安全清理。
+- root 与 onboarding bootstrap 的 hook/runtime/CLI/snippet 已同步；指导已改为 advisory prompt + canonical decision command。
 
 ## 验证结果
 
-- `node scripts/run-domain-tests.mjs`: 233/233 pass。
-- `node scripts/release-check.mjs .`: pass。
-- host-wrapper 5/5；关键 9 项连续 3 轮通过。
-- 根 runtime 与 onboarding bootstrap 镜像一致，installer 事务无残留。
-- 最终 distribution `6de4533c325cb9cf8026622fa00f4df2a31ecb57f569ccb3857aa9de1af168a7` 已安装到 `scientific_Graph`。
-- 下游 workflow、static health、runtime parity、context recovery、context budget、asset governance 均通过；liveness 因用户关闭 hooks 与 runtime 更新而保留预期 warning，待重启后复验。
+- 全部 domain runner：241/241 pass，12 domains。
+- 关键 11 项稳定性循环：连续三轮 11/11 pass。
+- `workflow-governance`：21/21 pass。
+- `workflow-hooks`：106/106 pass。
+- `core`：25/25 pass。
+- `health-release`：23/23 pass。
+- `host-wrapper`：5/5 pass。
+- `skills-contracts`：2/2 pass。
+- `node scripts/release-check.mjs .`：pass。
+- `node scripts/release-check.mjs .` 在最终实现上重新运行并通过。
+- installer 与下游 live host 尚未在本轮最终实现上运行。
 
 ## 审查
 
-- 本地 agent architecture/security/simplicity review 已完成，所有接受 findings 已修复并补负例。
-- 两个独立子代理因平台错误路由到未启用图像后端而 503，已关闭且未产生修改或审查证据。
+- Task 8 正在执行。
+- 已修复 high：plan progress metadata 与 approval hash 自相矛盾，改为 `approval-contract-v2`。
+- 已修复 high：health 复制 workflow consistency/hash 逻辑并发生漂移，改为复用 runtime `workflowConsistencyStatus`。
+- 已修复 medium：`codex-learning-memory` 不再声称 learning review 可阻塞 Stop/PreCompact。
+- 已修复 medium：runtime `preCompact` 不再把 learning review 聚合成 hard issue。
+- 已修复 medium：SessionStart 不再重复注入 working notes、decisions、questions、worktree、plan、solution 与 instincts excerpts；业务 handoff sections 先于临时 PreCompact notice。
+- 已修复 medium：root `AGENTS.md` managed block 与 canonical/bootstrap snippet 强制 parity。
+- 完整审计报告：`docs/codex/reviews/2026-07-13-dong-skills-agent-architecture-audit.md`；无 unresolved High/Critical。
 
 ## 剩余动作
 
-- 源码本地 checkpoint 已创建，提交信息为 `fix(hooks): harden host recovery and state isolation`，未 push；最终 hash 以 Git HEAD 为准。
-- 用户重启并 trust 新 hooks 后，在下游复验 PreToolUse、PostToolUse、Stop liveness 与 subagent prompt isolation。
+- Tasks 1-6 已完成并通过相关 workflow/core/host/skills domains。
+- Task 7 已完成：全部 domain tests、关键路径连续三轮和 release-check 均通过。
+- Task 8 已完成：12 个 agent architecture 边界已审查，accepted findings 已修复并通过全量回归。
+- 当前下一步：创建源码 checkpoint，不 push；随后执行 Task 9 installer Preview/Apply 到下游，并做真实 recovery、compound diagnostics、PreToolUse/PostToolUse、连续 Stop 与 freshness 回归。
 
 ## 最后更新
 

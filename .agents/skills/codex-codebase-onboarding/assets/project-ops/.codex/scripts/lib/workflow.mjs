@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readText, writeTextAtomic } from "./core.mjs";
-import { meaningful, sectionContent } from "./markdown.mjs";
+import { meaningful, replaceSection, sectionContent, sectionFields, withoutSection } from "./markdown.mjs";
 import { stableFingerprint, withRuntimeLock } from "./runtime.mjs";
 import { REQUIRED_FILES, TEMPLATES } from "./templates.mjs";
 
@@ -16,6 +16,232 @@ export const DECISION_TRANSITIONS = Object.freeze({
   "verification-failure-choice": ["verification-retry", "verification-gap-accepted"],
   "user-choice": ["resume"]
 });
+
+const DECISION_EVIDENCE_FILES = Object.freeze({
+  "written-spec-approval": {
+    evidenceFile: REQUIRED_FILES.spec,
+    targetFiles: [REQUIRED_FILES.spec]
+  },
+  "execution-approval": {
+    evidenceFile: REQUIRED_FILES.plan,
+    targetFiles: [REQUIRED_FILES.plan]
+  },
+  "verification-gap-acceptance": {
+    evidenceFile: REQUIRED_FILES.verification,
+    targetFiles: [REQUIRED_FILES.verification]
+  },
+  "verification-failure-choice": {
+    evidenceFile: REQUIRED_FILES.verification,
+    targetFiles: [REQUIRED_FILES.verification]
+  },
+  "user-choice": {
+    evidenceFile: REQUIRED_FILES.handoff,
+    targetFiles: [REQUIRED_FILES.current, REQUIRED_FILES.handoff]
+  }
+});
+
+function canonicalDecisionTargetFiles(root, contextDir, decision, contentOverrides = new Map()) {
+  const config = DECISION_EVIDENCE_FILES[decision];
+  const files = config.targetFiles.map((name) => ({
+    name,
+    content: contentOverrides.has(name)
+      ? contentOverrides.get(name)
+      : withoutSection(readText(path.join(contextDir, name)), "Workflow Decision")
+  }));
+  if (decision !== "execution-approval") return files;
+  const planEntry = files.find((entry) => entry.name === REQUIRED_FILES.plan);
+  const reference = planReferenceFromMarkdown(planEntry?.content || "");
+  if (!reference) return files;
+  const absolute = path.isAbsolute(reference) ? path.resolve(reference) : path.resolve(root, reference);
+  if (!pathIsInside(root, absolute)) {
+    files.push({ name: reference, content: "[outside-project]" });
+    return files;
+  }
+  files.push({
+    name: path.relative(root, absolute).replace(/\\/g, "/"),
+    content: fs.existsSync(absolute)
+      ? withoutSection(readText(absolute), "Workflow Decision")
+      : "[missing]"
+  });
+  return files;
+}
+
+export function canonicalDecisionEvidenceStatus(root, ctx, state, decision, event) {
+  const config = DECISION_EVIDENCE_FILES[decision];
+  if (!config || !(DECISION_TRANSITIONS[decision] || []).includes(event)) {
+    return { ok: false, reason: `unsupported decision transition: ${decision}/${event}` };
+  }
+  const contextDir = ctxFor(root, ctx);
+  const evidenceMarkdown = readText(path.join(contextDir, config.evidenceFile));
+  const parsed = sectionFields(evidenceMarkdown, "Workflow Decision");
+  if (parsed.duplicates.length) {
+    return { ok: false, reason: `Workflow Decision has duplicate field(s): ${parsed.duplicates.join(", ")}` };
+  }
+  if (parsed.invalid.length) {
+    return { ok: false, reason: "Workflow Decision must contain only exact '- key: value' fields" };
+  }
+  const fields = parsed.fields;
+  for (const name of ["schema", "decision", "transition", "task_id", "task_generation", "target_hash"]) {
+    if (!fields[name]) return { ok: false, reason: `Workflow Decision missing field: ${name}` };
+  }
+  if (fields.schema !== "dong-skills.workflow-decision.v1") {
+    return { ok: false, reason: `Workflow Decision schema mismatch: ${fields.schema}` };
+  }
+  if (fields.decision !== decision) {
+    return { ok: false, reason: `Workflow Decision decision mismatch: ${fields.decision}` };
+  }
+  if (fields.transition !== event) {
+    return { ok: false, reason: `Workflow Decision transition mismatch: ${fields.transition}` };
+  }
+  if (fields.task_id !== state.task_id || String(fields.task_generation) !== String(state.task_generation)) {
+    return { ok: false, reason: "Workflow Decision task identity mismatch" };
+  }
+  const files = canonicalDecisionTargetFiles(root, contextDir, decision);
+  const targetHash = stableFingerprint({
+    task_id: state.task_id,
+    task_generation: String(state.task_generation),
+    decision,
+    files
+  });
+  if (fields.target_hash !== targetHash) {
+    return { ok: false, reason: "Workflow Decision target_hash does not match the current decision target" };
+  }
+  return { ok: true, reason: "canonical Workflow Decision evidence matches" };
+}
+
+const DECISION_EVENTS = new Set(Object.values(DECISION_TRANSITIONS).flat());
+
+function decisionForEvidenceWrite(state, event) {
+  const pending = String(state.decision_required || "none");
+  if (pending !== "none") {
+    if ((DECISION_TRANSITIONS[pending] || []).includes(event)) return pending;
+    throw new Error(`Cannot record decision for ${event}: pending decision ${pending} allows only ${(DECISION_TRANSITIONS[pending] || []).join(", ") || "no registered transition"}`);
+  }
+  const candidates = Object.entries(DECISION_TRANSITIONS)
+    .filter(([, events]) => events.includes(event))
+    .map(([decision]) => decision);
+  if (candidates.length !== 1) {
+    throw new Error(`Cannot record decision for ${event}: no unambiguous pending decision is recorded`);
+  }
+  return candidates[0];
+}
+
+export function writeCanonicalDecisionEvidence(root, ctx, event) {
+  return withWorkflowStateLock(root, ctx, () => {
+    const state = loadWorkflowState(root, ctx);
+    const decision = decisionForEvidenceWrite(state, event);
+    const config = DECISION_EVIDENCE_FILES[decision];
+    const contextDir = ctxFor(root, ctx);
+    const evidenceFile = path.join(contextDir, config.evidenceFile);
+    const original = readText(evidenceFile);
+    const base = withoutSection(original, "Workflow Decision");
+    const files = canonicalDecisionTargetFiles(
+      root,
+      contextDir,
+      decision,
+      new Map([[config.evidenceFile, base]])
+    );
+    const targetHash = stableFingerprint({
+      task_id: state.task_id,
+      task_generation: String(state.task_generation),
+      decision,
+      files
+    });
+    const markdown = replaceSection(base, "Workflow Decision", [
+      "- schema: dong-skills.workflow-decision.v1",
+      `- decision: ${decision}`,
+      `- transition: ${event}`,
+      `- task_id: ${state.task_id}`,
+      `- task_generation: ${state.task_generation}`,
+      `- target_hash: ${targetHash}`
+    ].join("\n"));
+
+    try {
+      writeTextAtomic(evidenceFile, markdown);
+      const status = canonicalDecisionEvidenceStatus(root, contextDir, state, decision, event);
+      if (!status.ok) throw new Error(status.reason);
+    } catch (error) {
+      writeTextAtomic(evidenceFile, original);
+      throw error;
+    }
+
+    return {
+      decision,
+      event,
+      evidenceFile,
+      targetHash
+    };
+  });
+}
+
+function decisionForTransition(state, event) {
+  if ((DECISION_TRANSITIONS[state.decision_required] || []).includes(event)) {
+    return state.decision_required;
+  }
+  const candidates = Object.entries(DECISION_TRANSITIONS)
+    .filter(([, events]) => events.includes(event))
+    .map(([decision]) => decision);
+  return candidates.length === 1 ? candidates[0] : "";
+}
+
+function applyDecisionDocumentResolution(root, ctx, state, event) {
+  const contextDir = ctxFor(root, ctx);
+  const changes = [];
+  const updateFile = (name, update) => {
+    const file = path.join(contextDir, name);
+    const before = readText(file);
+    const after = update(before);
+    if (after === before) return;
+    writeTextAtomic(file, after);
+    changes.push({ file, before });
+  };
+  if (DECISION_EVENTS.has(event)) {
+    const decision = decisionForTransition(state, event);
+    const evidenceFile = DECISION_EVIDENCE_FILES[decision]?.evidenceFile;
+    if (evidenceFile) {
+      updateFile(evidenceFile, (markdown) => withoutSection(markdown, "Workflow Decision"));
+    }
+  }
+  if (event === "spec-approved" || event === "spec-skipped") {
+    const status = event === "spec-approved" ? "approved" : "skipped";
+    updateFile(REQUIRED_FILES.spec, (markdown) => replaceSection(markdown, "Approval Status", [
+      `- status: ${status}`,
+      "- approved_by: user"
+    ].join("\n")));
+  } else if (event === "execution-approved-traditional" || event === "execution-approved-goal") {
+    const mode = event === "execution-approved-goal" ? "codex-goal" : "traditional";
+    updateFile(REQUIRED_FILES.plan, (markdown) => replaceSection(
+      replaceSection(markdown, "Execution Approval", [
+        "- status: approved",
+        "- approved_by: user",
+        `- mode: ${mode}`
+      ].join("\n")),
+      "Execution Mode",
+      `- mode: ${mode}`
+    ));
+  } else if (["brainstorming-start", "spec-living"].includes(event)) {
+    updateFile(REQUIRED_FILES.spec, (markdown) => replaceSection(
+      withoutSection(markdown, "Workflow Decision"),
+      "Approval Status",
+      "- status: living-draft"
+    ));
+    updateFile(REQUIRED_FILES.plan, (markdown) => replaceSection(
+      replaceSection(withoutSection(markdown, "Workflow Decision"), "Execution Approval", "- status: pending"),
+      "Execution Mode",
+      "- mode: pending"
+    ));
+  } else if (event === "plan-start") {
+    updateFile(REQUIRED_FILES.plan, (markdown) => replaceSection(
+      replaceSection(withoutSection(markdown, "Workflow Decision"), "Execution Approval", "- status: pending"),
+      "Execution Mode",
+      "- mode: pending"
+    ));
+  }
+  if (!changes.length) return null;
+  return () => {
+    for (const { file, before } of changes.reverse()) writeTextAtomic(file, before);
+  };
+}
 
 const FIELD_ORDER = [
   "workflow",
@@ -54,7 +280,7 @@ const FIELD_ORDER = [
 const ALLOWED = {
   workflow: ["standard", "hotfix", "tweak"],
   work_lane: ["lane-0", "lane-1", "lane-2", "lane-3"],
-  document_hash_mode: ["legacy-v0", "normalized-v1"],
+  document_hash_mode: ["legacy-v0", "normalized-v1", "approval-contract-v2"],
   phase: [
     "discovery",
     "wayfinding",
@@ -142,7 +368,7 @@ export function defaultWorkflowState() {
     work_lane: "lane-1",
     task_id: "task-1",
     task_generation: "1",
-    document_hash_mode: "normalized-v1",
+    document_hash_mode: "approval-contract-v2",
     phase: "discovery",
     next_skill: "codex-codebase-onboarding",
     auto_next: "true",
@@ -326,7 +552,7 @@ export function migrateWorkflowState(root, ctx) {
     if (!parsed.approved_plan_hash &&
         migrated.plan_status === "approved" &&
         ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(migrated.execution_approval)) {
-      migrated.approved_plan_hash = documentHash(contextDir, REQUIRED_FILES.plan);
+      migrated.approved_plan_hash = approvedDocumentHash(root, contextDir, REQUIRED_FILES.plan, migrated.document_hash_mode);
     }
     if (migrated.document_hash_mode === "legacy-v0") {
       const rebindCurrentHash = (field, name) => {
@@ -389,6 +615,74 @@ export function migrateWorkflowState(root, ctx) {
         rebindCurrentHash("review_evidence_hash", REQUIRED_FILES.verification);
       }
       migrated.document_hash_mode = "normalized-v1";
+    }
+    if (migrated.document_hash_mode === "normalized-v1") {
+      if (migrated.plan_status === "approved" &&
+          ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(migrated.execution_approval)) {
+        const stored = String(parsed.approved_plan_hash || migrated.approved_plan_hash || "none");
+        if (/^[a-f0-9]{64}$/.test(stored)) {
+          const progressFile = path.join(contextDir, REQUIRED_FILES.plan);
+          const currentProgress = readText(progressFile);
+          const currentContract = planContractHash(root, contextDir, currentProgress);
+          let equivalent = normalizedTextHash(currentProgress) === stored;
+          if (!equivalent) {
+            const relative = path.relative(root, progressFile).replace(/\\/g, "/");
+            const stateRelative = path.relative(root, file).replace(/\\/g, "/");
+            try {
+              const commits = execFileSync("git", [
+                "log",
+                "--format=%H",
+                `-Sapproved_plan_hash: ${stored}`,
+                "--",
+                stateRelative
+              ], {
+                cwd: root,
+                encoding: "utf8",
+                stdio: ["ignore", "pipe", "ignore"]
+              }).trim().split(/\r?\n/).filter(Boolean);
+              for (const commit of commits) {
+                const recordedState = execFileSync("git", ["show", `${commit}:${stateRelative}`], {
+                  cwd: root,
+                  encoding: "utf8",
+                  stdio: ["ignore", "pipe", "ignore"]
+                });
+                if (!new RegExp(`^approved_plan_hash: ${stored}$`, "m").test(recordedState)) continue;
+                const recordedProgress = execFileSync("git", ["show", `${commit}:${relative}`], {
+                  cwd: root,
+                  encoding: "utf8",
+                  stdio: ["ignore", "pipe", "ignore"]
+                });
+                if (normalizedTextHash(recordedProgress) !== stored) continue;
+                const recordedContract = planContractHash(
+                  root,
+                  contextDir,
+                  recordedProgress,
+                  (linkedRelative) => {
+                    try {
+                      return execFileSync("git", ["show", `${commit}:${linkedRelative}`], {
+                        cwd: root,
+                        encoding: "utf8",
+                        stdio: ["ignore", "pipe", "ignore"]
+                      });
+                    } catch {
+                      return null;
+                    }
+                  }
+                );
+                if (recordedContract === currentContract) {
+                  equivalent = true;
+                  break;
+                }
+              }
+            } catch {}
+          }
+          if (!equivalent) {
+            throw new Error("Cannot migrate approved_plan_hash: current approved plan contract differs from the recorded approval; return to planning and obtain fresh approval");
+          }
+          migrated.approved_plan_hash = currentContract;
+        }
+      }
+      migrated.document_hash_mode = "approval-contract-v2";
     }
     const validation = validateWorkflowState(migrated);
     if (!validation.ok) {
@@ -492,6 +786,13 @@ function nonTemplateStatusText(text) {
 }
 
 function specApprovalFromMarkdown(markdown) {
+  const structured = sectionFields(markdown, "Approval Status");
+  if (!structured.duplicates.length && !structured.invalid.length && structured.fields.status) {
+    if (["living-draft", "pending-approval", "approved", "skipped", "mechanical-exception"].includes(structured.fields.status)) {
+      return structured.fields.status;
+    }
+    return "unknown";
+  }
   const approval = nonTemplateStatusText(sectionContent(markdown, "Approval Status"));
   if (!approval) return "unknown";
   if (/living draft|not approved|未批准|草稿/.test(approval)) return "living-draft";
@@ -503,6 +804,13 @@ function specApprovalFromMarkdown(markdown) {
 }
 
 function planApprovalFromMarkdown(markdown) {
+  const structured = sectionFields(markdown, "Execution Approval");
+  if (!structured.duplicates.length && !structured.invalid.length && structured.fields.status) {
+    if (structured.fields.status === "pending") return "pending";
+    if (structured.fields.status === "approved" && structured.fields.mode === "traditional") return "approved-traditional";
+    if (structured.fields.status === "approved" && structured.fields.mode === "codex-goal") return "approved-goal";
+    return "unknown";
+  }
   const approval = nonTemplateStatusText(sectionContent(markdown, "Execution Approval"));
   if (!approval) return "unknown";
   if (/pending|not approved|尚未批准|未批准|待.*批准|等待.*批准/.test(approval)) return "pending";
@@ -513,6 +821,11 @@ function planApprovalFromMarkdown(markdown) {
 }
 
 function planModeFromMarkdown(markdown) {
+  const structured = sectionFields(markdown, "Execution Mode");
+  if (!structured.duplicates.length && !structured.invalid.length && structured.fields.mode) {
+    if (["pending", "traditional", "codex-goal"].includes(structured.fields.mode)) return structured.fields.mode;
+    return "unknown";
+  }
   const mode = nonTemplateStatusText(sectionContent(markdown, "Execution Mode"));
   if (!mode) return "unknown";
   if (/pending|待定|未定|尚未/.test(mode)) return "pending";
@@ -643,11 +956,11 @@ export function workflowConsistencyStatus(root, ctx, state = null) {
   }
   if (current.plan_status === "approved" &&
       ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(current.execution_approval)) {
-    const currentPlanHash = documentHash(contextDir, REQUIRED_FILES.plan);
+    const currentPlanHash = approvedDocumentHash(root, contextDir, REQUIRED_FILES.plan, current.document_hash_mode);
     if (!/^[a-f0-9]{64}$/.test(String(current.approved_plan_hash || ""))) {
       issues.push("state mismatch: approved plan is missing approved_plan_hash; migrate or obtain fresh execution approval");
     } else if (currentPlanHash !== current.approved_plan_hash) {
-      issues.push("state mismatch: plan-progress.md changed after execution approval; return to planning and obtain fresh approval");
+      issues.push("state mismatch: approved plan contract changed after execution approval; return to planning and obtain fresh approval");
     }
   }
   if (["traditional", "codex-goal"].includes(planMode) && current.execution_mode !== "pending" && planMode !== current.execution_mode) {
@@ -1069,6 +1382,17 @@ function transitionWorkflowStateUnlocked(root, ctx, event) {
     throw new Error(`Cannot transition ${event} from complete; run workflow-state transition new-task`);
   }
 
+  if (DECISION_EVENTS.has(event)) {
+    const decision = decisionForTransition(state, event);
+    if (!decision) {
+      throw new Error(`Cannot transition ${event}: no unambiguous pending decision is recorded`);
+    }
+    const evidence = canonicalDecisionEvidenceStatus(root, ctx, state, decision, event);
+    if (!evidence.ok) {
+      throw new Error(`Cannot transition ${event}: ${evidence.reason}`);
+    }
+  }
+
   switch (event) {
     case "work-lane-0":
     case "work-lane-1":
@@ -1243,7 +1567,7 @@ function transitionWorkflowStateUnlocked(root, ctx, event) {
         phase: "execution",
         next_skill: "executing-plans",
         plan_status: "approved",
-        approved_plan_hash: documentHash(ctxFor(root, ctx), REQUIRED_FILES.plan),
+        approved_plan_hash: approvedDocumentHash(root, ctxFor(root, ctx), REQUIRED_FILES.plan, state.document_hash_mode),
         execution_mode: "traditional",
         execution_approval: "approved-traditional",
         loop_review_status: "not-required",
@@ -1274,7 +1598,7 @@ function transitionWorkflowStateUnlocked(root, ctx, event) {
         phase: "execution",
         next_skill: "executing-plans",
         plan_status: "approved",
-        approved_plan_hash: documentHash(ctxFor(root, ctx), REQUIRED_FILES.plan),
+        approved_plan_hash: approvedDocumentHash(root, ctxFor(root, ctx), REQUIRED_FILES.plan, state.document_hash_mode),
         execution_mode: "codex-goal",
         execution_approval: "approved-goal",
         loop_review_status: "approved",
@@ -1517,7 +1841,15 @@ function transitionWorkflowStateUnlocked(root, ctx, event) {
   }
 
   let rollbackTaskReset = null;
+  let rollbackDecisionDocument = null;
   try {
+    rollbackDecisionDocument = applyDecisionDocumentResolution(root, ctx, state, event);
+    if (event === "spec-approved") {
+      next.approved_spec_hash = documentHash(ctxFor(root, ctx), REQUIRED_FILES.spec);
+    }
+    if (["execution-approved-traditional", "execution-approved-goal"].includes(event)) {
+      next.approved_plan_hash = approvedDocumentHash(root, ctxFor(root, ctx), REQUIRED_FILES.plan, next.document_hash_mode);
+    }
     if (event === "new-task") {
       rollbackTaskReset = resetTaskScopedContext(root, ctx, state, next);
       const handoffHash = workflowContextHash(root, ctx, false).combined;
@@ -1531,6 +1863,7 @@ function transitionWorkflowStateUnlocked(root, ctx, event) {
     saveWorkflowStateUnlocked(root, ctx, next);
     return next;
   } catch (error) {
+    if (rollbackDecisionDocument) rollbackDecisionDocument();
     if (rollbackTaskReset) rollbackTaskReset();
     throw error;
   }
@@ -1662,9 +1995,12 @@ function fileHash(file) {
   return normalizedTextHash(readText(file));
 }
 
+function normalizedText(text) {
+  return String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+}
+
 function normalizedTextHash(text) {
-  const normalized = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
-  return createHash("sha256").update(normalized, "utf8").digest("hex");
+  return createHash("sha256").update(normalizedText(text), "utf8").digest("hex");
 }
 
 function rawFileHash(file) {
@@ -1674,6 +2010,66 @@ function rawFileHash(file) {
 function documentHash(contextDir, name) {
   const file = path.join(contextDir, name);
   return fs.existsSync(file) ? fileHash(file) : "none";
+}
+
+function canonicalPlanMarkdown(markdown) {
+  return normalizedText(withoutSection(
+    withoutSection(
+      withoutSection(markdown, "Workflow Decision"),
+      "Current Step"
+    ),
+    "Checkpoints"
+  )).replace(/^(\s*[-*]\s+)\[[ xX]\]/gm, "$1[ ]");
+}
+
+function planReferenceFromMarkdown(markdown) {
+  const section = sectionContent(String(markdown || ""), "Active Plan");
+  const candidates = [
+    ...[...section.matchAll(/\[[^\]]+\]\(([^)]+\.md)\)/gi)].map((match) => match[1]),
+    ...[...section.matchAll(/`([^`]+\.md)`/gi)].map((match) => match[1]),
+    section.match(/(?:^|\s)([A-Za-z0-9_.][^\s`'"<>]*\.md)(?:\s|$)/i)?.[1]
+  ].filter(Boolean);
+  return String(candidates[0] || "").trim().replace(/^<|>$/g, "").replace(/\\/g, "/");
+}
+
+function planContractEntries(root, contextDir, progressMarkdown, linkedReader = null) {
+  const entries = [{
+    name: `.codex-context/${REQUIRED_FILES.plan}`,
+    content: canonicalPlanMarkdown(progressMarkdown)
+  }];
+  const reference = planReferenceFromMarkdown(progressMarkdown);
+  if (!reference) return entries;
+  const absolute = path.isAbsolute(reference) ? path.resolve(reference) : path.resolve(root, reference);
+  if (!pathIsInside(root, absolute)) {
+    entries.push({ name: reference, content: "[outside-project]" });
+    return entries;
+  }
+  const relative = path.relative(root, absolute).replace(/\\/g, "/");
+  let linked = null;
+  if (linkedReader) linked = linkedReader(relative, absolute);
+  else if (fs.existsSync(absolute)) linked = readText(absolute);
+  entries.push({
+    name: relative,
+    content: linked === null || linked === undefined ? "[missing]" : canonicalPlanMarkdown(linked)
+  });
+  return entries;
+}
+
+function planContractHash(root, contextDir, progressMarkdown = null, linkedReader = null) {
+  const markdown = progressMarkdown === null
+    ? readText(path.join(contextDir, REQUIRED_FILES.plan))
+    : progressMarkdown;
+  return stableFingerprint({
+    schema: "dong-skills.plan-approval-contract.v1",
+    files: planContractEntries(root, contextDir, markdown, linkedReader)
+  });
+}
+
+function approvedDocumentHash(root, contextDir, name, mode = "approval-contract-v2") {
+  if (name === REQUIRED_FILES.plan && mode === "approval-contract-v2") {
+    return planContractHash(root, contextDir);
+  }
+  return documentHash(contextDir, name);
 }
 
 export function workflowContextHash(root, ctx, write = false) {

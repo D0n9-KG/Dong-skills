@@ -64,6 +64,50 @@ function workflowTransitionInput(event, toolUseId) {
   };
 }
 
+function workflowField(project, name) {
+  const state = fs.readFileSync(path.join(project, ".codex-context", "workflow-state.yaml"), "utf8");
+  return state.match(new RegExp(`^${name}:\\s*(.+)$`, "m"))?.[1]?.trim() || "";
+}
+
+function stripWorkflowDecision(markdown) {
+  return String(markdown || "")
+    .replace(/(?:^|\n)## Workflow Decision\s*\n[\s\S]*?(?=\n## |$)/, "")
+    .replace(/\s+$/, "") + "\n";
+}
+
+function canonicalDecisionTargetHash(project, decision) {
+  const names = {
+    "written-spec-approval": ["spec.md"],
+    "execution-approval": ["plan-progress.md"],
+    "verification-gap-acceptance": ["verification.md"],
+    "verification-failure-choice": ["verification.md"],
+    "user-choice": ["current-state.md", "handoff-summary.md"]
+  }[decision];
+  const files = names.map((name) => ({
+    name,
+    content: stripWorkflowDecision(fs.readFileSync(path.join(project, ".codex-context", name), "utf8"))
+  }));
+  return createHash("sha256").update(JSON.stringify({
+    task_id: workflowField(project, "task_id"),
+    task_generation: workflowField(project, "task_generation"),
+    decision,
+    files
+  }), "utf8").digest("hex");
+}
+
+function writeCanonicalDecision(project, fileName, decision, transition, overrides = {}) {
+  const file = path.join(project, ".codex-context", fileName);
+  const base = stripWorkflowDecision(fs.readFileSync(file, "utf8"));
+  write(file, base + `\n## Workflow Decision
+- schema: dong-skills.workflow-decision.v1
+- decision: ${decision}
+- transition: ${overrides.transition || transition}
+- task_id: ${overrides.task_id || workflowField(project, "task_id")}
+- task_generation: ${overrides.task_generation || workflowField(project, "task_generation")}
+- target_hash: ${overrides.target_hash || canonicalDecisionTargetHash(project, decision)}
+`);
+}
+
 function runWorkflowChild(project, event) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [workflowState, project, "transition", event], {
@@ -113,7 +157,7 @@ test("workflow transitions require recovery from the same session", () => {
   assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
 });
 
-test("approval transitions require a matching user decision receipt", () => {
+test("approval prompts remain advisory until canonical decision evidence is written", () => {
   const project = tempProject();
   readyHealthFixture(project);
   const specFile = path.join(project, ".codex-context", "spec.md");
@@ -170,14 +214,15 @@ Wait for written spec approval.
     ...workflowTransitionInput("spec-approved", "spec-approve-no-prompt")
   });
   assert.equal(noDecision.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(noDecision.hookSpecificOutput.permissionDecisionReason, /user decision receipt/i);
+  assert.match(noDecision.hookSpecificOutput.permissionDecisionReason, /canonical Workflow Decision/i);
 
   const prompt = runHook(project, {
     hook_event_name: "UserPromptSubmit",
     session_id: "approval-session",
     prompt: "可以，批准这个书面规格。"
   });
-  assert.match(prompt.hookSpecificOutput?.additionalContext || "", /approval|批准/i);
+  assert.match(prompt.hookSpecificOutput?.additionalContext || "", /advisory/i);
+  assert.doesNotMatch(prompt.hookSpecificOutput?.additionalContext || "", /recorded user approval/i);
 
   runHook(project, {
     hook_event_name: "UserPromptSubmit",
@@ -189,21 +234,346 @@ Wait for written spec approval.
     ...workflowTransitionInput("spec-approved", "spec-approve-after-retraction")
   });
   assert.equal(retracted.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(retracted.hookSpecificOutput.permissionDecisionReason, /user decision receipt/i);
+  assert.match(retracted.hookSpecificOutput.permissionDecisionReason, /canonical Workflow Decision/i);
 
   runHook(project, {
     hook_event_name: "UserPromptSubmit",
     session_id: "approval-session",
     prompt: "修改已经确认，现在批准这个书面规格。"
   });
-  const approved = runHook(project, {
+  const promptOnly = runHook(project, {
     session_id: "approval-session",
     ...workflowTransitionInput("spec-approved", "spec-approve-with-prompt")
+  });
+  assert.equal(promptOnly.hookSpecificOutput?.permissionDecision, "deny");
+
+  writeCanonicalDecision(project, "spec.md", "written-spec-approval", "spec-approved");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, "approval-session", "recovery-after-canonical-decision");
+  const approved = runHook(project, {
+    session_id: "approval-session",
+    ...workflowTransitionInput("spec-approved", "spec-approve-with-canonical-evidence")
   });
   assert.notEqual(approved.hookSpecificOutput?.permissionDecision, "deny");
 });
 
-test("automatic compaction preserves an unconsumed session decision after recovery", () => {
+test("canonical decision evidence authorizes only the matching task, transition, and target hash", () => {
+  const prepareSpecDecision = (overrides = null) => {
+    const project = tempProject();
+    readyHealthFixture(project);
+    const specFile = path.join(project, ".codex-context", "spec.md");
+    write(specFile, fs.readFileSync(specFile, "utf8").replace(
+      /(## (?:Approval Status|审批状态)\s*\r?\n)[^\r\n]*/,
+      "$1Pending user approval."
+    ));
+    write(path.join(project, ".codex-context", "plan-progress.md"), `# Plan Progress
+
+## Spec Approval
+Pending user approval.
+
+## Execution Approval
+Pending user approval.
+
+## Artifact Readiness
+requirements-only
+
+## Execution Mode
+Pending.
+
+## Current Step
+Wait for written spec approval.
+`);
+    write(path.join(project, ".codex-context", "verification.md"),
+      "# Verification\n\n## Not Yet Verified\n- Implementation has not started.\n");
+    setState(project, {
+      phase: "spec",
+      next_skill: "brainstorming",
+      decision_required: "written-spec-approval",
+      spec_status: "pending-approval",
+      plan_status: "not-started",
+      execution_mode: "pending",
+      execution_approval: "pending"
+    });
+    if (overrides) {
+      writeCanonicalDecision(project, "spec.md", "written-spec-approval", "spec-approved", overrides);
+    }
+    execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    const sessionId = `canonical-spec-${Math.random()}`;
+    runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
+    acknowledgeSessionRecovery(project, sessionId);
+    return { project, sessionId };
+  };
+
+  for (const [label, overrides] of [
+    ["missing", null],
+    ["wrong task", { task_id: "task-other" }],
+    ["wrong transition", { transition: "spec-skipped" }],
+    ["wrong hash", { target_hash: "0".repeat(64) }]
+  ]) {
+    const { project, sessionId } = prepareSpecDecision(overrides);
+    const denied = runHook(project, {
+      session_id: sessionId,
+      ...workflowTransitionInput("spec-approved", `canonical-spec-${label}`)
+    });
+    assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny", label);
+    assert.throws(() => {
+      execFileSync(process.execPath, [workflowState, project, "transition", "spec-approved"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+    }, /Command failed/, label);
+  }
+
+  const correctSpec = prepareSpecDecision({});
+  const specAllowed = runHook(correctSpec.project, {
+    session_id: correctSpec.sessionId,
+    ...workflowTransitionInput("spec-approved", "canonical-spec-correct")
+  });
+  assert.notEqual(specAllowed.hookSpecificOutput?.permissionDecision, "deny");
+  execFileSync(process.execPath, [workflowState, correctSpec.project, "transition", "spec-approved"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const approvedSpecState = fs.readFileSync(path.join(correctSpec.project, ".codex-context", "workflow-state.yaml"), "utf8");
+  assert.match(approvedSpecState, /^spec_status: approved$/m);
+  assert.match(fs.readFileSync(path.join(correctSpec.project, ".codex-context", "spec.md"), "utf8"), /- status: approved/);
+
+  const cases = [
+    {
+      decision: "execution-approval",
+      transition: "execution-approved-traditional",
+      file: "plan-progress.md",
+      state: {
+        phase: "planning",
+        next_skill: "writing-plans",
+        decision_required: "execution-approval",
+        spec_status: "approved",
+        plan_status: "drafted",
+        execution_mode: "pending",
+        execution_approval: "pending"
+      }
+    },
+    {
+      decision: "verification-gap-acceptance",
+      transition: "verification-gap-accepted",
+      file: "verification.md",
+      state: {
+        phase: "verification",
+        next_skill: "codex-verification-loop",
+        decision_required: "verification-gap-acceptance",
+        verify_result: "gap-recorded"
+      }
+    },
+    {
+      decision: "verification-failure-choice",
+      transition: "verification-retry",
+      file: "verification.md",
+      state: {
+        phase: "debugging",
+        next_skill: "systematic-debugging",
+        decision_required: "verification-failure-choice",
+        verify_result: "fail"
+      }
+    },
+    {
+      decision: "user-choice",
+      transition: "resume",
+      file: "handoff-summary.md",
+      state: {
+        phase: "blocked",
+        next_skill: "using-superpowers",
+        decision_required: "user-choice",
+        resume_phase: "execution",
+        resume_skill: "executing-plans"
+      }
+    }
+  ];
+
+  for (const item of cases) {
+    const project = tempProject();
+    readyHealthFixture(project);
+    write(path.join(project, ".codex-context", "verification.md"), item.decision.startsWith("verification-")
+      ? "# Verification\n\n## Commands Run\n- The fixture recorded the unresolved verification result.\n\n## Not Yet Verified\n- The recorded gap or failure still requires the selected resolution.\n"
+      : "# Verification\n\n## Not Yet Verified\n- Implementation or follow-up remains active.\n");
+    if (item.decision === "execution-approval") {
+      const planFile = path.join(project, ".codex-context", "plan-progress.md");
+      write(planFile, fs.readFileSync(planFile, "utf8").replace(
+        /(## (?:Execution Approval|执行审批)\s*\r?\n)[^\r\n]*/,
+        "$1Pending user approval."
+      ));
+    }
+    setState(project, item.state);
+    syncApprovalHashes(project);
+    writeCanonicalDecision(project, item.file, item.decision, item.transition);
+    execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    const sessionId = `canonical-${item.transition}`;
+    runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
+    acknowledgeSessionRecovery(project, sessionId);
+    const allowed = runHook(project, {
+      session_id: sessionId,
+      ...workflowTransitionInput(item.transition, `canonical-${item.transition}`)
+    });
+    assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny", item.transition);
+    execFileSync(process.execPath, [workflowState, project, "transition", item.transition], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }
+});
+
+test("execution decisions bind linked plan substance while allowing later progress metadata", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const ctx = path.join(project, ".codex-context");
+  const detailedPlan = path.join(project, "docs", "codex", "plans", "linked-plan.md");
+  write(detailedPlan, `# Linked Plan
+
+## Tasks
+- [ ] Implement the approved linked-plan task.
+
+## Current Step
+- Start implementation.
+
+## Checkpoints
+### Checkpoint 1
+- Pending.
+`);
+  write(path.join(ctx, "plan-progress.md"), `# Plan Progress
+
+## Current Plan
+- Detailed plan: \`docs/codex/plans/linked-plan.md\`.
+
+## Spec Approval
+- status: approved
+
+## Execution Approval
+- status: pending
+
+## Artifact Readiness
+- status: implementation-ready
+
+## Execution Mode
+- mode: pending
+
+## Work Class / Risk Lane
+- Lane 2.
+
+## Runtime Constraints
+- Follow the linked plan.
+
+## Tasks
+- [ ] Implement the approved linked-plan task.
+
+## Current Step
+- Start implementation.
+
+## Checkpoints
+### Checkpoint 1
+- Pending.
+
+## Verification
+- Run linked-plan tests.
+
+## Out Of Scope
+- Remote service replacement.
+`);
+  const specHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(ctx, "spec.md"), "utf8").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n"), "utf8")
+    .digest("hex");
+  write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
+work_lane: lane-2
+task_id: linked-plan-task
+task_generation: 1
+document_hash_mode: approval-contract-v2
+phase: planning
+next_skill: writing-plans
+auto_next: false
+decision_required: execution-approval
+spec_status: approved
+plan_status: drafted
+approved_spec_hash: ${specHash}
+approved_plan_hash: none
+execution_mode: pending
+execution_approval: pending
+verify_result: pending
+review_status: pending
+checkpoint_status: pending
+resume_phase: none
+resume_skill: none
+handoff_hash: null
+updated_at: fixture
+note: linked plan fixture
+`);
+
+  execFileSync(process.execPath, [workflowState, project, "decision", "execution-approved-traditional"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  write(
+    detailedPlan,
+    fs.readFileSync(detailedPlan, "utf8").replace(
+      "Implement the approved linked-plan task.",
+      "Replace the implementation with an unapproved remote service."
+    )
+  );
+  assert.throws(() => {
+    execFileSync(process.execPath, [workflowState, project, "transition", "execution-approved-traditional"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  }, /target_hash does not match/i);
+
+  write(
+    detailedPlan,
+    fs.readFileSync(detailedPlan, "utf8").replace(
+      "Replace the implementation with an unapproved remote service.",
+      "Implement the approved linked-plan task."
+    )
+  );
+  execFileSync(process.execPath, [workflowState, project, "decision", "execution-approved-traditional"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  execFileSync(process.execPath, [workflowState, project, "transition", "execution-approved-traditional"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  write(
+    detailedPlan,
+    fs.readFileSync(detailedPlan, "utf8")
+      .replace("- [ ] Implement the approved linked-plan task.", "- [x] Implement the approved linked-plan task.")
+      .replace("- Start implementation.", "- Run verification.")
+      .replace("### Checkpoint 1\n- Pending.", "### Checkpoint 1\n- Task verified.")
+  );
+  const status = execFileSync(process.execPath, [workflowState, project, "status"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(status, /Workflow state ok/);
+});
+
+test("automatic compaction preserves canonical decision evidence but still requires recovery", () => {
   const project = tempProject();
   readyHealthFixture(project);
   const specFile = path.join(project, ".codex-context", "spec.md");
@@ -247,6 +617,7 @@ Wait for written spec approval.
     execution_mode: "pending",
     execution_approval: "pending"
   });
+  writeCanonicalDecision(project, "spec.md", "written-spec-approval", "spec-approved");
   execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
     cwd: root,
     encoding: "utf8",
@@ -256,11 +627,6 @@ Wait for written spec approval.
   const sessionId = "approval-compact-session";
   runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
   acknowledgeSessionRecovery(project, sessionId);
-  runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: sessionId,
-    prompt: "可以，批准这个书面规格。"
-  });
 
   runHook(project, {
     hook_event_name: "PostCompact",
@@ -287,7 +653,7 @@ Wait for written spec approval.
   assert.notEqual(approved.hookSpecificOutput?.permissionDecision, "deny");
 });
 
-test("approval parsing does not treat negated modes or partial skips as approval", () => {
+test("approval wording never creates transition authority", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setState(project, {
@@ -336,8 +702,8 @@ test("approval parsing does not treat negated modes or partial skips as approval
     session_id: "semantic-approval-session",
     prompt: "不要用 Goal mode，可以按传统方式执行。"
   });
-  assert.match(executionPrompt.hookSpecificOutput?.additionalContext || "", /execution-approved-traditional/);
-  assert.doesNotMatch(executionPrompt.hookSpecificOutput?.additionalContext || "", /execution-approved-goal/);
+  assert.match(executionPrompt.hookSpecificOutput?.additionalContext || "", /advisory/i);
+  assert.doesNotMatch(executionPrompt.hookSpecificOutput?.additionalContext || "", /execution-approved-(?:traditional|goal)/);
 
   const ambiguousExecutionPrompt = runHook(project, {
     hook_event_name: "UserPromptSubmit",
@@ -365,7 +731,7 @@ test("approval parsing does not treat negated modes or partial skips as approval
   }
 });
 
-test("plan-then-execute intent survives new-task and authorizes traditional execution", () => {
+test("plan-then-execute wording remains advisory and execution uses canonical evidence", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setState(project, {
@@ -382,7 +748,8 @@ test("plan-then-execute intent survives new-task and authorizes traditional exec
     session_id: "intent-session",
     prompt: "请先完成计划，然后按 Traditional task-by-task execution 直接执行，不用再等我确认。"
   });
-  assert.match(intent.hookSpecificOutput?.additionalContext || "", /plan-then-execute/i);
+  assert.match(intent.hookSpecificOutput?.additionalContext || "", /advisory/i);
+  assert.doesNotMatch(intent.hookSpecificOutput?.additionalContext || "", /recorded plan-then-execute/i);
 
   execFileSync(process.execPath, [workflowState, project, "transition", "new-task"], {
     cwd: root,
@@ -402,7 +769,7 @@ test("plan-then-execute intent survives new-task and authorizes traditional exec
 Approved by user.
 
 ## Execution Approval
-plan-then-execute requested; Traditional task-by-task execution.
+Pending user approval.
 
 ## Artifact Readiness
 implementation-ready
@@ -468,6 +835,7 @@ Start execution.
     checkpoint_status: "pending"
   });
   syncApprovalHashes(project);
+  writeCanonicalDecision(project, "plan-progress.md", "execution-approval", "execution-approved-traditional");
   execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
     cwd: root,
     encoding: "utf8",
@@ -488,7 +856,7 @@ Start execution.
   assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
 });
 
-test("explicit skip-brainstorming intent authorizes spec-skipped without a second approval prompt", () => {
+test("skip-brainstorming wording remains advisory until canonical evidence is written", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setState(project, {
@@ -555,11 +923,25 @@ Determine whether brainstorming is skipped.
     session_id: sessionId,
     prompt: "需求和边界已经明确，跳过 brainstorming，直接进入计划。"
   });
-  assert.match(intent.hookSpecificOutput?.additionalContext || "", /spec-skipped/);
+  assert.match(intent.hookSpecificOutput?.additionalContext || "", /advisory/i);
+  assert.doesNotMatch(intent.hookSpecificOutput?.additionalContext || "", /recorded.*spec-skipped/i);
 
-  const allowed = runHook(project, {
+  const promptOnly = runHook(project, {
     session_id: sessionId,
     ...workflowTransitionInput("spec-skipped", "skip-with-intent")
+  });
+  assert.equal(promptOnly.hookSpecificOutput?.permissionDecision, "deny");
+
+  writeCanonicalDecision(project, "spec.md", "written-spec-approval", "spec-skipped");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, sessionId, "recovery-after-skip-decision");
+  const allowed = runHook(project, {
+    session_id: sessionId,
+    ...workflowTransitionInput("spec-skipped", "skip-with-canonical-evidence")
   });
   assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
   execFileSync(process.execPath, [workflowState, project, "transition", "spec-skipped"], {
@@ -623,16 +1005,30 @@ test("Lane 3 verification gaps require user acceptance and cannot skip review", 
     ...workflowTransitionInput("verification-gap-accepted", "gap-accept-no-prompt")
   });
   assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /user decision receipt/i);
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /canonical Workflow Decision/i);
 
-  runHook(project, {
+  const prompt = runHook(project, {
     hook_event_name: "UserPromptSubmit",
     session_id: "gap-session",
     prompt: "接受已记录的验证缺口，继续进入审查。"
   });
-  const allowed = runHook(project, {
+  assert.match(prompt.hookSpecificOutput?.additionalContext || "", /advisory/i);
+  const promptOnly = runHook(project, {
     session_id: "gap-session",
     ...workflowTransitionInput("verification-gap-accepted", "gap-accept-with-prompt")
+  });
+  assert.equal(promptOnly.hookSpecificOutput?.permissionDecision, "deny");
+
+  writeCanonicalDecision(project, "verification.md", "verification-gap-acceptance", "verification-gap-accepted");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, "gap-session", "recovery-after-gap-decision");
+  const allowed = runHook(project, {
+    session_id: "gap-session",
+    ...workflowTransitionInput("verification-gap-accepted", "gap-accept-with-canonical-evidence")
   });
   assert.notEqual(allowed.hookSpecificOutput?.permissionDecision, "deny");
   execFileSync(process.execPath, [workflowState, project, "transition", "verification-gap-accepted"], {
@@ -779,11 +1175,20 @@ test("rejecting a recorded verification gap returns the workflow to debugging", 
   const sessionId = "gap-rejected-session";
   runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
   acknowledgeSessionRecovery(project, sessionId);
-  runHook(project, {
+  const prompt = runHook(project, {
     hook_event_name: "UserPromptSubmit",
     session_id: sessionId,
     prompt: "不接受这个验证缺口，请继续修复并重试。"
   });
+  assert.match(prompt.hookSpecificOutput?.additionalContext || "", /advisory/i);
+
+  writeCanonicalDecision(project, "verification.md", "verification-gap-acceptance", "verification-retry");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  acknowledgeSessionRecovery(project, sessionId, "recovery-after-gap-retry-decision");
 
   const allowed = runHook(project, {
     session_id: sessionId,
@@ -864,7 +1269,7 @@ test("new-task archives and resets task-scoped context", () => {
   assert.match(status, /Workflow state ok/i);
 });
 
-test("new-task reset is recovery-ready and keeps the pending prompt obligation", () => {
+test("new-task reset is recovery-ready without carrying prompt obligations", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setState(project, {
@@ -898,83 +1303,46 @@ test("new-task reset is recovery-ready and keeps the pending prompt obligation",
   assert.doesNotMatch(state, /^handoff_hash: null$/m);
   assert.match(state, /^handoff_task_generation: 2$/m);
 
-  const marker = JSON.parse(
-    fs.readFileSync(path.join(project, ".codex-context", "discussion-state.json"), "utf8")
-  );
-  assert.equal(marker.status, "dirty");
-  assert.match(marker.prompt_excerpt, /开始新的复杂任务/);
-  assert.deepEqual(
-    [...marker.required_files].sort(),
-    ["current-state.md", "handoff-summary.md", "plan-progress.md", "spec.md"].sort()
-  );
+  const markerFile = path.join(project, ".codex-context", "discussion-state.json");
+  if (fs.existsSync(markerFile)) {
+    const marker = JSON.parse(fs.readFileSync(markerFile, "utf8"));
+    assert.equal(marker.status, "advisory");
+    assert.deepEqual(marker.required_files, []);
+  }
 });
 
-test("bare continuation prompts do not dirty five discussion documents", () => {
+test("all prompt paraphrases remain advisory and create no freshness requirements", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setWorkflowPhase(project, "planning", "writing-plans");
   const marker = path.join(project, ".codex-context", "discussion-state.json");
   fs.rmSync(marker, { force: true });
 
-  const output = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "继续"
-  });
-  assert.equal(fs.existsSync(marker), false);
-  assert.doesNotMatch(output.hookSpecificOutput?.additionalContext || "", /marked discussion state dirty/i);
-
-  const status = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "目前进展到哪了？"
-  });
-  assert.equal(fs.existsSync(marker), false);
-  assert.doesNotMatch(status.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
-
-  const coverageReview = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "复核吧，但是我好像没有看到Stop coverage"
-  });
-  assert.equal(fs.existsSync(marker), false);
-  assert.doesNotMatch(coverageReview.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
-
-  const projectOpsPolicy = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "补充一下，dong skills应该是起到辅助提醒的作用，如果现在的dong skills过于繁重反而会导致codex工作被限制，所以如果发现有这个问题，应该适当放宽限制，避免出现dong skills干扰codex工作的情况"
-  });
-  assert.equal(fs.existsSync(marker), false);
-  assert.doesNotMatch(projectOpsPolicy.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
-
-  const hookPolicy = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "如果 hooks 经常报没有必要的 dirty，就应放宽或删除不必要的 hooks"
-  });
-  assert.equal(fs.existsSync(marker), false);
-  assert.doesNotMatch(hookPolicy.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
-
-  const requestedBusinessFix = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "复核当前实验方法并修改评测指标"
-  });
-  assert.equal(fs.existsSync(marker), true);
-  assert.match(requestedBusinessFix.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
-
-  fs.rmSync(marker, { force: true });
-  const mixedProjectOpsAndBusiness = runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    session_id: "continue-session",
-    prompt: "调整 Dong Skills 后，把研究方法改成时序知识图谱"
-  });
-  assert.equal(fs.existsSync(marker), true);
-  assert.match(mixedProjectOpsAndBusiness.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
+  for (const prompt of [
+    "继续",
+    "目前进展到哪了？",
+    "复核吧，但是我好像没有看到Stop coverage",
+    "补充一下，dong skills应该是起到辅助提醒的作用，如果现在的dong skills过于繁重反而会导致codex工作被限制，所以如果发现有这个问题，应该适当放宽限制，避免出现dong skills干扰codex工作的情况",
+    "如果 hooks 经常报没有必要的 dirty，就应放宽或删除不必要的 hooks",
+    "已经重启，并打开hooks",
+    "复核当前实验方法并修改评测指标",
+    "调整 Dong Skills 后，把研究方法改成时序知识图谱"
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "UserPromptSubmit",
+      session_id: "continue-session",
+      prompt
+    });
+    assert.match(output.hookSpecificOutput?.additionalContext || "", /advisory/i, prompt);
+    const advisory = JSON.parse(fs.readFileSync(marker, "utf8"));
+    assert.equal(advisory.status, "advisory", prompt);
+    assert.equal(advisory.enforce_before_mutation, false, prompt);
+    assert.equal(advisory.requires_scope_reopen, false, prompt);
+    assert.deepEqual(advisory.required_files, [], prompt);
+  }
 });
 
-test("execution scope corrections block project mutations until scope is reopened", () => {
+test("scope prompts stay advisory while canonical spec drift forces scope reopening", () => {
   const project = tempProject();
   readyHealthFixture(project);
   setState(project, {
@@ -1066,14 +1434,11 @@ Continue implementation.
     session_id: sessionId,
     prompt: "把输出改成 JSON，并新增失败重试；先不要继续改代码。"
   });
-  assert.match(correction.hookSpecificOutput?.additionalContext || "", /execution|scope|范围/i);
+  assert.match(correction.hookSpecificOutput?.additionalContext || "", /advisory/i);
   const marker = JSON.parse(fs.readFileSync(markerFile, "utf8"));
-  assert.equal(marker.enforce_before_mutation, true);
-  assert.equal(marker.requires_scope_reopen, true);
-  assert.deepEqual(
-    [...marker.required_files].sort(),
-    ["current-state.md", "handoff-summary.md", "plan-progress.md", "spec.md"].sort()
-  );
+  assert.equal(marker.enforce_before_mutation, false);
+  assert.equal(marker.requires_scope_reopen, false);
+  assert.deepEqual(marker.required_files, []);
 
   runHook(project, {
     hook_event_name: "UserPromptSubmit",
@@ -1081,8 +1446,14 @@ Continue implementation.
     prompt: "以后这个 API 都返回 JSON。"
   });
   const durableProjectDirective = JSON.parse(fs.readFileSync(markerFile, "utf8"));
-  assert.equal(durableProjectDirective.enforce_before_mutation, true);
-  assert.equal(durableProjectDirective.requires_scope_reopen, true);
+  assert.equal(durableProjectDirective.enforce_before_mutation, false);
+  assert.equal(durableProjectDirective.requires_scope_reopen, false);
+
+  fs.appendFileSync(
+    path.join(project, ".codex-context", "spec.md"),
+    "\n## Pending Scope Revision\n- Return JSON and add retry behavior.\n",
+    "utf8"
+  );
 
   const denied = runHook(project, {
     hook_event_name: "PreToolUse",
@@ -1092,7 +1463,7 @@ Continue implementation.
     tool_input: { command: "Set-Content src/app.js 'changed'" }
   });
   assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /reopen|scope|范围|user directive/i);
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /spec\.md changed after written-spec approval|workflow state is not valid/i);
 
   const reopen = runHook(project, {
     session_id: sessionId,
@@ -1110,7 +1481,7 @@ Continue implementation.
   assert.match(state, /^execution_approval: pending$/m);
 });
 
-test("execution scope reductions and deferrals also require fresh approval", () => {
+test("execution scope wording never creates a hard gate by itself", () => {
   for (const prompt of [
     "登录这轮不用做了，先只做导出。",
     "权限系统放到下一轮。",
@@ -1129,9 +1500,10 @@ test("execution scope reductions and deferrals also require fresh approval", () 
     });
 
     const marker = JSON.parse(fs.readFileSync(markerFile, "utf8"));
-    assert.equal(marker.enforce_before_mutation, true, prompt);
-    assert.equal(marker.requires_scope_reopen, true, prompt);
-    assert.ok(marker.required_files.includes("spec.md"), prompt);
+    assert.equal(marker.status, "advisory", prompt);
+    assert.equal(marker.enforce_before_mutation, false, prompt);
+    assert.equal(marker.requires_scope_reopen, false, prompt);
+    assert.deepEqual(marker.required_files, [], prompt);
   }
 });
 
@@ -1287,7 +1659,7 @@ test("Wayfinder uses a formal workflow phase and returns through brainstorming",
   assert.match(state, /^spec_status: living-draft$/m);
 });
 
-test("Wayfinder decisions must refresh the active map before Stop", () => {
+test("Wayfinder prompts remain advisory and route-map updates are explicit", () => {
   const project = tempProject();
   readyHealthFixture(project);
   const contextRoot = path.join(project, ".codex-context");
@@ -1374,23 +1746,14 @@ Resolve the active Wayfinder frontier.
     prompt: "我决定采用分阶段发布，下一步调查迁移量。"
   });
   const marker = JSON.parse(fs.readFileSync(path.join(contextRoot, "discussion-state.json"), "utf8"));
-  assert.ok(marker.required_files.includes(wayfinderRelative));
+  assert.equal(marker.status, "advisory");
+  assert.deepEqual(marker.required_files, []);
 
-  for (const name of ["current-state.md", "handoff-summary.md"]) {
-    const file = path.join(contextRoot, name);
-    write(file, `${fs.readFileSync(file, "utf8")}\n- 最新路线决策已记录。\n`);
-  }
-  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  const blocked = runHook(project, {
+  const allowedBeforeMapEdit = runHook(project, {
     hook_event_name: "Stop",
     session_id: "wayfinder-map-refresh"
   });
-  assert.equal(blocked.decision, "block");
-  assert.match(blocked.reason, /docs[\\/]codex[\\/]wayfinder[\\/]route\.md/i);
+  assert.notEqual(allowedBeforeMapEdit.decision, "block", JSON.stringify(allowedBeforeMapEdit));
 
   write(
     wayfinderFile,
@@ -1398,6 +1761,10 @@ Resolve the active Wayfinder frontier.
       .replace("- None.", "- Use staged rollout.")
       .replace("- Choose the rollout.", "- Measure migration volume.")
   );
+  for (const name of ["current-state.md", "handoff-summary.md"]) {
+    const file = path.join(contextRoot, name);
+    write(file, `${fs.readFileSync(file, "utf8")}\n- 最新路线决策已记录。\n`);
+  }
   const workingNotes = path.join(contextRoot, "working-notes.md");
   write(
     workingNotes,

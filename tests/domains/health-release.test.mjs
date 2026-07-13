@@ -181,7 +181,7 @@ Fixture.
 - Fixture.
 
 ## Approval Status
-Approved by fixture.
+Approved by user.
 
 ## Truth Hierarchy
 - Fixture hierarchy.
@@ -225,7 +225,7 @@ Fixture.
 - Fixture.
 
 ## 审批状态
-Approved by fixture.
+Approved by user.
 
 ## 事实优先级
 - Fixture hierarchy.
@@ -252,7 +252,7 @@ Continue.
 Fixture.
 
 ## 规格审批
-Approved by fixture.
+Approved by user.
 
 ## 执行审批
 Approved by user for Traditional task-by-task execution.

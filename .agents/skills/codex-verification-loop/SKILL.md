@@ -54,8 +54,8 @@ When workflow state is available, update it after recording verification:
 
 `verification-gap-recorded` and `verification-fail` create blocking user decisions. Present mutually exclusive choices and do not continue modifying project files until the user chooses:
 
-- Accept the recorded gap and continue to review: after the matching user response, run `node .codex/hooks/project-ops.mjs workflow-state transition verification-gap-accepted`.
-- Reject the gap or choose another fix-and-verify cycle: after the matching user response, run `node .codex/hooks/project-ops.mjs workflow-state transition verification-retry`, then use `systematic-debugging`.
+- Accept the recorded gap and continue to review: after the matching user response, run `workflow-state decision verification-gap-accepted`, then `workflow-state transition verification-gap-accepted`.
+- Reject the gap or choose another fix-and-verify cycle: after the matching user response, run `workflow-state decision verification-retry`, then `workflow-state transition verification-retry` and use `systematic-debugging`.
 
 Run `workflow-state next` after recording the result and follow its `TRANSITIONS` output. Do not treat a vague "continue" as gap acceptance.
 

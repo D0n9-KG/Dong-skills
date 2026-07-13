@@ -26,7 +26,7 @@ When workflow state is available, record the chosen lane before phase-specific w
 node .codex/hooks/project-ops.mjs workflow-state transition work-lane-<0|1|2|3>
 ```
 
-For a genuine Lane 0 edit, record the compact scope and acceptance criterion, then run `workflow-state transition mechanical-exception` before the direct edit. If the user explicitly says to skip brainstorming for a clear multi-step task, record the compact scope and run `workflow-state transition spec-skipped`; this skip is task-scoped and does not approve execution.
+For a genuine Lane 0 edit, record the compact scope and acceptance criterion, then run `workflow-state transition mechanical-exception` before the direct edit. If the user explicitly says to skip brainstorming for a clear multi-step task, record the compact scope, run `workflow-state decision spec-skipped`, then run `workflow-state transition spec-skipped`; this skip is task-scoped and does not approve execution.
 
 Changing the lane during planning invalidates the existing plan approval and downstream verification/review/checkpoint evidence. Rebuild the plan at the new risk depth before execution.
 
@@ -66,7 +66,7 @@ Use the output contract:
 
 If the file is missing, run `codex-codebase-onboarding` or `node .codex/hooks/project-ops.mjs workflow-state init` before continuing. If the state conflicts with the latest user instruction, the latest user instruction wins, but repair it through a validated `workflow-state transition <event>` before moving on. Direct `workflow-state set` and direct edits to `workflow-state.yaml` are not normal workflow paths.
 
-When the recorded phase is `complete` and the user starts a distinct task, run `node .codex/hooks/project-ops.mjs workflow-state transition new-task` before discovery or brainstorming. This increments task identity and clears prior approvals, verification, review, checkpoint, and handoff hash state. When resuming from `blocked`, use `workflow-state transition resume`; it must restore the recorded `resume_phase` and `resume_skill`, not guess from chat memory.
+When the recorded phase is `complete` and the user starts a distinct task, run `node .codex/hooks/project-ops.mjs workflow-state transition new-task` before discovery or brainstorming. This increments task identity and clears prior approvals, verification, review, checkpoint, and handoff hash state. When resuming from `blocked`, wait for the explicit user choice, run `workflow-state decision resume`, then `workflow-state transition resume`; the transition must restore the recorded `resume_phase` and `resume_skill`, not guess from chat memory.
 
 Do not route from chat memory alone when a valid workflow state exists.
 
@@ -80,7 +80,7 @@ After automatic compaction, a new session, or any resume where workflow state is
 4. If recovery reports an Active Wayfinder, read the injected Wayfinder summary and open the referenced map. A path without its Destination, decisions, frontier, fog, and boundaries is not recovered context.
 5. Continue only when the handoff, workflow state, current plan/spec, verification evidence, and Active Wayfinder agree on the current task and next action.
 
-Automatic compaction invalidates the recovery receipt, but a still-valid, unconsumed user decision receipt from the same session may survive because it is independently bound to task identity, evidence, and runtime hash. Re-run recovery after compaction; do not ask the user to repeat an approval unless `workflow-state next` still reports the decision and the prior receipt no longer matches.
+Automatic compaction invalidates the recovery receipt. Canonical `Workflow Decision` evidence may remain in its target document, but the transition still requires fresh recovery and matching task/document hashes. Re-run recovery after compaction, then run `workflow-state next`; ask the user again only when the decision is still pending and the existing evidence no longer matches.
 
 When this evaluation runs through the installed hook path, success creates a session-scoped recovery receipt bound to the active task, handoff hash, and hook runtime. Supported project mutations are denied until that receipt is valid. A receipt from another session, an older handoff, a prior task generation, or an older runtime cannot authorize the current mutation. Read-only repair and diagnosis should remain available.
 
@@ -146,7 +146,7 @@ Do not load every skill. Read only the one needed now, plus directly referenced 
 - A written spec is not approved until the user explicitly approves the written spec file or inline written spec, or explicitly asks to skip brainstorming.
 - For non-trivial work, final discussion approval is not enough; the user must approve the written spec before planning.
 - A plan is not execution-approved until the user chooses execution mode or explicitly asked earlier to plan-then-execute.
-- Written-spec and execution approvals bind to the approved contents of `spec.md` and `plan-progress.md`. Editing either approved artifact invalidates the matching approval; refreshing the general context hash does not reapprove changed content.
+- Written-spec approval binds to `spec.md`. Execution approval binds to the substantive plan contract in `plan-progress.md` plus any linked detailed plan. Task checkbox state, `Current Step`, and the dedicated `Checkpoints` section are mutable progress metadata; changing task text, scope, runtime constraints, verification commands, or linked-plan substance invalidates approval. Refreshing the general context hash does not reapprove changed content.
 - Reopen changed scope with `brainstorming-start`; reopen an implementation-plan change with `plan-start`, then obtain the matching approval again before project mutations continue.
 - Plan-then-execute without an explicit Goal mode request means Traditional task-by-task execution.
 - Codex Goal mode requires an explicit user choice, a Goal Mode Objective in `plan-progress.md`, and an actual goal or workflow mechanism exposed in the current Codex session with visible progress and closure state. If no such mechanism is available, ask before falling back to Traditional task-by-task execution.
@@ -163,7 +163,8 @@ At a decision point:
 - Present mutually exclusive, actionable options.
 - Do not choose from historical preference, defaults, or "the user probably wants this."
 - Do not write the chosen state fields or execute the branch until the user explicitly chooses.
-- After the user chooses, update `workflow-state.yaml` and the matching `.codex-context` state files, then continue.
+- After the user chooses, run `node .codex/hooks/project-ops.mjs workflow-state decision <listed-transition>`. This writes task/hash-bound canonical evidence to the correct context file but does not advance the workflow.
+- Then run `node .codex/hooks/project-ops.mjs workflow-state transition <listed-transition>`. Do not hand-calculate or manually paste `target_hash`.
 
 ## State Discipline
 

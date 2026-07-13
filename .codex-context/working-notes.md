@@ -6,37 +6,40 @@
 
 ## 当前发现
 
-- 旧 scoped recovery 文件会永久压制 unscoped fallback。
-- unscoped recovery 未消费时可被多个 session 使用。
-- PowerShell pipeline 的 `Select-Object` 未在只读白名单。
-- 当前项目 hook 会误判另一个仓库的 patch/命令，真实宿主可能只暴露绝对命令路径。
-- `tool_response={}` 被当成失败，导致实际状态 refresh 不入 receipt。
+- prompt advisory-only 与 canonical decision evidence 的核心契约已通过 workflow domains。
+- 手工计算/粘贴 `Workflow Decision.target_hash` 不适合作为真实使用入口；`workflow-state decision <transition>` 已补齐该操作路径。
+- 受控 decision 命令在 pending decision 时可写入正确 evidence file，但不自动 transition；错误 pending/event 被 PreToolUse 和 CLI 双重拒绝。
+- decision transition 消费 evidence section，避免 stale machine fields 长期污染 active state。
+- root/bootstrap runtime、hook、CLI 与 AGENTS snippet 当前逐对无差异。
+- 全部 domain runner 240/240、关键 11 项连续三轮和 release-check 已通过，Task 7 已闭环。
+- 架构审计发现技能文本虽已把 learning review 降为 milestone advisory，但 runtime `preCompact` 仍执行 `issues.push(...learning.issues)`；这会让 pending raw observations 阻塞手动压缩，并在自动压缩中制造不必要 emergency debt。
+- learning/PreCompact 运行态矛盾已 test-first 修复；pending observations 只显示 advisory。
+- SessionStart 重复注入多个 on-demand state excerpt 的 wrapper regression 已 test-first 修复；business handoff sections 在 recovery 输出中先于临时 PreCompact notice。
+- root `AGENTS.md` managed block 漂移已同步，并新增与 canonical snippet 的 parity 测试。
+- health 现在始终声明 liveness 不证明 host trust。
 
 ## 当前假设
 
-- 原子 claim lock + scoped promotion + unscoped consumption 可同时解决死锁和隔离。
-- 外部作用域必须依赖明确路径证据；不对无目标 opaque mutation 放行。
-- unknown response 应允许 hash-based refresh，explicit failure 不允许。
+- 剩余架构风险最可能位于 compaction/recovery burden、installer/receipt stale state 和输出边界，而不是 prompt decision 主路径。
 
 ## 已排除路径
 
-- 不删除所有 scoped receipts 作为长期修复。
-- 不让 unscoped receipt 对所有 session 永久有效。
-- 不把所有 PowerShell pipeline 判为只读。
-- 不通过关闭 hooks 或让研究任务进入 execution 来维护外部源码。
+- 不增加 NLP/model classifier 或继续扩充 prompt 正则词表。
+- 不让用户记忆专用 decision token，也不要求手工计算 hash。
+- 不把 `workflow-state decision` 合并成自动 transition；记录证据与状态推进保持两个可审计步骤。
+- 不用下游研究 Wayfinder 文档偿还旧 runtime 制造的跨项目伪债。
 
 ## 开放调查问题
 
-- 完整 domain suite 是否存在顺序污染、超时或安装事务残留？
-- 新外部路径规则是否存在混入当前 root 的绕过？
-- installer 更新后真实 host 是否需要重启才能加载新 runtime？
+- agent-architecture audit 是否发现新的 high severity wrapper/persistence/hidden-loop 问题？
+- installer 更新后下游真实 host 是否与自动化契约一致？
 
 ## 下一步验证
 
-- workflow-hooks 全量。
-- domain runner 与 release-check。
-- 关键测试重复 3 次。
-- installer + downstream host simulation。
+- 增加真实 pending learning observation 的手动 PreCompact 回归，先证明当前失败，再移除 hard issue 聚合。
+- 完成 12 个 agent architecture 边界审计并形成审计报告。
+- 修复 accepted findings 后重跑 targeted、全部 domain runner、release-check、parity、transaction residue 和 diff check。
+- 完成 Task 8 checkpoint，再进入 installer + downstream live host。
 
 ## 提升记录
 

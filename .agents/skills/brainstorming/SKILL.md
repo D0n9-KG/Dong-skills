@@ -21,10 +21,11 @@ Read-only discovery is allowed before approval. If you are unsure whether a requ
 If the user explicitly says to skip brainstorming, still externalize the compact scope and acceptance criteria in `.codex-context/spec.md`, then run:
 
 ```powershell
+node .codex/hooks/project-ops.mjs workflow-state decision spec-skipped
 node .codex/hooks/project-ops.mjs workflow-state transition spec-skipped
 ```
 
-`UserPromptSubmit` records a one-time task-bound skip receipt from the explicit instruction. Do not ask the user to approve the same skip a second time, and do not treat `spec-skipped` as execution approval.
+`workflow-state decision spec-skipped` records task/hash-bound canonical evidence after the explicit instruction; the prompt itself is advisory and creates no permission. Do not ask the user to approve the same skip a second time, and do not treat `spec-skipped` as execution approval.
 
 When Dong Skills project hooks are installed, start or refresh the workflow state before the first substantive brainstorming response:
 
@@ -210,7 +211,7 @@ After the user approves the discussed design, but before `writing-plans`:
    - a fresh session could write a plan from the spec file without relying on chat memory
 3. Ask the user to review the written spec file before planning.
 4. If the user requests changes, update the spec and rerun this gate.
-5. Only after the user approves the written spec, update `审批状态` to `Approved by user on [date/time]`, run `workflow-state transition spec-approved`, and transition to `writing-plans`.
+5. Only after the user approves the written spec, run `workflow-state decision spec-approved`, then `workflow-state transition spec-approved`; the transition updates the structured approval status before routing to `writing-plans`.
 
 Use this gate instead of relying on a vague "looks good" after a conversation. A section approval, approach choice, or casual acknowledgement is not written-spec approval.
 

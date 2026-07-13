@@ -4,7 +4,7 @@ import { REQUIRED_FILES } from "./templates.mjs";
 
 const HEADING_ALIASES = {
   "Active Assumptions": ["当前假设"],
-  "Active Plan": ["当前计划"],
+  "Active Plan": ["Current Plan", "当前计划"],
   "Approval Status": ["审批状态"],
   "Approved Scope": ["已批准范围"],
   "Approved Scope / Spec": ["已批准范围 / 规格"],
@@ -18,6 +18,7 @@ const HEADING_ALIASES = {
   "Candidate Options": ["候选方案"],
   "Categories": ["分类"],
   "Checkpoint Cadence": ["存档节奏"],
+  "Checkpoints": ["存档记录"],
   "Commands": ["命令"],
   "Commands Run": ["已运行命令"],
   "Conventions": ["约定"],
@@ -88,7 +89,8 @@ const HEADING_ALIASES = {
   "Verification": ["验证"],
   "Verification Evidence": ["验证证据"],
   "Where To Change Things": ["修改位置指南"],
-  "Work Class / Risk Lane": ["工作类别 / 风险等级"]
+  "Work Class / Risk Lane": ["工作类别 / 风险等级"],
+  "Workflow Decision": ["工作流决策"]
 };
 
 export function headingAliases(heading) {
@@ -122,6 +124,48 @@ export function sectionContent(markdown, heading) {
     body.push(lines[i]);
   }
   return body.join("\n").trim();
+}
+
+export function sectionFields(markdown, heading) {
+  const fields = {};
+  const duplicates = [];
+  const invalid = [];
+  for (const line of sectionContent(String(markdown || ""), heading).split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const match = line.match(/^\s*[-*]\s+([a-z][a-z0-9_-]*)\s*:\s*(.*?)\s*$/);
+    if (!match) {
+      invalid.push(line);
+      continue;
+    }
+    const [, key, value] = match;
+    if (Object.prototype.hasOwnProperty.call(fields, key)) duplicates.push(key);
+    else fields[key] = value;
+  }
+  return { fields, duplicates, invalid };
+}
+
+export function withoutSection(markdown, heading) {
+  const lines = String(markdown || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
+  const start = headingStartIndex(lines, heading);
+  if (start === -1) return `${lines.join("\n").replace(/\s+$/, "")}\n`;
+  let end = start + 1;
+  while (end < lines.length && !lines[end].startsWith("## ")) end += 1;
+  const remaining = [...lines.slice(0, start), ...lines.slice(end)];
+  return `${remaining.join("\n").replace(/\s+$/, "")}\n`;
+}
+
+export function replaceSection(markdown, heading, content) {
+  const lines = String(markdown || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
+  const start = headingStartIndex(lines, heading);
+  const body = String(content || "").replace(/\r\n?/g, "\n").replace(/^\n+|\n+$/g, "").split("\n");
+  if (start === -1) {
+    const prefix = lines.join("\n").replace(/\s+$/, "");
+    return `${prefix}${prefix ? "\n\n" : ""}## ${heading}\n${body.join("\n")}\n`;
+  }
+  let end = start + 1;
+  while (end < lines.length && !lines[end].startsWith("## ")) end += 1;
+  const updated = [...lines.slice(0, start + 1), ...body, "", ...lines.slice(end)];
+  return `${updated.join("\n").replace(/\s+$/, "")}\n`;
 }
 
 export function escapeRegex(value) {
