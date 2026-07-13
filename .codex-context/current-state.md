@@ -31,11 +31,13 @@
 - `skills-contracts`：2/2 pass。
 - `node scripts/release-check.mjs .`：pass。
 - `node scripts/release-check.mjs .` 在最终实现上重新运行并通过。
-- installer 与下游 live host 尚未在本轮最终实现上运行。
+- installer Preview/Apply 已运行；下游 distribution 为 `abad207552c0f259b0b2f113032a03dbf9c2aef236b08842d0d1cada395454f1`。
+- installer 前后六个核心 context 文件 SHA256 全部一致；下游 static health/runtime parity、workflow migrate/status、recovery、next、asset-governance 与 context-budget 通过。
+- 新 runtime 的 live host coverage 尚待 Codex 重启并重新启用/trust hooks。
 
 ## 审查
 
-- Task 8 正在执行。
+- Task 8 已完成。
 - 已修复 high：plan progress metadata 与 approval hash 自相矛盾，改为 `approval-contract-v2`。
 - 已修复 high：health 复制 workflow consistency/hash 逻辑并发生漂移，改为复用 runtime `workflowConsistencyStatus`。
 - 已修复 medium：`codex-learning-memory` 不再声称 learning review 可阻塞 Stop/PreCompact。
@@ -49,7 +51,12 @@
 - Tasks 1-6 已完成并通过相关 workflow/core/host/skills domains。
 - Task 7 已完成：全部 domain tests、关键路径连续三轮和 release-check 均通过。
 - Task 8 已完成：12 个 agent architecture 边界已审查，accepted findings 已修复并通过全量回归。
-- 当前下一步：创建源码 checkpoint，不 push；随后执行 Task 9 installer Preview/Apply 到下游，并做真实 recovery、compound diagnostics、PreToolUse/PostToolUse、连续 Stop 与 freshness 回归。
+- 源码 checkpoint 已创建：`db9e3c93cdb38b5750db6377c7c12fa9a2308680 fix(hooks): remove prompt semantic authority`，未 push。
+- Task 9 live 回归发现的复合只读 literal assignment 误判已修复；workflow 已通过 `debugging-resolved` 返回 `execution`。
+- 修复不按 `$files` 或具体措辞白名单：只识别简单局部变量和无插值字面量标量/数组；unsafe assignment 继续 gated。
+- external root 的 Git checkpoint 缺口也已修复：仅允许显式外部 `workdir` 的 repo-local Git allowlist，拒绝 `-C`/git-dir/work-tree 重定向和未知子命令。
+- 新鲜验证：host-wrapper 5/5、全部 domains 241/241、`release-check` pass、runtime/bootstrap parity pass；两轮控制面修改后均重新全量验证。
+- 当前下一步：用户临时关闭当前已加载的旧 hooks，checkpoint 本轮修复并重新安装；重启后重复原始 live 命令、external Git 与连续 Stop/freshness。
 
 ## 最后更新
 

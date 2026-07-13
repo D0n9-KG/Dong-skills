@@ -64,7 +64,7 @@
 
 ## 当前步骤
 
-- Task 8 已完成；创建 verified source checkpoint 后进入 Task 9 installer 与下游 live 回归。
+- Task 9 首次 live 回归暴露 literal assignment classifier 缺口；根因修复与全量验证已通过，当前准备 checkpoint、重新安装并再次重启 live 验证。
 
 ## 存档记录
 
@@ -89,6 +89,25 @@
 - Verification：workflow-hooks 106/106、core 25/25、health-release 23/23、全部 domain runner 241/241、`release-check` pass。
 - Remaining risk：Task 9 下游 installer/live host 尚未执行；低风险 residual 记录在 audit report。
 - Next task：source checkpoint，不 push；然后 installer Preview/Apply 到 `scientific_Graph`。
+
+### Checkpoint 4
+- Source checkpoint：`db9e3c93cdb38b5750db6377c7c12fa9a2308680 fix(hooks): remove prompt semantic authority`，未 push。
+- Installer：Preview/Apply pass；下游 distribution=`abad207552c0f259b0b2f113032a03dbf9c2aef236b08842d0d1cada395454f1`。
+- Context preservation：六个核心 context 文件安装前后 SHA256 全部一致。
+- Static verification：workflow migrate/status、health、recovery、next、asset-governance、context-budget、`git diff --check` pass；Issues none，liveness 为预期 runtime-mismatch。
+- Hygiene：transaction、`.previous-*`、`.staging-*` 无残留；旧 managed-block backup 已清理。
+- Remaining risk：新 runtime 尚未被 Codex host 重启加载，live critical coverage 与连续 Stop 待验证。
+- Next task：重启/trust 后完成 Task 9 live 回归。
+
+### Checkpoint 5
+- Live failure：`$files=@(...); Get-FileHash ...` 被归为 `opaque`，真实 host 与新增自动化均复现。
+- Root cause：segment splitter 正常；read-only classifier 缺少安全 literal assignment 语法类。
+- Fix：结构化解析简单局部变量与无插值字面量标量/数组；不解释任意 PowerShell，不按措辞白名单。
+- Negative preservation：subexpression、scriptblock、命令调用赋值和写操作继续 deny。
+- Additional live failure：显式外部 `workdir` 的 `git add` 未被识别为外部仓库操作。
+- External Git fix：外部 workdir + repo-local Git allowlist；重定向当前项目或未知子命令继续 deny。
+- Verification：PowerShell targeted 2/2、external Git 正反例、host-wrapper 5/5、全部 domains 241/241、release-check pass；控制面第二次修改后完整重跑。
+- Next task：临时关闭旧 hooks，checkpoint、installer Preview/Apply、重启并重复原始 live 命令、external Git 和 Stop freshness。
 
 ## 验证
 

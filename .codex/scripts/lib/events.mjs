@@ -376,6 +376,30 @@ function pathOutsideProject(target, root, base = root) {
   return Boolean(relative && (relative.startsWith("../") || path.isAbsolute(relative)));
 }
 
+function repositoryLocalGitOperation(command) {
+  const syntax = shellSyntax(command);
+  if (!syntax.segments.length || syntax.redirections.length > 0) return false;
+  const allowed = new Set([
+    "add",
+    "branch",
+    "commit",
+    "diff",
+    "log",
+    "ls-files",
+    "remote",
+    "rev-parse",
+    "show",
+    "status",
+    "tag"
+  ]);
+  return syntax.segments.every((segment) => {
+    if (/\$\(|<\(|>\(|[{}]|`|(?:^|\s)&(?:\s|$)/.test(segment)) return false;
+    if (/(?:^|\s)(?:-C|--git-dir(?:=|\s)|--work-tree(?:=|\s))/i.test(segment)) return false;
+    const match = segment.match(/^\s*git(?:\.exe)?\s+([A-Za-z][A-Za-z-]*)(?:\s|$)/i);
+    return Boolean(match && allowed.has(match[1].toLowerCase()));
+  });
+}
+
 function toolExplicitlyOutsideProject(input, root) {
   const name = normalizedToolName(input);
   const targets = explicitToolTargets(input);
@@ -391,6 +415,7 @@ function toolExplicitlyOutsideProject(input, root) {
   const command = commandText.replace(/\\/g, "/").toLowerCase();
   const normalizedRoot = path.resolve(root).replace(/\\/g, "/").toLowerCase();
   if (command.includes(normalizedRoot)) return false;
+  if (repositoryLocalGitOperation(commandText)) return true;
   const mutation = shellFileMutation(input);
   if (mutation.mutates) {
     if (mutation.opaque || mutation.targets.length === 0) return false;
@@ -589,7 +614,73 @@ function shellSegments(command) {
   return shellSyntax(command).segments;
 }
 
+function skipPowerShellWhitespace(text, index) {
+  while (index < text.length && /\s/.test(text[index])) index += 1;
+  return index;
+}
+
+function readPowerShellQuotedLiteral(text, index) {
+  const quote = text[index];
+  let cursor = index + 1;
+  while (cursor < text.length) {
+    const char = text[cursor];
+    if (quote === "'" && char === "'" && text[cursor + 1] === "'") {
+      cursor += 2;
+      continue;
+    }
+    if (quote === '"' && char === "`") {
+      cursor += 2;
+      continue;
+    }
+    if (quote === '"' && char === "$") return -1;
+    if (char === quote) return cursor + 1;
+    cursor += 1;
+  }
+  return -1;
+}
+
+function readPowerShellLiteralToken(text, index) {
+  const start = skipPowerShellWhitespace(text, index);
+  if (start >= text.length) return -1;
+  if (text[start] === "'" || text[start] === '"') {
+    return readPowerShellQuotedLiteral(text, start);
+  }
+  const tail = text.slice(start);
+  const constant = tail.match(/^\$(?:true|false|null)\b/i);
+  if (constant) return start + constant[0].length;
+  const number = tail.match(/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)\b/);
+  if (number) return start + number[0].length;
+  return -1;
+}
+
+function powerShellLiteralList(text) {
+  let value = String(text || "").trim();
+  if (!value) return false;
+  if (value.startsWith("@(")) {
+    if (!value.endsWith(")")) return false;
+    value = value.slice(2, -1);
+  }
+  let cursor = skipPowerShellWhitespace(value, 0);
+  if (cursor === value.length) return true;
+  while (cursor < value.length) {
+    const end = readPowerShellLiteralToken(value, cursor);
+    if (end < 0) return false;
+    cursor = skipPowerShellWhitespace(value, end);
+    if (cursor === value.length) return true;
+    if (value[cursor] !== ",") return false;
+    cursor = skipPowerShellWhitespace(value, cursor + 1);
+    if (cursor === value.length) return false;
+  }
+  return true;
+}
+
+function readOnlyPowerShellLiteralAssignment(segment) {
+  const match = String(segment || "").match(/^\s*\$[A-Za-z_][A-Za-z0-9_]*\s*=\s*([\s\S]+?)\s*$/);
+  return Boolean(match && powerShellLiteralList(match[1]));
+}
+
 function readOnlyShellSegment(segment) {
+  if (readOnlyPowerShellLiteralAssignment(segment)) return true;
   if (/\$\(|<\(|>\(|[{}]|(?:^|\s)&(?:\s|$)/.test(segment)) return false;
   if (/^git\s+remote\s*$/i.test(segment) ||
       /^git\s+remote\s+(?:-v|--verbose|show|get-url)(?:\s|$)/i.test(segment)) {

@@ -71,6 +71,7 @@ test("simple PowerShell read-only pipelines and Git diagnostics bypass recovery"
   for (const command of [
     "Get-Content README.md | Select-Object -First 1",
     "Get-ChildItem -Force | Select-Object Name,Length",
+    "$files=@('README.md','.codex-context/spec.md'); Get-FileHash -Algorithm SHA256 -LiteralPath $files | Select-Object Path,Hash | Format-Table -AutoSize",
     "git status --short; git remote -v; git worktree list --porcelain"
   ]) {
     const output = runHook(project, {
@@ -92,7 +93,9 @@ test("PowerShell pipeline transforms with executable expressions remain gated", 
   for (const command of [
     "Get-Content README.md | Select-Object $(Remove-Item work.txt)",
     "Get-Content README.md | Select-Object @{Name='x';Expression={Remove-Item work.txt}}",
-    "Get-Content README.md | Select-Object & Remove-Item work.txt"
+    "Get-Content README.md | Select-Object & Remove-Item work.txt",
+    "$files=@($(Remove-Item work.txt)); Get-FileHash -LiteralPath $files",
+    "$files=Get-ChildItem; Get-FileHash -LiteralPath $files"
   ]) {
     const output = runHook(project, {
       hook_event_name: "PreToolUse",
@@ -146,6 +149,30 @@ test("verified work outside the project root is not governed by the current proj
     }
   });
   assert.deepEqual(shellMutation, {});
+
+  const externalGitCheckpoint = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "external-work",
+    workdir: external,
+    tool_name: "shell_command",
+    tool_use_id: "external-git-checkpoint",
+    tool_input: {
+      command: "git add -- .; git commit -m checkpoint"
+    }
+  });
+  assert.deepEqual(externalGitCheckpoint, {});
+
+  const redirectedGit = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "external-work",
+    workdir: external,
+    tool_name: "shell_command",
+    tool_use_id: "redirected-git-checkpoint",
+    tool_input: {
+      command: `git -C "${project.replace(/\\/g, "/")}" add -- .`
+    }
+  });
+  assert.equal(redirectedGit.hookSpecificOutput?.permissionDecision, "deny");
 
   const opaqueRelativeCommand = runHook(project, {
     hook_event_name: "PreToolUse",

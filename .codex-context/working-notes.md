@@ -1,5 +1,18 @@
 # 工作记录
 
+## 2026-07-13 Live Wrapper Debugging
+
+- 真实复现：`$files=@(...); Get-FileHash ... | Select-Object ...` 在新 runtime 下仍被拒绝为项目 mutation。
+- 自动化复现：`host-wrapper.test.mjs` 新增同形命令后按预期失败，理由为 recovery/mutation gate，而不是 fixture 或宿主 payload 缺失。
+- 根因：`shellSyntax` 已正确拆分 assignment 与读取 pipeline，但 `readOnlyShellSegment` 只识别命令 verb；安全字面量 assignment 被归入 `opaque`。
+- 修复：新增窄、结构化的 PowerShell literal-assignment 解析器，只接受简单局部变量与无插值字面量标量/数组；不按变量名或整句措辞白名单。
+- 安全边界：`$()`、scriptblock、命令调用赋值、重定向和写命令继续拒绝；不尝试解释任意 PowerShell。
+- 验证：targeted PowerShell 正反例、host-wrapper 5/5、相关 workflow-hooks、全部 241/241 domains 与 release-check 通过。
+- 第二个 live failure：显式外部 `workdir` 下的 `git add` 仍落回科研项目 gate；自动化同形复现确认 external scope 没有识别 Git 隐含工作树目标。
+- 第二个根因修复：只对外部 `workdir` 的 repo-local Git allowlist 生效；`-C`、`--git-dir`、`--work-tree` 重定向及不明子命令继续拒绝。
+- 第二轮验证：external Git 正反例、host-wrapper 5/5、全部 241/241 domains 与 release-check 再次通过。
+- 下一验证：临时关闭当前旧 hooks，checkpoint、重新安装并重启 host，重复原始 live 命令、external Git 与连续 Stop。
+
 ## 用途
 
 - 保留当前稳定性调查的复现、根因、假设与下一验证，不保存隐藏推理或完整日志。

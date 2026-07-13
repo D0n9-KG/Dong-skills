@@ -3,7 +3,7 @@
 ## 当前任务资产
 
 - `.codex-context/spec.md`：已批准的 prompt semantic authority removal Product Contract。
-- `.codex-context/plan-progress.md`：Lane 3 Traditional execution；Tasks 1-6 完成，当前 Task 7。
+- `.codex-context/plan-progress.md`：Lane 3 Traditional execution；Tasks 1-8 完成，Task 9 installer/static 完成、live 待重启。
 - `docs/codex/plans/2026-07-13-remove-prompt-semantic-authority.md`：当前 implementation-ready 详细计划。
 - `docs/codex/plans/2026-07-13-dong-skills-host-stability.md`：上一轮宿主稳定性计划，作为历史证据。
 - `.codex/scripts/lib/runtime.mjs`：recovery claim/promotion 与 legacy decision receipt 清理；旧 decision/advance receipt 写入/校验已删除。
@@ -18,6 +18,8 @@
 - `tests/domains/workflow-hooks.test.mjs`：prompt advisory、decision CLI/PreToolUse、Stop/PreCompact、mutation freshness 和 recovery 回归。
 - `tests/domains/workflow-governance.test.mjs`：canonical decision evidence 与 transition 回归。
 - `tests/domains/host-wrapper.test.mjs`：真实宿主 wrapper 回归。
+- `.codex/scripts/lib/events.mjs` literal-assignment parser：允许简单局部变量的无插值字面量标量/数组作为 read-only compound setup；unsafe expressions 仍 gated。
+- `.codex/scripts/lib/events.mjs` external Git scope：显式外部 `workdir` 下仅放行 repo-local Git allowlist；拒绝 root redirection 与未知子命令。
 - `tests/domains/skills-contracts.test.mjs`：root `AGENTS.md` managed block、root snippet 与 bootstrap snippet parity。
 - `docs/codex/reviews/2026-07-13-dong-skills-agent-architecture-audit.md`：12 个 agent architecture 边界的 severity、修复、证据与 residual risk。
 
@@ -33,4 +35,4 @@
 
 ## 下一里程碑
 
-- 完成 Task 7 全量/稳定性/release-check；随后完成 Task 8 架构审计和 Task 9 下游 live 回归。
+- 首次 live 暴露的 literal assignment 与 external Git workdir 缺口均已修复并两次全量验证；下一步关闭旧 hooks、checkpoint、重新安装新 distribution，再完成 live 回归。

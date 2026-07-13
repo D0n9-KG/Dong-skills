@@ -21,7 +21,31 @@
 
 ## Not Yet Verified
 
-- installer Preview/Apply 与下游 live host。
+- literal assignment classifier 修复后的 targeted/full regression、重新安装，以及下游 live PreToolUse/PostToolUse/Stop coverage 与连续两次 Stop freshness。
+
+## Live Failure Reproduction
+
+- Command: `node --test --test-name-pattern="simple PowerShell read-only pipelines" tests/domains/host-wrapper.test.mjs`
+- Result: fail as expected after adding the exact live command shape.
+- Evidence: `$files=@(...); Get-FileHash ...` is denied because the literal assignment segment is classified as `opaque`; the failure matches the live host denial.
+
+## Literal Assignment Fix Evidence
+
+- `node --test --test-name-pattern="PowerShell" tests/domains/host-wrapper.test.mjs`：2/2 pass；literal assignment 正例通过，`$()`、scriptblock、命令调用赋值负例继续 deny。
+- `node --test tests/domains/host-wrapper.test.mjs`：5/5 pass。
+- related workflow-hooks：read-only inspection 与 compound diagnostics 2/2 pass。
+- `node scripts/run-domain-tests.mjs`：241/241 pass，12 domains。
+- `node scripts/release-check.mjs .`：pass；全部发布门禁通过。
+- root/bootstrap `events.mjs` parity 与 `node --check`：pass。
+
+## External Git Workdir Fix Evidence
+
+- Live reproduction：从 `scientific_Graph` 会话对显式外部 Dong Skills 源仓库执行 `git add -- .`，被旧 runtime 错误拒绝为科研项目 mutation。
+- Automated reproduction：`verified work outside the project root` 用例加入外部 `git add; git commit` 后先红。
+- Positive：显式外部 `workdir` 的 repo-local `git add/commit` 通过。
+- Negative：`git -C <current-project> add -- .` 继续 deny；`--git-dir`、`--work-tree` 和未知子命令不在 allowlist。
+- `node --test tests/domains/host-wrapper.test.mjs`：5/5 pass。
+- 第二轮 `node scripts/run-domain-tests.mjs`：241/241 pass；第二轮 `node scripts/release-check.mjs .`：pass。
 
 ## 命令证据
 
@@ -54,7 +78,12 @@
 
 ## Installer / 下游证据
 
-- 本轮最终实现尚未安装；旧 distribution 与旧 live 证据不作为当前 release 结论。
+- Source checkpoint：`db9e3c93cdb38b5750db6377c7c12fa9a2308680 fix(hooks): remove prompt semantic authority`，未 push。
+- Installer Preview：只计划 global/project Dong-managed skills、runtime、state merge、AGENTS managed block 和 receipts；`No files were written.`。
+- Installer Apply：pass；下游 distribution 更新为 `abad207552c0f259b0b2f113032a03dbf9c2aef236b08842d0d1cada395454f1`。
+- Context preservation：`spec.md`、`plan-progress.md`、`verification.md`、`handoff-summary.md`、`current-state.md`、`artifact-index.md` 安装前后 SHA256 逐一一致。
+- Static checks：workflow migrate/status、health-check、context-recovery-eval、workflow next、asset-governance、context-budget、`git diff --check` 通过；health Issues none，liveness 为预期 `runtime-mismatch`。
+- Hygiene：install transaction 目录、`.previous-*`、`.staging-*` 无残留；旧 `AGENTS.md.codex-project-ops.bak` 经确认仅含旧 managed block 后删除。
 
 ## 行为证据
 
@@ -72,4 +101,4 @@
 
 ## 剩余验证缺口
 
-- Task 9 下游 installer Preview/Apply、context hash 对比和 live host 连续 Stop/freshness 尚待执行。
+- Task 9 只剩重启/trust 后的下游 live host：critical coverage、复合只读诊断、PreToolUse/PostToolUse 和连续 Stop/freshness。
