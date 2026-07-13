@@ -1,28 +1,43 @@
-# 工作笔记
-
-## Task Identity
-- task_id: task-6-2026-07-12T15-42-07-054Z
-- task_generation: 6
+# 工作记录
 
 ## 用途
-记录需要跨压缩保留的紧凑外部化调查状态。不要在这里保存隐藏思维链、完整聊天记录、原始日志、密钥或私密推理。
+
+- 保留当前稳定性调查的复现、根因、假设与下一验证，不保存隐藏推理或完整日志。
 
 ## 当前发现
-- `shellFileMutation` 已正确识别 raw 重定向；绕过发生在 `governanceRepairMutation` 的目录级白名单。
-- Stop 的 `changed` 包含 Git 状态、当前 intent 和 pending change-state receipt；旧 checkpoint 详情只检查 Git 状态文件。
+
+- 旧 scoped recovery 文件会永久压制 unscoped fallback。
+- unscoped recovery 未消费时可被多个 session 使用。
+- PowerShell pipeline 的 `Select-Object` 未在只读白名单。
+- 当前项目 hook 会误判另一个仓库的 patch/命令，真实宿主可能只暴露绝对命令路径。
+- `tool_response={}` 被当成失败，导致实际状态 refresh 不入 receipt。
 
 ## 当前假设
-- `raw` 可以在正常执行阶段被显式写入，但不能绕过 recovery 和 workflow gate。
+
+- 原子 claim lock + scoped promotion + unscoped consumption 可同时解决死锁和隔离。
+- 外部作用域必须依赖明确路径证据；不对无目标 opaque mutation 放行。
+- unknown response 应允许 hash-based refresh，explicit failure 不允许。
 
 ## 已排除路径
-- 不增加第二套命令解析器。
-- 不把 receipt-only 文件从 freshness 集合中删掉。
+
+- 不删除所有 scoped receipts 作为长期修复。
+- 不让 unscoped receipt 对所有 session 永久有效。
+- 不把所有 PowerShell pipeline 判为只读。
+- 不通过关闭 hooks 或让研究任务进入 execution 来维护外部源码。
 
 ## 开放调查问题
-- 无。
+
+- 完整 domain suite 是否存在顺序污染、超时或安装事务残留？
+- 新外部路径规则是否存在混入当前 root 的绕过？
+- installer 更新后真实 host 是否需要重启才能加载新 runtime？
 
 ## 下一步验证
-- 完成 review 后提交推送，并同步全局安装。
+
+- workflow-hooks 全量。
+- domain runner 与 release-check。
+- 关键测试重复 3 次。
+- installer + downstream host simulation。
 
 ## 提升记录
-- 在阶段边界，把持久结论提升到 spec.md、decisions.md、current-state.md、handoff-summary.md 或 docs/solutions/。
+
+- 当前属于 Dong Skills 源码修复，最终写入源码 backlog/solution，而不是研究项目 instinct。

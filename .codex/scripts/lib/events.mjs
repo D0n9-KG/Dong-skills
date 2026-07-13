@@ -396,7 +396,15 @@ function acknowledgeScopeReopen(ctx) {
   });
 }
 
+function toolOriginatedPrompt(input) {
+  const tool = String(input?.tool_name || input?.toolName || input?.tool_use_id || input?.toolUseId || "").trim();
+  const agent = String(input?.agent_id || input?.agentId || input?.parent_agent_id || input?.parentAgentId || "").trim();
+  const source = String(input?.source || "").trim();
+  return Boolean(tool || agent || /subagent|child-agent|delegated-agent/i.test(source));
+}
+
 export function userPromptSubmit(input, root, ctx) {
+  if (toolOriginatedPrompt(input)) return;
   const prompt = extractPromptText(input);
   const workflow = workflowStatus(root, ctx);
   const state = workflow.state || {};
@@ -681,6 +689,59 @@ function explicitToolTargets(input) {
   return unique(targets.map((target) => String(target).trim()).filter(Boolean));
 }
 
+function explicitToolWorkdir(input) {
+  const direct = String(
+    input?.workdir || input?.working_directory || input?.workingDirectory || ""
+  ).trim();
+  if (direct) return direct;
+  const payload = input?.tool_input || input?.toolInput || input?.input || input?.arguments || input?.payload || {};
+  if (!payload || typeof payload !== "object") return "";
+  return String(payload.workdir || payload.cwd || payload.working_directory || payload.workingDirectory || "").trim();
+}
+
+function shellAbsolutePaths(command) {
+  const paths = [];
+  for (const match of String(command || "").matchAll(
+    /(?:"([a-z]:[\\/][^"]+)"|'([a-z]:[\\/][^']+)'|([a-z]:[\\/][^\s;|]+))/gi
+  )) {
+    paths.push(match[1] || match[2] || match[3]);
+  }
+  return unique(paths);
+}
+
+function pathOutsideProject(target, root, base = root) {
+  const cleaned = String(target || "").replace(/^["']|["']$/g, "");
+  if (!cleaned) return false;
+  const absolute = path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(base, cleaned);
+  const relative = path.relative(root, absolute).replace(/\\/g, "/");
+  return Boolean(relative && (relative.startsWith("../") || path.isAbsolute(relative)));
+}
+
+function toolExplicitlyOutsideProject(input, root) {
+  const name = normalizedToolName(input);
+  const targets = explicitToolTargets(input);
+  if (targets.length > 0 && targets.every((target) => pathOutsideProject(target, root))) {
+    return true;
+  }
+  if (!/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) return false;
+  const commandText = shellCommandText(input);
+  const absolutePaths = shellAbsolutePaths(commandText);
+  if (absolutePaths.some((target) => !pathOutsideProject(target, root))) return false;
+  const workdir = explicitToolWorkdir(input);
+  if (!workdir || !pathOutsideProject(workdir, root)) return false;
+  const command = commandText.replace(/\\/g, "/").toLowerCase();
+  const normalizedRoot = path.resolve(root).replace(/\\/g, "/").toLowerCase();
+  if (command.includes(normalizedRoot)) return false;
+  const mutation = shellFileMutation(input);
+  if (mutation.mutates) {
+    if (mutation.opaque || mutation.targets.length === 0) return false;
+    return mutation.targets.every((target) => pathOutsideProject(target, root, workdir));
+  }
+  if (["read-only", "verification"].includes(shellCommandClass(input))) return true;
+  const externalControl = controlPlaneOperation(input, path.resolve(workdir));
+  return Boolean(externalControl && externalControl.kind !== "forbidden");
+}
+
 function shellPathArguments(segment) {
   const targets = [];
   for (const match of String(segment || "").matchAll(
@@ -870,12 +931,16 @@ function shellSegments(command) {
 }
 
 function readOnlyShellSegment(segment) {
-  if (/\$\(|<\(|>\(/.test(segment)) return false;
-  return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
+  if (/\$\(|<\(|>\(|[{}]|(?:^|\s)&(?:\s|$)/.test(segment)) return false;
+  if (/^git\s+remote\s*$/i.test(segment) ||
+      /^git\s+remote\s+(?:-v|--verbose|show|get-url)(?:\s|$)/i.test(segment)) {
+    return true;
+  }
+  return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|select-object|sort-object|measure-object|format-table|format-list|out-string|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
 }
 
 function verificationShellSegment(segment) {
-  return /^(?:node(?:\.exe)?\s+--test|npm(?:\.cmd)?\s+(?:test|run\s+(?:test|lint|typecheck|check|build|format:check|format-check))|npx(?:\.cmd)?\s+(?:eslint|tsc|prettier\s+--check)|pnpm\s+(?:test|lint|typecheck|check|build)|yarn\s+(?:test|lint|typecheck|check|build)|pytest|python(?:\.exe)?\s+-m\s+pytest|go\s+test|cargo\s+(?:test|check|clippy|build)|dotnet\s+(?:test|build)|mvn\s+(?:test|verify)|gradle\s+(?:test|check|build)|\.\/gradlew\s+(?:test|check|build))(?:\s|$)/i.test(segment);
+  return /^(?:node(?:\.exe)?\s+(?:--test|(?:\.?[\\/])?scripts[\\/](?:run-domain-tests|release-check)\.mjs)|npm(?:\.cmd)?\s+(?:test|run\s+(?:test|lint|typecheck|check|build|format:check|format-check))|npx(?:\.cmd)?\s+(?:eslint|tsc|prettier\s+--check)|pnpm\s+(?:test|lint|typecheck|check|build)|yarn\s+(?:test|lint|typecheck|check|build)|pytest|python(?:\.exe)?\s+-m\s+pytest|go\s+test|cargo\s+(?:test|check|clippy|build)|dotnet\s+(?:test|build)|mvn\s+(?:test|verify)|gradle\s+(?:test|check|build)|\.\/gradlew\s+(?:test|check|build))(?:\s|$)/i.test(segment);
 }
 
 function shellCommandClass(input) {
@@ -1068,6 +1133,7 @@ function denyPreToolUse(reason) {
 }
 
 export function preToolUse(input, root, ctx) {
+  if (toolExplicitlyOutsideProject(input, root)) return;
   const controlClass = toolControlClass(input, root);
   if (["mutating", "destructive", "opaque"].includes(controlClass) &&
       protectedWorkflowStateMutation(input, root)) {
@@ -1435,6 +1501,7 @@ function writeArtifactReminder(root, ctx, changed, latest) {
 }
 
 export function postToolUse(input, root, ctx) {
+  if (toolExplicitlyOutsideProject(input, root)) return;
   const controlClass = toolControlClass(input, root);
   const operation = controlPlaneOperation(input, root);
 
@@ -1550,13 +1617,9 @@ export function postToolUse(input, root, ctx) {
     }
     const fingerprint = projectChangeFingerprint(root, changed);
     const execution = toolExecutionStatus(input);
-    const responseProvided = input?.tool_response !== undefined ||
-      input?.toolResponse !== undefined ||
-      input?.tool_result !== undefined ||
-      input?.toolResult !== undefined;
     const currentHashes = refreshFileHashes(ctx);
     const baselineHashes = intent.value?.baseline_hashes || {};
-    const refreshedTouched = (!responseProvided || execution.ok)
+    const refreshedTouched = (!execution.known || execution.ok)
       ? CHANGE_REFRESH_FILES.filter((name) =>
         baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
       : [];

@@ -1,24 +1,27 @@
-# 资产索引
+# Artifact Index
 
-## Task Identity
-- task_id: task-6-2026-07-12T15-42-07-054Z
-- task_generation: 6
+## 当前任务资产
 
-## 已创建
-- `.codex-context/archive/tasks/task-5-2026-07-10T15-05-49-436Z/`：上一任务状态归档。
-
-## 已修改
-- `.codex/scripts/lib/events.mjs`：收紧 raw 治理修复豁免，向 checkpoint 传递统一 freshness 文件集合。
-- `.codex/scripts/lib/core.mjs`：新增 `latestChangedInfo`。
-- `.codex/scripts/lib/git.mjs`：checkpoint 判定与详情共用 freshness 事实源。
-- `.agents/skills/codex-codebase-onboarding/assets/project-ops/.codex/scripts/lib/{events,core,git}.mjs`：bootstrap 镜像同步。
-- `tests/domains/workflow-hooks.test.mjs`：新增两个真实失败回归。
-- `.codex-context/*.md`、`workflow-state.yaml`：当前任务状态和证据。
+- `.codex-context/spec.md`：宿主稳定性 Product Contract。
+- `.codex-context/plan-progress.md`：Lane 3 Traditional 执行状态。
+- `docs/codex/plans/2026-07-13-dong-skills-host-stability.md`：详细计划。
+- `.codex/scripts/lib/runtime.mjs`：recovery claim/promotion。
+- `.codex/scripts/lib/events.mjs`：pipeline、外部作用域、PostToolUse refresh。
+- onboarding bootstrap 对应 runtime 镜像：installer 事实源。
+- `tests/domains/workflow-hooks.test.mjs`：recovery 回归。
+- `tests/domains/host-wrapper.test.mjs`：真实宿主 wrapper 回归。
 
 ## 已读取 / 已检查
-- `using-superpowers`、`systematic-debugging`、`verification-before-completion`。
-- PreToolUse mutation 分类、governance repair、Stop、checkpoint、mtime 和 change-state receipt 实现。
-- 相邻已有 workflow hook 回归。
 
-## 原始输出
-- 无需保留临时 probe；测试 fixture 位于系统临时目录并自动清理。
+- `tests/project-ops-support.mjs`：临时项目与 hook fixture。
+- `scripts/run-domain-tests.mjs`：domain 并发和超时合同。
+- `scripts/release-check.mjs`：发布级验证入口。
+
+## 临时资产
+
+- `scientific_Graph/.codex/scripts/lib/events.mjs` 有临时 bootstrap patch；不作为源码，最终由 installer 覆盖。
+- 子代理尝试均因平台 503 失败且已关闭，没有产生文件变更。
+
+## 下一里程碑
+
+- 全量验证通过后更新 verification、review、checkpoint 和 handoff。

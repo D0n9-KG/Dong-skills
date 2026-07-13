@@ -1284,6 +1284,22 @@ test("UserPromptSubmit marks discussion state during active brainstorming", () =
   assert.match(marker.prompt_excerpt, /\[redacted\]/);
 });
 
+test("tool-originated subagent prompts do not contaminate parent discussion or learning state", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "wayfinding", "codex-wayfinder");
+
+  const output = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    tool_name: "Bash",
+    user_prompt: "对父项目做只读审查，以后不要在没有验证时声称完成。"
+  });
+
+  assert.deepEqual(output, {});
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "discussion-state.json")), false);
+  assert.equal(fs.existsSync(path.join(project, ".codex-context", "raw", "observations.jsonl")), false);
+});
+
 test("planning prompts require plan progress instead of unrelated spec artifacts", () => {
   const project = tempProject();
   readyHealthFixture(project);
@@ -3009,10 +3025,9 @@ test("shell governance refresh satisfies a clean committed change receipt", () =
   assert.ok(receipt.refreshed_hashes["verification.md"]);
 });
 
-test("failed, unknown-result, or no-op governance edits cannot satisfy change-state refresh requirements", () => {
+test("failed or no-op governance edits cannot satisfy change-state refresh requirements", () => {
   for (const { response, writesPartialOutput } of [
-    { response: { is_error: true, exit_code: 1 }, writesPartialOutput: false },
-    { response: {}, writesPartialOutput: true },
+    { response: { is_error: true, exit_code: 1 }, writesPartialOutput: true },
     { response: { is_error: false, exit_code: 0 }, writesPartialOutput: false }
   ]) {
     const project = tempProject();
@@ -3103,6 +3118,8 @@ test("read-only workflow inspection and verification commands bypass mutation ap
     ["read-quoted-redirect", "shell_command", { command: "rg \"a > b\" README.md" }],
     ["read-quoted-pipe", "shell_command", { command: "rg \"foo|bar\" README.md" }],
     ["node-tests", "shell_command", { command: "node --test tests/domains/core.test.mjs" }],
+    ["domain-tests", "shell_command", { command: "node scripts/run-domain-tests.mjs" }],
+    ["release-check", "shell_command", { command: "node scripts/release-check.mjs ." }],
     ["npm-lint", "shell_command", { command: "npm run lint" }],
     ["pytest", "shell_command", { command: "pytest -q" }]
   ]) {
@@ -3223,6 +3240,141 @@ test("unscoped recovery eval receipt can authorize same-session workflow transit
     tool_input: { command: "Get-Content .codex-context/workflow-state.yaml; node .codex/hooks/project-ops.mjs workflow-state transition wayfinder-start" }
   });
   assert.deepEqual(transition, {});
+});
+
+test("fresh unscoped recovery can replace a stale scoped receipt for the same session", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  const sessionId = "stale-scoped-recovery";
+  runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
+  acknowledgeSessionRecovery(project, sessionId);
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  const scopedName = fs.readdirSync(runtimeDir).find((name) => /^recovery-[a-f0-9]{16}\.json$/i.test(name));
+  assert.ok(scopedName);
+  const staleScoped = fs.readFileSync(path.join(runtimeDir, scopedName), "utf8");
+
+  fs.appendFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "\n- New recovery boundary.\n", "utf8");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  fs.writeFileSync(path.join(runtimeDir, scopedName), staleScoped, "utf8");
+
+  const allowed = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: sessionId,
+    tool_name: "apply_patch",
+    tool_use_id: "verification-after-fresh-recovery",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  });
+  assert.deepEqual(allowed, {});
+});
+
+test("an unscoped recovery receipt is claimed by only one session", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const first = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "claim-session-a",
+    tool_name: "apply_patch",
+    tool_use_id: "claim-a",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work-a.txt\n*** End Patch" }
+  });
+  assert.deepEqual(first, {});
+
+  const second = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "claim-session-b",
+    tool_name: "apply_patch",
+    tool_use_id: "claim-b",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work-b.txt\n*** End Patch" }
+  });
+  assert.equal(second.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(second.hookSpecificOutput.permissionDecisionReason, /context recovery/i);
+});
+
+test("failed recovery promotion consumes the unscoped receipt and fails closed", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, ".codex-context", "verification.md"), "# Verification\n\n## Commands Run\n- Baseline.\n");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+
+  const sessionId = "failed-recovery-promotion";
+  runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
+  acknowledgeSessionRecovery(project, sessionId);
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  const scopedName = fs.readdirSync(runtimeDir).find((name) => /^recovery-[a-f0-9]{16}\.json$/i.test(name));
+  assert.ok(scopedName);
+
+  fs.appendFileSync(path.join(project, ".codex-context", "handoff-summary.md"), "\n- New recovery boundary.\n", "utf8");
+  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.ok(fs.existsSync(path.join(runtimeDir, "recovery.json")));
+
+  const scopedLock = path.join(runtimeDir, `${scopedName}.lock`);
+  fs.writeFileSync(scopedLock, `${process.pid} ${new Date().toISOString()}\n`, "utf8");
+  const denied = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: sessionId,
+    tool_name: "apply_patch",
+    tool_use_id: "failed-promotion",
+    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
+  });
+  assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
+  assert.match(denied.hookSpecificOutput.permissionDecisionReason, /rerun context-recovery-eval/i);
+  assert.equal(fs.existsSync(path.join(runtimeDir, "recovery.json")), false);
+  fs.rmSync(scopedLock, { force: true });
 });
 
 test("compound workflow transitions are validated instead of downgraded to opaque shell mutations", () => {

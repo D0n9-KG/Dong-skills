@@ -1,66 +1,76 @@
 # 计划进度
 
 ## Task Identity
-- task_id: task-6-2026-07-12T15-42-07-054Z
-- task_generation: 6
+- task_id: task-7-2026-07-12T18-25-41-449Z
+- task_generation: 7
 
 ## 当前计划
-修复 `raw` 治理豁免和 checkpoint freshness 事实源不一致，并同步发行镜像。
 
-## 规格审批
-Approved by user on 2026-07-12。
-
-## 执行审批
-Approved by user for Traditional task-by-task execution on 2026-07-12。
-
-## 执行模式
-Traditional task-by-task execution。
+- 详细计划：`docs/codex/plans/2026-07-13-dong-skills-host-stability.md`。
 
 ## Artifact Readiness
-implementation-ready。
+
+- implementation-ready。
+
+## 规格审批
+
+- Approved by user on 2026-07-13。
+
+## 执行审批
+
+- plan-then-execute requested; Traditional task-by-task execution。
+
+## 执行模式
+
+- Traditional task-by-task execution。
 
 ## 工作类别 / 风险等级
-Lane 3。涉及 hook 安全门、恢复门和 Stop 收尾，必须测试先行并做完整发布检查。
+
+- Lane 3：权限门禁、session isolation、跨项目作用域与发布安装。
 
 ## Goal 模式目标
-未选择 Codex Goal mode。
+
+- 未选择；本轮使用 Traditional task-by-task execution。
+
+## Loop Review
+
+- not-required；本轮不是 Goal mode。
 
 ## 运行约束
-- 不削弱 recovery、workflow、审批、验证和 checkpoint 证据。
-- 不建立第二套 shell 解析器或 freshness 状态。
-- 根运行时和 bootstrap 镜像必须完全一致。
-- 失败测试先证明问题，再做最小实现。
-- 状态文件只记录可恢复事实，不记录隐藏思维链。
+
+- test-first；不为绿灯削弱安全负例。
+- 不修改研究业务代码或实验资产。
+- 不把安装副本当源码；最终由真实源码 installer 覆盖临时 bootstrap。
+- 完整测试失败时回 systematic-debugging，不叠补丁。
 
 ## 存档节奏
-- 两个失败用例转绿并通过完整发布检查后提交。
-- 推送后同步全局 Dong Skills 安装副本。
 
-## 简化门禁
-- can avoid building：不能，仅改文档无法修复运行时误判。
-- standard library：复用现有 `fs.statSync`、路径和 mtime 逻辑。
-- native platform：继续使用 Git 状态和现有 hook receipt，不引入依赖。
+- recovery 模块、events 模块、全量验证、下游安装各自形成可验证检查点。
+- 最终源仓库 commit；未明确要求时不 push。
 
 ## 任务
-- [x] Task 1：新增 `raw` 复合重定向绕过 recovery 的失败回归。
-- [x] Task 2：新增 checkpoint stale 结论与详情文件集合不一致的失败回归。
-- [x] Task 3：排除 `.codex-context/raw` 的治理修复豁免。
-- [x] Task 4：新增统一 freshness info，并接入 Stop、PreCompact 和状态摘要。
-- [x] Task 5：同步 onboarding bootstrap 镜像。
-- [x] Task 6：运行针对性回归、完整 workflow-hooks 和 release-check。
-- [x] Task 7a：完成代码审查。
-- [ ] Task 7b：提交、推送和全局安装同步。
+
+- [x] Task 1：复现 recovery scoped/unscoped 死锁与跨 session 复用。
+- [x] Task 2：实现原子 single claim/promotion 并通过定向隔离测试。
+- [x] Task 3：复现并修复 PowerShell pipeline、外部作用域与 PostToolUse 空响应。
+- [ ] Task 4：运行 workflow-hooks、全部 domain tests、release-check 与重复稳定性循环。
+- [ ] Task 5：执行架构/对抗审查并处理 findings。
+- [ ] Task 6：installer 更新 `scientific_Graph`，验证 context 保护与真实回归。
+- [ ] Task 7：刷新状态、checkpoint 源仓库并恢复研究 Wayfinder。
 
 ## 当前步骤
-Task 7b：Git checkpoint 与安装同步。
+
+- Task 4：完整验证和稳定性循环。
 
 ## 验证
-- 两个原始失败用例：2/2 pass。
-- 相邻回归：8/8 pass。
-- `tests/domains/workflow-hooks.test.mjs`：97/97 pass。
-- `node scripts/release-check.mjs .`：pass。
+
+- `node --test tests/domains/host-wrapper.test.mjs`
+- `node --test tests/domains/workflow-hooks.test.mjs`
+- `node scripts/run-domain-tests.mjs`
+- `node scripts/release-check.mjs .`
+- `git diff --check`
+- installer Preview/Apply + 下游 health/recovery/Stop。
 
 ## 范围外
-- 完整 shell sandbox。
-- 自动升级所有旧项目。
-- 修改非 Dong Skills 的全局技能。
+
+- 推送远端、发布 tag、修改研究方法与实验。

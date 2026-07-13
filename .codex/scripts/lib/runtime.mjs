@@ -229,7 +229,7 @@ export function hookRuntimeHash(root) {
 }
 
 export function writeRecoveryReceipt(root, ctx, state, sessionKey = "") {
-  return writeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey), {
+  const value = {
     schema: "dong-skills.recovery-receipt.v1",
     task_id: state.task_id,
     task_generation: String(state.task_generation),
@@ -237,6 +237,13 @@ export function writeRecoveryReceipt(root, ctx, state, sessionKey = "") {
     runtime_hash: hookRuntimeHash(root),
     session_key_hash: sessionKey ? stableFingerprint(String(sessionKey)) : "",
     acknowledged_at: new Date().toISOString()
+  };
+  if (!sessionKey) {
+    return writeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", ""), value);
+  }
+  return withRuntimeLock(ctx, "recovery-claim", () => {
+    removeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", ""), { required: true });
+    return writeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey), value);
   });
 }
 
@@ -244,34 +251,13 @@ export function removeRecoveryReceipt(ctx, sessionKey = "", options = {}) {
   return removeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey), options);
 }
 
-function hasScopedRecoveryReceipt(ctx) {
-  const dir = runtimeDirectory(ctx);
-  if (!fs.existsSync(dir)) return false;
-  return fs.readdirSync(dir).some((name) => /^recovery-[a-f0-9]{16}\.json$/i.test(name));
-}
-
-export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
-  let receipt = readRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey));
-  let fallbackToUnscoped = false;
-  if (!receipt.ok) {
+function recoveryReceiptValueStatus(root, state, value, sessionKey = "", allowUnscoped = false) {
+  if (value.schema !== "dong-skills.recovery-receipt.v1") {
     return {
       ok: false,
-      reason: `context recovery receipt is invalid: ${receipt.error}`
+      reason: "context recovery receipt schema is unsupported"
     };
   }
-  if (!receipt.exists) {
-    const unscoped = sessionKey ? readRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", "")) : receipt;
-    if (!sessionKey || !unscoped.ok || !unscoped.exists || hasScopedRecoveryReceipt(ctx)) {
-      return {
-        ok: false,
-        reason: "context recovery has not been acknowledged in this session"
-      };
-    }
-    receipt = unscoped;
-    fallbackToUnscoped = true;
-  }
-
-  const value = receipt.value || {};
   if (value.task_id !== state.task_id ||
       String(value.task_generation) !== String(state.task_generation)) {
     return {
@@ -280,7 +266,7 @@ export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
     };
   }
   if (sessionKey && value.session_key_hash !== stableFingerprint(String(sessionKey))) {
-    if (!fallbackToUnscoped || value.session_key_hash) {
+    if (!allowUnscoped || value.session_key_hash) {
       return {
         ok: false,
         reason: "context recovery receipt belongs to a different session"
@@ -300,6 +286,99 @@ export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
     };
   }
   return { ok: true, reason: "" };
+}
+
+function claimUnscopedRecoveryReceipt(root, ctx, state, sessionKey) {
+  if (!sessionKey) {
+    return {
+      ok: false,
+      reason: "context recovery has not been acknowledged in this session"
+    };
+  }
+
+  return withRuntimeLock(ctx, "recovery-claim", () => {
+    const scopedName = scopedRuntimeReceiptName("recovery", sessionKey);
+    const scoped = readRuntimeReceipt(ctx, scopedName);
+    if (!scoped.ok) {
+      return {
+        ok: false,
+        reason: `context recovery receipt is invalid: ${scoped.error}`
+      };
+    }
+    if (scoped.exists) {
+      const status = recoveryReceiptValueStatus(root, state, scoped.value || {}, sessionKey);
+      if (status.ok) return status;
+    }
+
+    return withRuntimeReceiptLock(ctx, "recovery", (unscopedFile) => {
+      const unscoped = readRuntimeReceiptFile(unscopedFile);
+      if (!unscoped.ok) {
+        return {
+          ok: false,
+          reason: `context recovery receipt is invalid: ${unscoped.error}`
+        };
+      }
+      if (!unscoped.exists) {
+        return {
+          ok: false,
+          reason: "context recovery has not been acknowledged in this session"
+        };
+      }
+
+      const status = recoveryReceiptValueStatus(root, state, unscoped.value || {}, sessionKey, true);
+      if (!status.ok) return status;
+
+      const promoted = {
+        ...unscoped.value,
+        session_key_hash: stableFingerprint(String(sessionKey))
+      };
+      try {
+        fs.rmSync(unscopedFile);
+      } catch (error) {
+        return {
+          ok: false,
+          authoritative: true,
+          reason: `context recovery receipt could not be consumed: ${error.message}`
+        };
+      }
+      try {
+        withRuntimeReceiptLock(ctx, scopedName, (scopedFile) => {
+          writeTextAtomic(scopedFile, `${JSON.stringify(promoted, null, 2)}\n`);
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          authoritative: true,
+          reason: `context recovery receipt promotion failed; rerun context-recovery-eval: ${error.message}`
+        };
+      }
+      return { ok: true, reason: "" };
+    });
+  });
+}
+
+export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
+  const scopedName = scopedRuntimeReceiptName("recovery", sessionKey);
+  const receipt = readRuntimeReceipt(ctx, scopedName);
+  if (!receipt.ok) {
+    return {
+      ok: false,
+      reason: `context recovery receipt is invalid: ${receipt.error}`
+    };
+  }
+  if (receipt.exists) {
+    const status = recoveryReceiptValueStatus(root, state, receipt.value || {}, sessionKey);
+    if (status.ok || !sessionKey) return status;
+    const claimed = claimUnscopedRecoveryReceipt(root, ctx, state, sessionKey);
+    return claimed.ok || claimed.authoritative ? claimed : status;
+  }
+  if (!sessionKey) {
+    return {
+      ok: false,
+      reason: "context recovery has not been acknowledged in this session"
+    };
+  }
+  return claimUnscopedRecoveryReceipt(root, ctx, state, sessionKey);
 }
 
 export function writeDecisionReceipt(root, ctx, state, sessionKey, decision, allowedEvents, evidenceHash) {

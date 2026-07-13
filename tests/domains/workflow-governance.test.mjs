@@ -1371,7 +1371,7 @@ Resolve the active Wayfinder frontier.
     hook_event_name: "Stop",
     session_id: "wayfinder-map-refresh"
   });
-  assert.notEqual(allowed.decision, "block");
+  assert.notEqual(allowed.decision, "block", JSON.stringify(allowed));
 });
 
 test("active-session context updates do not invalidate workflow routing", () => {
