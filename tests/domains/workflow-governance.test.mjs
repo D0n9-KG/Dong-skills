@@ -931,6 +931,47 @@ test("bare continuation prompts do not dirty five discussion documents", () => {
   });
   assert.equal(fs.existsSync(marker), false);
   assert.doesNotMatch(status.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
+
+  const coverageReview = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    session_id: "continue-session",
+    prompt: "复核吧，但是我好像没有看到Stop coverage"
+  });
+  assert.equal(fs.existsSync(marker), false);
+  assert.doesNotMatch(coverageReview.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
+
+  const projectOpsPolicy = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    session_id: "continue-session",
+    prompt: "补充一下，dong skills应该是起到辅助提醒的作用，如果现在的dong skills过于繁重反而会导致codex工作被限制，所以如果发现有这个问题，应该适当放宽限制，避免出现dong skills干扰codex工作的情况"
+  });
+  assert.equal(fs.existsSync(marker), false);
+  assert.doesNotMatch(projectOpsPolicy.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
+
+  const hookPolicy = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    session_id: "continue-session",
+    prompt: "如果 hooks 经常报没有必要的 dirty，就应放宽或删除不必要的 hooks"
+  });
+  assert.equal(fs.existsSync(marker), false);
+  assert.doesNotMatch(hookPolicy.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
+
+  const requestedBusinessFix = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    session_id: "continue-session",
+    prompt: "复核当前实验方法并修改评测指标"
+  });
+  assert.equal(fs.existsSync(marker), true);
+  assert.match(requestedBusinessFix.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
+
+  fs.rmSync(marker, { force: true });
+  const mixedProjectOpsAndBusiness = runHook(project, {
+    hook_event_name: "UserPromptSubmit",
+    session_id: "continue-session",
+    prompt: "调整 Dong Skills 后，把研究方法改成时序知识图谱"
+  });
+  assert.equal(fs.existsSync(marker), true);
+  assert.match(mixedProjectOpsAndBusiness.hookSpecificOutput?.additionalContext || "", /marked .*state dirty/i);
 });
 
 test("execution scope corrections block project mutations until scope is reopened", () => {

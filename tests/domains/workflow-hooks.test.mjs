@@ -3096,7 +3096,7 @@ test("failed or no-op governance edits cannot satisfy change-state refresh requi
   }
 });
 
-test("read-only workflow inspection and verification commands bypass mutation approval gates", () => {
+test("read-only inspection, verification, and safe governance commands bypass mutation approval gates", () => {
   const project = tempProject();
   readyHealthFixture(project);
   const stateFile = path.join(project, ".codex-context", "workflow-state.yaml");
@@ -3113,13 +3113,17 @@ test("read-only workflow inspection and verification commands bypass mutation ap
 
   for (const [toolUseId, toolName, toolInput] of [
     ["read-workflow-shell", "shell_command", { command: "Get-Content .codex-context/workflow-state.yaml" }],
+    ["read-file-hash", "shell_command", { command: "Get-FileHash .codex/scripts/lib/events.mjs -Algorithm SHA256" }],
     ["read-workflow-mcp", "mcp__filesystem__read_file", { path: ".codex-context/workflow-state.yaml" }],
     ["read-pipeline", "shell_command", { command: "Get-Content README.md | Select-String -Pattern Project" }],
     ["read-quoted-redirect", "shell_command", { command: "rg \"a > b\" README.md" }],
     ["read-quoted-pipe", "shell_command", { command: "rg \"foo|bar\" README.md" }],
     ["node-tests", "shell_command", { command: "node --test tests/domains/core.test.mjs" }],
+    ["node-check", "shell_command", { command: "node --check .codex/scripts/lib/events.mjs" }],
     ["domain-tests", "shell_command", { command: "node scripts/run-domain-tests.mjs" }],
     ["release-check", "shell_command", { command: "node scripts/release-check.mjs ." }],
+    ["asset-governance-dry-run", "shell_command", { command: "node .codex/hooks/project-ops.mjs asset-governance" }],
+    ["asset-governance-apply", "shell_command", { command: "node .codex/hooks/project-ops.mjs asset-governance --apply" }],
     ["npm-lint", "shell_command", { command: "npm run lint" }],
     ["pytest", "shell_command", { command: "pytest -q" }]
   ]) {
@@ -3812,6 +3816,36 @@ test("ordinary source reads do not create mandatory Stop state debt", () => {
 
   const stopped = runHook(project, { hook_event_name: "Stop" });
   assert.notEqual(stopped.decision, "block", JSON.stringify(stopped));
+});
+
+test("no-change verification does not turn pre-existing dirty files into new freshness debt", () => {
+  const project = tempProject();
+  git(project, ["init"]);
+  git(project, ["config", "user.email", "test@example.com"]);
+  git(project, ["config", "user.name", "Test User"]);
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "before\n");
+  git(project, ["add", "-A"]);
+  git(project, ["commit", "-m", "baseline"]);
+  write(path.join(project, "work.txt"), "pre-existing dirty work\n");
+
+  const verifyInput = {
+    tool_name: "shell_command",
+    tool_use_id: "no-change-dirty-verification",
+    tool_input: { command: "node --test tests/domains/core.test.mjs" }
+  };
+  runHook(project, { hook_event_name: "PreToolUse", ...verifyInput });
+  const post = runHook(project, {
+    hook_event_name: "PostToolUse",
+    ...verifyInput,
+    tool_response: { exit_code: 0 }
+  });
+
+  assert.deepEqual(post, {});
+  assert.equal(
+    fs.existsSync(path.join(project, ".codex-context", "raw", "project-ops-runtime", "change-state.json")),
+    false
+  );
 });
 
 test("no-change verification commands preserve completed change-state refreshes", () => {

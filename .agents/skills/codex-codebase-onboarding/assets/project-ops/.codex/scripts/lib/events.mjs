@@ -169,7 +169,25 @@ function promptIsBareContinuation(prompt) {
 
 function promptIsStatusInquiry(prompt) {
   const text = String(prompt || "").trim();
-  return /^(?:(?:现在|目前|当前)\s*)?(?:(?:进展|进度|状态|情况)(?:到哪(?:里|儿)?|如何|怎么样)?|做到哪(?:里|儿)?|到哪(?:里|儿)?|遇到什么问题|出了什么问题|为什么停了|what(?:'s| is) the status|where are we|what happened)(?:了|呢|吗)?[？?。.!！\s]*$/i.test(text);
+  if (/^(?:(?:现在|目前|当前)\s*)?(?:(?:进展|进度|状态|情况)(?:到哪(?:里|儿)?|如何|怎么样)?|做到哪(?:里|儿)?|到哪(?:里|儿)?|遇到什么问题|出了什么问题|为什么停了|what(?:'s| is) the status|where are we|what happened)(?:了|呢|吗)?[？?。.!！\s]*$/i.test(text)) {
+    return true;
+  }
+  if (/(?:修复|修改|调整|更新|实现|添加|新增|删除|移除|重写|fix|change|update|implement|add|remove|delete)/i.test(text)) {
+    return false;
+  }
+  const reviewCue = /(?:复核|核对|确认|检查|查看|看一下|review|check|confirm)/i.test(text);
+  const observationCue = /(?:没有看到|没看到|看不到|未看到|是否|有没有|有无|是不是|正常|生效|触发|记录|coverage|覆盖)/i.test(text);
+  const runtimeSubject = /(?:stop(?:\s*hooks?)?|hooks?|coverage|覆盖|liveness|freshness|运行态|状态|记录|触发)/i.test(text);
+  return text.length <= 160 && reviewCue && observationCue && runtimeSubject;
+}
+
+function promptIsProjectOpsOnly(prompt) {
+  const text = String(prompt || "").trim();
+  const strongSubject = /(?:dong\s*-?\s*skills|codex\s+project\s+ops|project\s+ops)/i.test(text);
+  const hookSubject = /(?:(?:stop|precompact|postcompact|subagent|userpromptsubmit|pretooluse|posttooluse)\s*hooks?|workflow-state|context-recovery|asset-governance|project-ops|hooks?)/i.test(text);
+  const governanceCue = /(?:提醒|门禁|限制|干扰|辅助|治理|安装|更新|修复|关闭|开启|启用|停用|trust|coverage|liveness|freshness|runtime|dirty|状态|复核|检查|问题|原则)/i.test(text);
+  const businessCue = /(?:研究|实验|论文|方法|模型|数据|评测|指标|baseline|业务|产品|页面|接口|功能|数据库|用户流程)/i.test(text);
+  return (strongSubject || (hookSubject && governanceCue)) && !businessCue;
 }
 
 function promptLooksLikeQuestionOrReview(prompt) {
@@ -481,6 +499,7 @@ export function userPromptSubmit(input, root, ctx) {
   if (promptIsSubstantive(prompt) &&
       !promptIsBareContinuation(prompt) &&
       !promptIsStatusInquiry(prompt) &&
+      !promptIsProjectOpsOnly(prompt) &&
       !promptIsLearningOnly(prompt, cue) &&
       state.decision_required === "none" &&
       EXECUTION_DIRECTIVE_PHASES.has(state.phase)) {
@@ -508,6 +527,7 @@ export function userPromptSubmit(input, root, ctx) {
   if (promptIsSubstantive(prompt) &&
       !promptIsBareContinuation(prompt) &&
       !promptIsStatusInquiry(prompt) &&
+      !promptIsProjectOpsOnly(prompt) &&
       !executionDirectiveRecorded &&
       discussionWorkflowActive(state)) {
     const requiredFiles = discussionRefreshFiles(root, ctx, state);
@@ -614,9 +634,11 @@ function singleControlPlaneOperation(command, root) {
   const allowedScripts = new Set([
     path.resolve(root, ".codex", "hooks", "project-ops.mjs"),
     path.resolve(root, ".codex", "scripts", "context-recovery-eval.mjs"),
+    path.resolve(root, ".codex", "scripts", "asset-governance.mjs"),
     path.resolve(root, ".codex", "scripts", "project-ops-health.mjs"),
     path.resolve(root, ".codex", "scripts", "workflow-state.mjs"),
     path.resolve(root, "scripts", "context-recovery-eval.mjs"),
+    path.resolve(root, "scripts", "asset-governance.mjs"),
     path.resolve(root, "scripts", "project-ops-health.mjs"),
     path.resolve(root, "scripts", "workflow-state.mjs")
   ]);
@@ -627,14 +649,22 @@ function singleControlPlaneOperation(command, root) {
   if (basename === "project-ops.mjs") {
     if (/^context-recovery-eval(?:\s|$)/i.test(args)) return { kind: "recovery" };
     if (/^health-check(?:\s|$)/i.test(args)) return { kind: "read-only" };
+    const assetGovernance = args.match(/^asset-governance(?:\s+(.*))?$/i);
+    if (assetGovernance) return assetGovernanceOperation(String(assetGovernance[1] || ""));
     const workflow = args.match(/^workflow-state(?:\s+(.*))?$/i);
     if (!workflow) return null;
     return workflowStateOperation(String(workflow[1] || ""));
   }
   if (basename === "context-recovery-eval.mjs") return { kind: "recovery" };
+  if (basename === "asset-governance.mjs") return assetGovernanceOperation(args);
   if (basename === "project-ops-health.mjs") return { kind: "read-only" };
   if (basename === "workflow-state.mjs") return workflowStateOperation(args);
   return null;
+}
+
+function assetGovernanceOperation(args) {
+  const tokens = String(args || "").trim().split(/\s+/).filter(Boolean);
+  return { kind: tokens.includes("--apply") ? "repair" : "read-only", command: "asset-governance" };
 }
 
 function workflowStateOperation(args) {
@@ -936,11 +966,11 @@ function readOnlyShellSegment(segment) {
       /^git\s+remote\s+(?:-v|--verbose|show|get-url)(?:\s|$)/i.test(segment)) {
     return true;
   }
-  return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|select-object|sort-object|measure-object|format-table|format-list|out-string|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
+  return /^(?:git\s+(?:status|diff|log|show|rev-parse|ls-files)|git\s+branch\s+(?:--show-current|--list|-l)|git\s+worktree\s+list|rg|grep|findstr|select-string|get-content|get-childitem|get-filehash|select-object|sort-object|measure-object|format-table|format-list|out-string|cat|type|ls|dir|tree|head|tail|wc)(?:\s|$)/i.test(segment);
 }
 
 function verificationShellSegment(segment) {
-  return /^(?:node(?:\.exe)?\s+(?:--test|(?:\.?[\\/])?scripts[\\/](?:run-domain-tests|release-check)\.mjs)|npm(?:\.cmd)?\s+(?:test|run\s+(?:test|lint|typecheck|check|build|format:check|format-check))|npx(?:\.cmd)?\s+(?:eslint|tsc|prettier\s+--check)|pnpm\s+(?:test|lint|typecheck|check|build)|yarn\s+(?:test|lint|typecheck|check|build)|pytest|python(?:\.exe)?\s+-m\s+pytest|go\s+test|cargo\s+(?:test|check|clippy|build)|dotnet\s+(?:test|build)|mvn\s+(?:test|verify)|gradle\s+(?:test|check|build)|\.\/gradlew\s+(?:test|check|build))(?:\s|$)/i.test(segment);
+  return /^(?:node(?:\.exe)?\s+(?:--test|--check|(?:\.?[\\/])?scripts[\\/](?:run-domain-tests|release-check)\.mjs)|npm(?:\.cmd)?\s+(?:test|run\s+(?:test|lint|typecheck|check|build|format:check|format-check))|npx(?:\.cmd)?\s+(?:eslint|tsc|prettier\s+--check)|pnpm\s+(?:test|lint|typecheck|check|build)|yarn\s+(?:test|lint|typecheck|check|build)|pytest|python(?:\.exe)?\s+-m\s+pytest|go\s+test|cargo\s+(?:test|check|clippy|build)|dotnet\s+(?:test|build)|mvn\s+(?:test|verify)|gradle\s+(?:test|check|build)|\.\/gradlew\s+(?:test|check|build))(?:\s|$)/i.test(segment);
 }
 
 function shellCommandClass(input) {
@@ -1580,6 +1610,10 @@ export function postToolUse(input, root, ctx) {
   const invocationChanged = intent.files.some((file) => !isGovernancePath(file)) ||
     !statusUnchanged ||
     !fingerprintUnchanged;
+  if (controlClass === "verification" && !invocationChanged) {
+    removeMutationIntent(ctx, input);
+    return;
+  }
   if (["external", "unknown"].includes(controlClass)) {
     if (!intent.exists) {
       return;
