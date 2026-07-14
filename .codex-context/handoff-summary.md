@@ -17,7 +17,7 @@
 ## 计划状态
 - Tasks 1-3 完成。
 - Task 4 已完成 focused/full/release、两轮 finding 修复与最终 closure review；无 Critical/High。
-- Task 5：首次双下游 Apply 暴露两个 legacy CRLF migration bug（plan approval hash、context handoff hash）；均已 test-first 修复，core 27/27 通过，等待最终全量验证与修复 checkpoint 后重试。
+- Task 5：双下游 Apply/recovery 暴露三个 migration compatibility 场景（plan approval、legacy-v0 context、current-schema legacy context）；均已 test-first 修复，core 28/28、full 163/163、release-check 通过，等待补充 checkpoint 后重试。
 - Task 6 上游服务与 AAAI 研究恢复未开始。
 
 ## 已修改文件
@@ -51,8 +51,8 @@
 - 最新提交: `35c7aa8`，`main`，相对 `origin/main` ahead 7。
 - 推送状态: 本轮不 push。
 - 已包含文件: 最小 Hook 内核完整 source diff、tests、skills、docs 与 Task 4 closure 状态。
-- 有意保留未提交的文件: 第二个 migration 根因修复、回归测试与调试证据，等待最终全量验证后独立 checkpoint。
-- 暂缓原因: 修复已通过 core 27/27，正在运行最终全量验证；本轮不 push。
+- 有意保留未提交的文件: current-schema legacy context 补充修复、回归测试与调试证据，等待最终全量验证后独立 checkpoint。
+- 暂缓原因: 修复已通过 context 2/2、core 28/28、full 163/163 与 release-check，正在创建补充 checkpoint；本轮不 push。
 - 下次存档: 修复 checkpoint 后重试两个下游 Apply。
 
 ## 需要保留的经验沉淀

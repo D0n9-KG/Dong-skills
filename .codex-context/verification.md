@@ -43,3 +43,7 @@
 - 第二个红灯：`legacy context hash migration safely` 在旧实现中稳定失败，saved raw context aggregate 未被 normalized migration 重绑。
 - 第二个绿灯：精确用例 1/1、`node --test tests/domains/core.test.mjs` 27/27；root/bootstrap parity pass。
 - 最终全量：`node scripts/run-domain-tests.mjs` 162/162，12 domains；`node scripts/release-check.mjs .` pass，全部发布门禁通过。
+- 真实重装后 recovery 仍先红：schema 已是 `approval-contract-v2`，saved handoff 仍为 legacy raw 聚合；证明第一版修复触发范围过窄。
+- 第三个红灯：`current workflow schema repairs a matching legacy raw context aggregate` 在旧触发范围下稳定失败。
+- 第三个绿灯：两个 context migration 精确用例 2/2、core 28/28；安全重绑移至 schema mode 无关位置，只有 saved hash 精确命中当前 raw 聚合才更新。
+- 补充全量：`node scripts/run-domain-tests.mjs` 163/163，12 domains；`node scripts/release-check.mjs .` pass，全部发布门禁通过。

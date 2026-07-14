@@ -614,17 +614,6 @@ export function migrateWorkflowState(root, ctx) {
       if (["done", "skipped"].includes(migrated.review_status)) {
         rebindCurrentHash("review_evidence_hash", REQUIRED_FILES.verification);
       }
-      const legacyHandoffHash = String(parsed.handoff_hash || "null");
-      if (/^[a-f0-9]{64}$/.test(legacyHandoffHash)) {
-        const legacyContextHash = workflowContextDigest(
-          workflowContextEntries(root, contextDir, rawFileHash)
-        );
-        if (legacyContextHash === legacyHandoffHash) {
-          migrated.handoff_hash = workflowContextDigest(
-            workflowContextEntries(root, contextDir, fileHash)
-          );
-        }
-      }
       migrated.document_hash_mode = "normalized-v1";
     }
     if (migrated.document_hash_mode === "normalized-v1") {
@@ -694,6 +683,17 @@ export function migrateWorkflowState(root, ctx) {
         }
       }
       migrated.document_hash_mode = "approval-contract-v2";
+    }
+    const savedHandoffHash = String(migrated.handoff_hash || "null");
+    if (/^[a-f0-9]{64}$/.test(savedHandoffHash)) {
+      const legacyContextHash = workflowContextDigest(
+        workflowContextEntries(root, contextDir, rawFileHash)
+      );
+      if (legacyContextHash === savedHandoffHash) {
+        migrated.handoff_hash = workflowContextDigest(
+          workflowContextEntries(root, contextDir, fileHash)
+        );
+      }
     }
     const validation = validateWorkflowState(migrated);
     if (!validation.ok) {

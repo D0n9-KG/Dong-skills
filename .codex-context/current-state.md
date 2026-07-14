@@ -19,13 +19,13 @@ execution，Task 5 installer workflow migration 修复验证。
 - `PreToolUse` 以可确定 mutation target 为边界；外部、网络、浏览器、诊断和未知操作默认 fail-open。
 - 当前源码 focused 64/64、full domains 160/160、`release-check` 已通过；最终 closure review 无 Critical/High，两轮独立审查发现的可复现问题均已修复。
 - `scientific_Graph` 已 Apply distribution `b329b29e...` 且六文件哈希保持不变。
-- `sci-evo-extract` 首次 Apply 在 workflow migration 阶段回滚；两个 legacy-v0 兼容遗漏均已用最小测试先红后修复：plan approval hash 与 context handoff raw 聚合现在都会安全重绑到 normalized contract/hash。
+- `sci-evo-extract` 首次 Apply 在 workflow migration 阶段回滚；后续 recovery 复验还发现 schema 已升级但 raw handoff hash 遗留的情况。三个兼容场景均已用最小测试先红后修复：plan approval hash、legacy-v0 context hash、current-schema legacy context hash。
 
 ## 阻塞项
 - 无。
 
 ## 下一步动作
-创建迁移兼容修复 checkpoint，再重试两个下游 Apply 与 recovery。
+创建补充 checkpoint，再重试两个下游 Apply 与 recovery。
 
 ## 最后更新
-2026-07-14：两个 legacy CRLF migration 兼容问题均已 test-first 修复；162/162 与 release-check 通过，等待 checkpoint 和双下游重装。
+2026-07-14：current-schema legacy handoff hash 补充回归已先红后绿；context 2/2、core 28/28、full 163/163、release-check 通过。
