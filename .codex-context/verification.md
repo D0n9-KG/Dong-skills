@@ -15,7 +15,7 @@
 - 两个下游 installer Preview 均通过且未写文件；六个核心 context 文件安装前 SHA-256 已在当前会话验证记录中保留。
 
 ## 尚未验证
-- `scientific_Graph` 与 `sci-evo-extract` 尚未 Apply 本轮 distribution。
+- `sci-evo-extract` 尚未 Apply 本轮 distribution；第一次尝试在 workflow migration 阶段失败并回滚。
 - 用户重启/trust 后的真实 `SessionStart`、`PreToolUse`、`PreCompact`、`Stop` 与浏览器 smoke 尚未运行。
 
 ## 审查证据
@@ -32,3 +32,11 @@
 - `node --test tests/domains/host-wrapper.test.mjs tests/domains/workflow-hooks.test.mjs tests/domains/health-release.test.mjs tests/domains/assets-worktree.test.mjs`：pass，64/64。
 - `node scripts/run-domain-tests.mjs`：pass，160/160，12 domains；并发 4，耗时约 161 秒。
 - `git diff --check`：pass；仅报告既有 CRLF normalization warning，无 whitespace error。
+
+## Installer 调试证据（2026-07-14）
+- `scientific_Graph` Apply：pass；distribution=`b329b29e6a15f3c9fad9b6d99a5fba900bef2151e9da61c71bfea6dd6c5925ba`，六个核心 context SHA-256 与安装前一致。
+- `sci-evo-extract` Apply：fail；`Cannot migrate approved_plan_hash: current approved plan contract differs from the recorded approval`，安装事务已回滚，marker 仍为旧 distribution `a3b3af45...`，六文件 SHA-256 未变。
+- 根因证据：legacy `approved_plan_hash=5421dd60...` 与当前 `plan-progress.md` 原始 SHA-256 完全相等；迁移代码第一阶段写入 normalized hash 后，第二阶段错误优先读取 `parsed.approved_plan_hash` 的旧 raw hash。
+- 红灯：`node --test --test-name-pattern="legacy plan hash migration carries" tests/domains/core.test.mjs` 在旧实现稳定 0/1，报错与 installer 现场一致。
+- 绿灯：第二阶段改用已重绑的 `migrated.approved_plan_hash` 后，精确用例 1/1、`node --test tests/domains/core.test.mjs` 26/26；root/bootstrap `workflow.mjs` parity pass。
+- 全量：`node scripts/run-domain-tests.mjs` 161/161，12 domains；`node scripts/release-check.mjs .` pass，全部发布门禁通过。

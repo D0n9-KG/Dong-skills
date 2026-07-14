@@ -619,7 +619,7 @@ export function migrateWorkflowState(root, ctx) {
     if (migrated.document_hash_mode === "normalized-v1") {
       if (migrated.plan_status === "approved" &&
           ["approved-traditional", "approved-goal", "plan-then-execute-traditional"].includes(migrated.execution_approval)) {
-        const stored = String(parsed.approved_plan_hash || migrated.approved_plan_hash || "none");
+        const stored = String(migrated.approved_plan_hash || "none");
         if (/^[a-f0-9]{64}$/.test(stored)) {
           const progressFile = path.join(contextDir, REQUIRED_FILES.plan);
           const currentProgress = readText(progressFile);

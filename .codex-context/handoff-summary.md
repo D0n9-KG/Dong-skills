@@ -17,7 +17,7 @@
 ## 计划状态
 - Tasks 1-3 完成。
 - Task 4 已完成 focused/full/release、两轮 finding 修复与最终 closure review；无 Critical/High。
-- Task 5 的两个 installer Preview 与安装前 context 哈希已完成；Apply 未执行。
+- Task 5：`scientific_Graph` Apply 成功；`sci-evo-extract` 首次 Apply 暴露 legacy CRLF plan hash migration bug，已 test-first 修复并通过 161/161 + release-check，等待修复 checkpoint 后重试。
 - Task 6 上游服务与 AAAI 研究恢复未开始。
 
 ## 已修改文件
@@ -35,7 +35,7 @@
 
 ## 开放问题与假设
 - 无设计决策待用户确认。
-- 仍需 source checkpoint 和下游 live runtime 证据。
+- 仍需修复 checkpoint、`sci-evo-extract` 重试和下游 live runtime 证据。
 
 ## 风险
 - shell parser 不是完整安全 sandbox；无法确定的脚本内部副作用按产品边界 fail-open。
@@ -48,19 +48,19 @@
 - 两轮独立审查的可复现 finding 已 test-first 修复，agent 已关闭。
 
 ## Git 存档
-- 最新提交: `4d61007`，`main`，相对 `origin/main` ahead 6。
+- 最新提交: `35c7aa8`，`main`，相对 `origin/main` ahead 7。
 - 推送状态: 本轮不 push。
-- 已包含文件: 尚无；本任务完整 source diff 等待 closure checkpoint。
-- 有意保留未提交的文件: 当前全部本任务 runtime、bootstrap、skills、tests、docs 与状态修改。
-- 暂缓原因: source checkpoint 尚未创建；本轮不 push。
-- 下次存档: source checkpoint 后执行两个下游 Apply 与 live 回归。
+- 已包含文件: 最小 Hook 内核完整 source diff、tests、skills、docs 与 Task 4 closure 状态。
+- 有意保留未提交的文件: installer migration 根因修复、回归测试与调试证据，等待独立 checkpoint。
+- 暂缓原因: 修复已通过 161/161 与 release-check，正在创建独立 checkpoint；本轮不 push。
+- 下次存档: 修复 checkpoint 后重试 `sci-evo-extract` Apply。
 
 ## 需要保留的经验沉淀
 - 对强 agentic model，hooks 应围绕少量确定性机械边界设计；未知内容不应因无法证明安全而被阻断。
 - review finding 必须先复现失败再修，不按静态意见盲改。
 
 ## 下一步动作
-创建 source checkpoint；再 Apply 到两个下游并核验 context preservation、health、budget、receipt 与事务残留。
+创建 migration 修复 checkpoint；重试 `sci-evo-extract` Apply，再核验两个下游 context preservation、health、budget、receipt 与事务残留。
 
 ## 优先重读文件
 - `.codex-context/workflow-state.yaml`

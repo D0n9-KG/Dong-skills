@@ -13,6 +13,9 @@
 - shell mutation 采用 tokenizer 和命令语义：copy 只写 destination，move/rename 同时影响 source/destination，rename 的 `NewName` 相对 source parent。
 - Git 全局参数、checkout/restore pathspec、PowerShell `EncodedCommand` 的确定性写入均有正反回归。
 - 外部 workdir、外部 Git、外部 encoded write、网络和诊断保持 fail-open。
+- `scientific_Graph` installer Apply 成功，六个核心 context hash 未变，distribution=`b329b29e...`。
+- `sci-evo-extract` 的 legacy `approved_plan_hash` 与当前 `plan-progress.md` 原始 SHA-256 完全相等；该状态未提交且文件为 CRLF。
+- `migrateWorkflowState()` 在 legacy block 已把 `migrated.approved_plan_hash` 重绑为 normalized hash，随后 approval-contract block 却用 `parsed.approved_plan_hash || migrated.approved_plan_hash`，重新选回旧 raw hash；无 Git revision 可兜底时稳定误报审批漂移。
 
 ## 当前假设
 - hooks 是项目 guardrail，不是完整 shell/security sandbox；无法确定目标的脚本内部写入仍按批准边界 fail-open。
@@ -23,11 +26,12 @@
 - 用固定句式或自然语言 regex 推断审批、scope、mutation：已拒绝。
 
 ## 开放调查问题
-- 安装到两个 dirty 下游项目后，核心 context 哈希、distribution receipt 与 hot budget 是否保持合同。
+- 修复 hash 传递后，`sci-evo-extract` 是否能在不改六个事实文件的前提下完成迁移和安装。
 
 ## 下一步验证
-- source checkpoint。
-- installer Apply、hash preservation、health/context-budget、transaction residue。
+- 增加 legacy CRLF + uncommitted approval state 的 migration 回归，确认旧实现先红。
+- 只修第二阶段读取的 hash 来源，跑 focused/full/release 并 checkpoint。
+- 重试 `sci-evo-extract` installer Apply、hash preservation、health/context-budget、transaction residue。
 - 用户重启/trust 后 live 四 hook 与浏览器 smoke。
 
 ## 提升记录

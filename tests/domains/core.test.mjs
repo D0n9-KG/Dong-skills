@@ -325,6 +325,36 @@ test("legacy document hash migration rebinds matching files and rejects drift", 
   }
 });
 
+test("legacy plan hash migration carries the normalized hash into approval contract migration", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  const ctx = path.join(project, ".codex-context");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  const specFile = path.join(ctx, "spec.md");
+  const planFile = path.join(ctx, "plan-progress.md");
+  const plan = fs.readFileSync(planFile, "utf8").replace(/\r\n?/g, "\n");
+  fs.writeFileSync(planFile, plan.replace(/\n/g, "\r\n"), "utf8");
+  const rawHash = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^document_hash_mode:.*\r?\n/m, "")
+      .replace(/^approved_spec_hash:.*$/m, `approved_spec_hash: ${rawHash(specFile)}`)
+      .replace(/^approved_plan_hash:.*$/m, `approved_plan_hash: ${rawHash(planFile)}`)
+  );
+
+  execFileSync(process.execPath, [workflowState, project, "migrate"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const state = fs.readFileSync(stateFile, "utf8");
+  assert.match(state, /^document_hash_mode: approval-contract-v2$/m);
+  assert.notEqual(workflowField(project, "approved_plan_hash"), rawHash(planFile));
+});
+
 test("legacy document hash migration rejects drift committed after approval evidence", () => {
   const project = tempProject();
   readyHealthFixture(project);
