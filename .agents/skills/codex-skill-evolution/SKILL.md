@@ -18,7 +18,7 @@ This skill is a global maintenance entry. It may be visible even when the curren
 - Use SkillOpt-Sleep only as an offline optimizer/evaluator that stages proposals.
 - Run SkillOpt-Sleep against the real Dong Skills source repo, not the current business project unless the current project is the Dong Skills source repo.
 - Do not treat installed skill copies under `%USERPROFILE%\.agents\skills` as the source repo.
-- Do not run SkillOpt-Sleep from `Stop`, `PreCompact`, `PostToolUse`, or any other hook.
+- Do not run SkillOpt-Sleep from any hook.
 - Do not use SkillOpt-Sleep to modify business project code.
 - Do not use `--auto-adopt`.
 - Automatically redact secrets before persisting candidate tasks, adoption diagnostics, or evolution logs; manual review is a second gate, not the primary privacy control.

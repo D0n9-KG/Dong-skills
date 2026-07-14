@@ -1,39 +1,23 @@
-# Artifact Index
+# 资产索引
 
-## 当前任务资产
+## Task Identity
+- task_id: task-8-2026-07-14T02-39-43-596Z
+- task_generation: 8
 
-- `.codex-context/spec.md`：已批准的 prompt semantic authority removal Product Contract。
-- `.codex-context/plan-progress.md`：Lane 3 Traditional execution；Tasks 1-9 全部完成，进入 workflow closure。
-- `docs/codex/plans/2026-07-13-remove-prompt-semantic-authority.md`：当前 implementation-ready 详细计划。
-- `docs/codex/plans/2026-07-13-dong-skills-host-stability.md`：上一轮宿主稳定性计划，作为历史证据。
-- `.codex/scripts/lib/runtime.mjs`：recovery claim/promotion 与 legacy decision receipt 清理；旧 decision/advance receipt 写入/校验已删除。
-- `.codex/scripts/lib/events.mjs`：advisory-only UserPromptSubmit、受控 decision operation、Stop/PreCompact、mutation freshness、pipeline、外部作用域和 PostToolUse refresh。
-- `.codex/scripts/lib/recovery.mjs`：精简 SessionStart hot context；保留 recovery order、handoff、Wayfinder、workflow 与 current state，按需读取其余状态；业务 handoff sections 先于临时 PreCompact notice。
-- `.codex/scripts/lib/{workflow,markdown}.mjs`：canonical decision evidence、`workflow-state decision`、evidence consumption 与结构化状态验证。
-- `scripts/workflow-state.mjs`：`decision <transition>` CLI；只写 evidence，不自动 transition。
-- `.codex/hooks/project-ops.mjs`：rootless `workflow-state decision` 转发。
-- `.agents/skills/{using-superpowers,brainstorming,writing-plans,executing-plans,codex-verification-loop,codex-project-governance}/SKILL.md`：canonical decision 使用指导。
-- `AGENTS.project-ops.snippet.md`、`AGENTS.md`、`README.md`：prompt advisory 与 deterministic control-plane 说明。
-- onboarding bootstrap 对应 runtime 镜像：installer 事实源。
-- `tests/domains/workflow-hooks.test.mjs`：prompt advisory、decision CLI/PreToolUse、Stop/PreCompact、mutation freshness 和 recovery 回归。
-- `tests/domains/workflow-governance.test.mjs`：canonical decision evidence 与 transition 回归。
-- `tests/domains/host-wrapper.test.mjs`：真实宿主 wrapper 回归。
-- `.codex/scripts/lib/events.mjs` literal-assignment parser：允许简单局部变量的无插值字面量标量/数组作为 read-only compound setup；unsafe expressions 仍 gated。
-- `.codex/scripts/lib/events.mjs` external Git scope：保留显式外部 `workdir` 支持，并新增宿主无关的 `git -C <绝对外部 Git 仓库>` 验证路径；只放行 repo-local Git allowlist，拒绝当前项目、相对路径、git-dir/work-tree 与未知子命令。
-- `.codex/scripts/lib/events.mjs` PowerShell diagnostics：按保守 read-only verb 集合识别查询命令；scriptblock、subexpression、控制/写命令仍 gated。
-- `tests/domains/skills-contracts.test.mjs`：root `AGENTS.md` managed block、root snippet 与 bootstrap snippet parity。
-- `docs/codex/reviews/2026-07-13-dong-skills-agent-architecture-audit.md`：12 个 agent architecture 边界的 severity、修复、证据与 residual risk。
+## 已创建
+- `docs/codex/plans/2026-07-14-minimal-hook-kernel.md`：已批准实施计划。
+- `.codex-context/archive/tasks/task-7-2026-07-12T18-25-41-449Z-g7/`：上个 task 的归档事实。
+
+## 已修改
+- Hook/runtime：`.codex/hooks.json`、`.codex/hooks/project-ops.mjs`、`.codex/scripts/lib/{budget,events,recovery-eval,runtime,workflow}.mjs` 及 bootstrap 镜像。
+- 分发/health：`scripts/{context-budget,context-recovery-eval,install-windows,project-ops-health}.mjs|ps1`、onboarding bootstrap 与 README。
+- Skills/AGENTS：`using-superpowers`、project governance、context budget、learning/evolution 相关 skills，根与 bootstrap AGENTS managed block。
+- Tests：hooks、host wrapper、health/release、assets/worktree、installer、workflow/governance、skills contracts 等 domain tests。
+- 状态：spec、plan、decisions、current、verification、handoff、working notes、artifact index、workflow state。
 
 ## 已读取 / 已检查
+- Dong Skills source diff、runtime/bootstrap parity、installer Preview。
+- `scientific_Graph` 与 `sci-evo-extract` 的 Git/marker/核心 context 哈希；未修改业务代码。
 
-- `tests/project-ops-support.mjs`：临时项目与 hook fixture。
-- `scripts/run-domain-tests.mjs`：domain 并发和超时合同。
-- `scripts/release-check.mjs`：发布级验证入口。
-
-## 临时资产
-
-- 无 active 临时实现；旧 prompt semantic regex 权限路径已删除。
-
-## 下一里程碑
-
-- distribution `e4befba...` 的 installer、static、live positive/negative、critical coverage 与连续 Stop 全部通过；下一步 workflow closure checkpoint。
+## 原始输出
+- 大型测试输出未写入 active state；仅保留紧凑命令与结果摘要。

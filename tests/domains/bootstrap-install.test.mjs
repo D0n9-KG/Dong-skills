@@ -99,18 +99,12 @@ test("bootstrap adds raw runtime ignore rules to target .gitignore", () => {
     stdio: ["pipe", "pipe", "pipe"]
   }).trim();
   const context = JSON.parse(recovery).hookSpecificOutput.additionalContext;
-  assert.match(context, /2\. \.codex-context\/worktree-state\.md/);
-  assert.match(context, /3\. \.codex-context\/workflow-state\.yaml/);
-  assert.match(context, /7\. \.codex-context\/decisions\.md/);
-  assert.match(context, /8\. \.codex-context\/open-questions\.md/);
-  assert.match(context, /9\. \.codex-context\/working-notes\.md/);
-  assert.match(context, /12\. \.codex-context\/solution-index\.md/);
-  assert.match(context, /14\. \.codex-context\/dong-skills-outbox\.md only when discussing Dong Skills improvements/);
-  assert.match(context, /15\. STRATEGY\.md, CONCEPTS\.md, or relevant docs\/solutions entries only when the task needs them/);
-  assert.match(context, /Workflow recovery:/);
+  assert.match(context, /Dong Skills project context/);
+  assert.match(context, /Workflow: phase=discovery/);
+  assert.match(context, /handoff-summary\.md, workflow-state\.yaml, and current-state\.md/);
 });
 
-test("fresh bootstrap can recover and permit the first governance edit", () => {
+test("fresh bootstrap permits the first governance edit without a recovery receipt", () => {
   const project = tempProject();
   execFileSync("git", ["init"], {
     cwd: project,
@@ -142,33 +136,6 @@ test("fresh bootstrap can recover and permit the first governance edit", () => {
     hook_event_name: "SessionStart",
     session_id: "fresh-bootstrap-session",
     source: "startup"
-  });
-
-  const recoveryCommand = "node .codex/hooks/project-ops.mjs context-recovery-eval";
-  const recoveryToolInput = { command: recoveryCommand };
-  const recoveryPre = runInstalledHook({
-    hook_event_name: "PreToolUse",
-    session_id: "fresh-bootstrap-session",
-    tool_name: "shell_command",
-    tool_use_id: "fresh-bootstrap-recovery",
-    tool_input: recoveryToolInput
-  });
-  assert.notEqual(recoveryPre.hookSpecificOutput?.permissionDecision, "deny");
-
-  const recoveryOutput = execFileSync(
-    process.execPath,
-    [installedHook, "context-recovery-eval"],
-    { cwd: project, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
-  );
-  assert.match(recoveryOutput, /Result: pass/);
-
-  runInstalledHook({
-    hook_event_name: "PostToolUse",
-    session_id: "fresh-bootstrap-session",
-    tool_name: "shell_command",
-    tool_use_id: "fresh-bootstrap-recovery",
-    tool_input: recoveryToolInput,
-    tool_response: { is_error: false, exit_code: 0 }
   });
 
   const editPre = runInstalledHook({
@@ -227,9 +194,14 @@ test("installed global entry bootstraps from its verified snapshot after source 
 
   assert.equal(fs.existsSync(path.join(targetProject, ".agents", "skills", ".dong-skills-project.json")), true);
   assert.equal(
-    fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "assets", "project-skills", "brainstorming", "SKILL.md")),
+    fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "assets", "project-skills", "brainstorming", "SKILL.project.md")),
     true
   );
+  assert.equal(
+    fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "assets", "project-skills", "brainstorming", "SKILL.md")),
+    false
+  );
+  assert.equal(fs.existsSync(path.join(targetProject, ".agents", "skills", "brainstorming", "SKILL.md")), true);
   const sourceMarker = readJson(path.join(skillsRoot, ".dong-skills-source.json"));
   const projectMarker = readJson(path.join(targetProject, ".agents", "skills", ".dong-skills-project.json"));
   assert.match(sourceMarker.distribution_id, /^[a-f0-9]{64}$/);

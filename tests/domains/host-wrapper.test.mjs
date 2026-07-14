@@ -2,66 +2,16 @@ import * as support from "../project-ops-support.mjs";
 
 const {
   assert,
-  execFileSync,
   fs,
   git,
   path,
-  readJson,
   readyHealthFixture,
-  root,
   runHook,
   setWorkflowPhase,
   tempProject,
   test,
-  workflowState,
   write
 } = support;
-
-function acknowledgeSessionRecovery(project, sessionId) {
-  const command = "node .codex/hooks/project-ops.mjs context-recovery-eval";
-  const toolInput = { command };
-  runHook(project, {
-    hook_event_name: "PreToolUse",
-    session_id: sessionId,
-    tool_name: "shell_command",
-    tool_use_id: `recovery-${sessionId}`,
-    tool_input: toolInput
-  });
-  execFileSync(process.execPath, [path.join(root, "scripts", "context-recovery-eval.mjs"), project], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  runHook(project, {
-    hook_event_name: "PostToolUse",
-    session_id: sessionId,
-    tool_name: "shell_command",
-    tool_use_id: `recovery-${sessionId}`,
-    tool_input: toolInput,
-    tool_response: { is_error: false, exit_code: 0 }
-  });
-}
-
-function committedExecutionProject() {
-  const project = tempProject();
-  git(project, ["init"]);
-  git(project, ["config", "user.email", "test@example.com"]);
-  git(project, ["config", "user.name", "Test User"]);
-  readyHealthFixture(project);
-  write(
-    path.join(project, ".codex-context", "verification.md"),
-    "# Verification\n\n## Commands Run\n- Baseline.\n\n## Not Yet Verified\n- None.\n"
-  );
-  write(path.join(project, "work.txt"), "before\n");
-  execFileSync(process.execPath, [workflowState, project, "hash", "--write"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-  git(project, ["add", "-A"]);
-  git(project, ["commit", "-m", "baseline"]);
-  return project;
-}
 
 test("simple PowerShell read-only pipelines and Git diagnostics bypass recovery", () => {
   const project = tempProject();
@@ -89,15 +39,14 @@ test("simple PowerShell read-only pipelines and Git diagnostics bypass recovery"
 test("PowerShell pipeline transforms with executable expressions remain gated", () => {
   const project = tempProject();
   readyHealthFixture(project);
+  setWorkflowPhase(project, "wayfinding", "codex-wayfinder");
   runHook(project, { hook_event_name: "SessionStart", session_id: "unsafe-pipeline", source: "resume" });
 
   for (const command of [
     "Get-Content README.md | Select-Object $(Remove-Item work.txt)",
     "Get-Content README.md | Select-Object @{Name='x';Expression={Remove-Item work.txt}}",
     "Get-Content README.md | Select-Object & Remove-Item work.txt",
-    "Get-Process node -ErrorAction SilentlyContinue; Stop-Process -Id 12345",
-    "$files=@($(Remove-Item work.txt)); Get-FileHash -LiteralPath $files",
-    "$files=Get-ChildItem; Get-FileHash -LiteralPath $files"
+    "$files=@($(Remove-Item work.txt)); Get-FileHash -LiteralPath $files"
   ]) {
     const output = runHook(project, {
       hook_event_name: "PreToolUse",
@@ -160,10 +109,22 @@ test("verified work outside the project root is not governed by the current proj
     tool_name: "shell_command",
     tool_use_id: "external-git-checkpoint",
     tool_input: {
-      command: "git add -- .; git commit -m checkpoint"
+      command: "git add -- .; git commit -m checkpoint; git reset --hard"
     }
   });
   assert.deepEqual(externalGitCheckpoint, {});
+
+  const wrappedExternalGitCheckpoint = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "external-work",
+    workdir: external,
+    tool_name: "shell_command",
+    tool_use_id: "wrapped-external-git-checkpoint",
+    tool_input: {
+      command: 'powershell.exe -NoProfile -Command "git add -- ."'
+    }
+  });
+  assert.deepEqual(wrappedExternalGitCheckpoint, {});
 
   const explicitExternalGitCheckpoint = runHook(project, {
     hook_event_name: "PreToolUse",
@@ -223,7 +184,7 @@ test("verified work outside the project root is not governed by the current proj
       command: "node mutate-relative.mjs ..\\project\\work.txt"
     }
   });
-  assert.equal(opaqueRelativeCommand.hookSpecificOutput?.permissionDecision, "deny");
+  assert.deepEqual(opaqueRelativeCommand, {});
 
   const externalControlPlane = runHook(project, {
     hook_event_name: "PreToolUse",
@@ -247,102 +208,100 @@ test("verified work outside the project root is not governed by the current proj
       command: `node "${externalScript}" workflow-state transition new-task`
     }
   });
-  assert.equal(absoluteCommand.hookSpecificOutput?.permissionDecision, "deny");
+  assert.deepEqual(absoluteCommand, {});
 });
 
-test("PostToolUse empty object response records state refreshes by content hash", () => {
-  const project = committedExecutionProject();
-  const sessionId = "empty-response-refresh";
-  runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
-  acknowledgeSessionRecovery(project, sessionId);
+test("minimal guardrails allow diagnostics, network control, and external scripts", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "wayfinding", "codex-wayfinder");
+  const external = tempProject();
+  const externalScript = path.join(external, "check-deps.mjs");
+  write(externalScript, "process.stdout.write('ok\\n');\n");
 
-  const mutation = {
-    tool_name: "apply_patch",
-    tool_use_id: "empty-response-project-mutation",
-    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
-  };
-  runHook(project, { hook_event_name: "PreToolUse", session_id: sessionId, ...mutation });
-  write(path.join(project, "work.txt"), "after\n");
-  runHook(project, {
-    hook_event_name: "PostToolUse",
-    session_id: sessionId,
-    ...mutation,
-    tool_response: { is_error: false }
-  });
-
-  const refresh = {
-    tool_name: "apply_patch",
-    tool_use_id: "empty-response-state-refresh",
-    tool_input: { patch: "*** Begin Patch\n*** Update File: .codex-context/current-state.md\n*** End Patch" }
-  };
-  runHook(project, { hook_event_name: "PreToolUse", session_id: sessionId, ...refresh });
-  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
-    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Refreshed ${name}.\n`, "utf8");
+  for (const command of [
+    "node .codex/hooks/project-ops.mjs context-budget",
+    "Invoke-RestMethod -Method Get -Uri http://127.0.0.1:8000/api/health",
+    "curl.exe -s http://127.0.0.1:8000/api/health",
+    "curl.exe -s -X POST --data-raw https://example.com http://127.0.0.1:3456/new",
+    `node "${externalScript.replace(/\\\\/g, "/")}"`,
+    "if (Test-Path AGENTS.md) { Get-Content -Raw AGENTS.md }; Get-ChildItem .codex-context | Select-Object Name,Length"
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "PreToolUse",
+      session_id: "minimal-positive",
+      tool_name: "shell_command",
+      tool_use_id: `positive-${command.length}`,
+      tool_input: { command }
+    });
+    assert.notEqual(
+      output.hookSpecificOutput?.permissionDecision,
+      "deny",
+      `${command} should not be governed as a current-project mutation`
+    );
   }
-  runHook(project, {
-    hook_event_name: "PostToolUse",
-    session_id: sessionId,
-    ...refresh,
-    tool_response: {}
-  });
-
-  const receipt = readJson(path.join(
-    project,
-    ".codex-context",
-    "raw",
-    "project-ops-runtime",
-    "change-state.json"
-  ));
-  assert.deepEqual(Object.keys(receipt.refreshed_hashes).sort(), [
-    "artifact-index.md",
-    "current-state.md",
-    "handoff-summary.md",
-    "verification.md"
-  ]);
 });
 
-test("PostToolUse explicit failure does not credit state refreshes", () => {
-  const project = committedExecutionProject();
-  const sessionId = "failed-response-refresh";
-  runHook(project, { hook_event_name: "SessionStart", session_id: sessionId, source: "resume" });
-  acknowledgeSessionRecovery(project, sessionId);
+test("minimal guardrails still deny explicit current-project writes before execution approval", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  setWorkflowPhase(project, "wayfinding", "codex-wayfinder");
 
-  const mutation = {
-    tool_name: "apply_patch",
-    tool_use_id: "failed-response-project-mutation",
-    tool_input: { patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch" }
-  };
-  runHook(project, { hook_event_name: "PreToolUse", session_id: sessionId, ...mutation });
-  write(path.join(project, "work.txt"), "after\n");
-  runHook(project, {
-    hook_event_name: "PostToolUse",
-    session_id: sessionId,
-    ...mutation,
-    tool_response: { is_error: false }
-  });
-
-  const refresh = {
-    tool_name: "apply_patch",
-    tool_use_id: "failed-response-state-refresh",
-    tool_input: { patch: "*** Begin Patch\n*** Update File: .codex-context/current-state.md\n*** End Patch" }
-  };
-  runHook(project, { hook_event_name: "PreToolUse", session_id: sessionId, ...refresh });
-  for (const name of ["artifact-index.md", "current-state.md", "verification.md", "handoff-summary.md"]) {
-    fs.appendFileSync(path.join(project, ".codex-context", name), `\n- Attempted refresh ${name}.\n`, "utf8");
+  for (const command of [
+    "Set-Content -LiteralPath work.txt -Value changed",
+    "Remove-Item -LiteralPath work.txt",
+    "Get-Content README.md > work.txt"
+  ]) {
+    const output = runHook(project, {
+      hook_event_name: "PreToolUse",
+      session_id: "minimal-negative",
+      tool_name: "shell_command",
+      tool_use_id: `negative-${command.length}`,
+      tool_input: { command }
+    });
+    assert.equal(output.hookSpecificOutput?.permissionDecision, "deny", command);
   }
-  runHook(project, {
-    hook_event_name: "PostToolUse",
-    session_id: sessionId,
-    ...refresh,
-    tool_response: { is_error: true }
-  });
 
-  const receipt = readJson(path.join(
-    project,
-    ".codex-context",
-    "raw",
-    "project-ops-runtime",
-    "change-state.json"
-  ));
-  assert.deepEqual(receipt.refreshed_hashes, {});
+  const patchOutput = runHook(project, {
+    hook_event_name: "PreToolUse",
+    session_id: "minimal-negative",
+    tool_name: "apply_patch",
+    tool_use_id: "negative-apply-patch",
+    tool_input: {
+      patch: "*** Begin Patch\n*** Update File: work.txt\n*** End Patch"
+    }
+  });
+  assert.equal(patchOutput.hookSpecificOutput?.permissionDecision, "deny");
+});
+
+test("Stop is advisory-only even when project state is unfinished", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  write(path.join(project, "work.txt"), "unfinished change\n");
+
+  const first = runHook(project, { hook_event_name: "Stop", session_id: "minimal-stop" });
+  const second = runHook(project, { hook_event_name: "Stop", session_id: "minimal-stop" });
+
+  assert.notEqual(first.decision, "block");
+  assert.notEqual(second.decision, "block");
+  const runtimeDir = path.join(project, ".codex-context", "raw", "project-ops-runtime");
+  assert.deepEqual(fs.readdirSync(runtimeDir), ["liveness.json"]);
+  const liveness = JSON.parse(fs.readFileSync(path.join(runtimeDir, "liveness.json"), "utf8"));
+  assert.match(liveness.events.Stop, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test("PreCompact preserves handoff and overwrites one bounded latest snapshot", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const handoff = path.join(project, ".codex-context", "handoff-summary.md");
+  const before = fs.readFileSync(handoff, "utf8");
+
+  runHook(project, { hook_event_name: "PreCompact", trigger: "auto", session_id: "minimal-compact" });
+  runHook(project, { hook_event_name: "PreCompact", trigger: "auto", session_id: "minimal-compact" });
+
+  assert.equal(fs.readFileSync(handoff, "utf8"), before);
+  const rawDir = path.join(project, ".codex-context", "raw");
+  const snapshots = fs.readdirSync(rawDir).filter((name) => name.startsWith("precompact"));
+  assert.deepEqual(snapshots, ["precompact-latest.md"]);
+  assert.ok(fs.statSync(path.join(rawDir, "precompact-latest.md")).size <= 64 * 1024);
 });

@@ -120,17 +120,12 @@ const REQUIRED_CONTEXT_FILES = [
   "workflow-state.yaml",
   "handoff-summary.md"
 ];
-const CRITICAL_LIVENESS_EVENTS = ["PreToolUse", "PostToolUse", "Stop"];
+const CRITICAL_LIVENESS_EVENTS = ["SessionStart", "PreToolUse", "Stop"];
 
 const REQUIRED_HOOK_EVENTS = [
   "SessionStart",
-  "UserPromptSubmit",
   "PreToolUse",
-  "PostToolUse",
   "PreCompact",
-  "PostCompact",
-  "SubagentStart",
-  "SubagentStop",
   "Stop"
 ];
 
@@ -143,6 +138,12 @@ const REQUIRED_HANDOFF_SECTIONS = [
   ["Decisions Made", "已做决策"],
   ["Verification Evidence", "验证证据"],
   ["Git Checkpoint", "Git 存档"],
+  ["Next Action", "下一步动作"],
+  ["Files To Re-read First", "优先重读文件"]
+];
+
+const EARLY_PHASE_HANDOFF_SECTIONS = [
+  ["Current Task", "当前任务", "Objective", "目标"],
   ["Next Action", "下一步动作"],
   ["Files To Re-read First", "优先重读文件"]
 ];
@@ -384,21 +385,28 @@ function checkWindowsHookCommand(group, eventName, issues) {
   for (const hook of group.hooks || []) {
     const value = String(hook.commandWindows || hook.command_windows || "");
     if (!value) continue;
-    if (!value.includes("-EncodedCommand")) {
-      issues.push(`.codex/hooks.json ${eventName} commandWindows must use -EncodedCommand to avoid PowerShell variable expansion`);
-    } else if (!/(?:project-ops|launch-project-ops)\.mjs/.test(decodePowerShellEncodedCommand(value))) {
-      issues.push(`.codex/hooks.json ${eventName} commandWindows encoded command does not invoke Dong Skills hook launcher`);
-    } else {
-      const decoded = decodePowerShellEncodedCommand(value);
-      if (!decoded.includes("Get-Command pwsh")) {
-        issues.push(`.codex/hooks.json ${eventName} commandWindows should prefer pwsh when available before falling back to powershell.exe`);
-      }
-      if (!decoded.includes("} else {")) {
-        issues.push(`.codex/hooks.json ${eventName} commandWindows should keep a powershell.exe fallback for hosts without PowerShell 7`);
-      }
+    const decoded = decodePowerShellEncodedCommand(value);
+    const inspected = decoded || value;
+    if (!/(?:project-ops|launch-project-ops)\.mjs/.test(inspected)) {
+      issues.push(`.codex/hooks.json ${eventName} commandWindows does not invoke Dong Skills hook launcher`);
     }
     if (value.includes('-Command "$root') || value.includes("2>$null")) {
       issues.push(`.codex/hooks.json ${eventName} commandWindows contains unsafe inline PowerShell variable syntax`);
+    }
+  }
+}
+
+function checkHookCommandRootResolution(group, eventName, issues) {
+  for (const hook of group.hooks || []) {
+    for (const field of ["command", "commandWindows", "command_windows"]) {
+      const value = String(hook[field] || "");
+      const inspected = decodePowerShellEncodedCommand(value) || value;
+      const directRelativeLauncher = /\bnode(?:\.exe)?\s+["']?\.codex[\\/]hooks[\\/]launch-project-ops\.mjs["']?/i.test(inspected);
+      const processCwdGitRoot = /git\s+rev-parse\s+--show-toplevel/i.test(inspected) &&
+        !/process\.stdin/.test(inspected);
+      if (directRelativeLauncher || processCwdGitRoot) {
+        issues.push(`.codex/hooks.json ${eventName} ${field} depends on project-root cwd`);
+      }
     }
   }
 }
@@ -423,7 +431,10 @@ function checkHooksJson(root, issues) {
     if (!groups.some(hookCommandMentionsDongSkills)) {
       issues.push(`.codex/hooks.json is missing Dong Skills hook for ${eventName}`);
     }
-    for (const group of groups) checkWindowsHookCommand(group, eventName, issues);
+    for (const group of groups) {
+      checkWindowsHookCommand(group, eventName, issues);
+      checkHookCommandRootResolution(group, eventName, issues);
+    }
   }
 }
 
@@ -461,7 +472,7 @@ function checkTrackedRaw(root, issues) {
   }
 }
 
-function checkContext(root, issues) {
+function checkContext(root, issues, warnings) {
   const ctx = path.join(root, ".codex-context");
   for (const name of REQUIRED_CONTEXT_FILES) {
     if (!fs.existsSync(path.join(ctx, name))) issues.push(`Missing .codex-context/${name}`);
@@ -481,17 +492,23 @@ function checkContext(root, issues) {
     }
   }
 
+  const workflow = normalizeWorkflowState(
+    parseWorkflowYaml(readText(path.join(ctx, "workflow-state.yaml")))
+  );
+  const earlyPhase = ["discovery", "wayfinding", "brainstorming", "spec", "planning"].includes(workflow.phase);
   const handoff = readText(path.join(ctx, "handoff-summary.md"));
-  for (const headings of REQUIRED_HANDOFF_SECTIONS) {
+  for (const headings of earlyPhase ? EARLY_PHASE_HANDOFF_SECTIONS : REQUIRED_HANDOFF_SECTIONS) {
     if (!hasAnyHeading(handoff, headings)) {
       issues.push(`handoff-summary.md missing section: ${headingLabel(headings)}`);
     }
   }
 
-  const checkpoint = sectionContent(handoff, ["Git Checkpoint", "Git 存档"]);
-  for (const labels of REQUIRED_CHECKPOINT_FIELDS) {
-    if (!labels.some((field) => checkpoint.includes(`${field}:`) || checkpoint.includes(`${field}：`))) {
-      issues.push(`handoff-summary.md Git Checkpoint missing field label: ${labels.join(" or ")}`);
+  if (!earlyPhase) {
+    const checkpoint = sectionContent(handoff, ["Git Checkpoint", "Git 存档"]);
+    for (const labels of REQUIRED_CHECKPOINT_FIELDS) {
+      if (!labels.some((field) => checkpoint.includes(`${field}:`) || checkpoint.includes(`${field}：`))) {
+        issues.push(`handoff-summary.md Git Checkpoint missing field label: ${labels.join(" or ")}`);
+      }
     }
   }
 
@@ -520,13 +537,10 @@ function checkContext(root, issues) {
     ["Promotion Notes", "提升记录"]
   ]) {
     if (!hasAnyHeading(workingNotes, headings)) {
-      issues.push(`working-notes.md missing section: ${headingLabel(headings)}`);
+      warnings.push(`working-notes.md missing advisory section: ${headingLabel(headings)}`);
     }
   }
 
-  const workflow = normalizeWorkflowState(
-    parseWorkflowYaml(readText(path.join(ctx, "workflow-state.yaml")))
-  );
   issues.push(...validateWorkflowState(workflow).issues);
   if (workflow.task_id !== undefined && !/^task-\S+/.test(workflow.task_id || "")) {
     issues.push("workflow-state.yaml task_id must identify the current task");
@@ -922,7 +936,7 @@ function run(root) {
   checkHooksJson(root, hookIssues);
   checkRuntimeGitignore(root, issues);
   checkTrackedRaw(root, issues);
-  checkContext(root, issues);
+  checkContext(root, issues, warnings);
   checkSemanticContext(root, warnings);
   checkProjectSkills(root, issues);
   checkSourceManifestCoverage(root, issues);

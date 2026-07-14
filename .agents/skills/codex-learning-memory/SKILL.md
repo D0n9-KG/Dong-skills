@@ -15,7 +15,7 @@ If the signal is about Dong Skills itself, do not turn it into a project instinc
 
 Learning is curated, not fully automatic.
 
-- Automatic hooks may capture raw learning observations from `UserPromptSubmit` when the user gives an explicit learning request, correction, durable preference, or recurring workflow rule.
+- The minimal project hook kernel does not inspect prompts or tool calls to capture learning automatically. Record a compact candidate explicitly during learning review when a user correction, durable preference, or recurring workflow rule is worth preserving.
 - Raw observations are stored in `.codex-context/raw/observations.jsonl`.
 - Raw observations are not active memory and must not be treated as rules.
 - Raw observations contain a short redacted excerpt plus a prompt fingerprint; do not reconstruct or store secrets from the original prompt.
@@ -32,7 +32,7 @@ Project truth lives in the repo:
 - `.codex-context/instincts/project/` - active project-scoped instincts
 - `.codex-context/instincts/candidates/` - draft instincts awaiting evidence or review
 - `.codex-context/instincts/retired/` - contradicted, obsolete, or superseded instincts
-- `.codex-context/raw/observations.jsonl` - compact raw learning events captured by hooks or manual review
+- `.codex-context/raw/observations.jsonl` - compact raw learning candidates captured by explicit or legacy workflows
 
 Use global scope only as a candidate unless the user explicitly asks for a global rule. Global candidates can be copied to a personal global store later, but this kit does not silently write outside the project.
 

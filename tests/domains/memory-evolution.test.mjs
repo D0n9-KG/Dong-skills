@@ -1,4 +1,8 @@
 import * as support from "../project-ops-support.mjs";
+import {
+  appendLearningObservation,
+  classifyLearningCue
+} from "../../.codex/scripts/lib/learning.mjs";
 
 const {
   assert,
@@ -39,6 +43,18 @@ const {
   writeDongProjectSkillsFixture
 } = support;
 
+function captureLearningCandidate(project, prompt) {
+  const cue = classifyLearningCue(prompt);
+  if (!cue) return false;
+  return appendLearningObservation(
+    project,
+    path.join(project, ".codex-context"),
+    { source: "explicit-learning-review" },
+    cue,
+    prompt
+  );
+}
+
 test("session-history CLI accepts an explicit project root argument", () => {
   const project = tempProject();
   git(project, ["init"]);
@@ -63,10 +79,7 @@ test("learning observations redact private key bodies and URL userinfo", () => {
     "https://user:pass@example.com/path?token=abc#frag" // codex-release-check: allow-secret-fixture
   ].join("\n");
 
-  runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    user_prompt: prompt
-  });
+  assert.equal(captureLearningCandidate(project, prompt), true);
 
   const obs = fs.readFileSync(path.join(project, ".codex-context", "raw", "observations.jsonl"), "utf8");
   assert.doesNotMatch(obs, /ABCDEF1234567890SECRET/);
@@ -86,10 +99,7 @@ test("learning observations redact common PII and platform tokens", () => {
     `C:\\Users\\Alice ${email} ${phone} ${githubToken} ${anthropicKey}`
   ].join(" ");
 
-  runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    user_prompt: prompt
-  });
+  assert.equal(captureLearningCandidate(project, prompt), true);
 
   const obs = fs.readFileSync(path.join(project, ".codex-context", "raw", "observations.jsonl"), "utf8");
   const event = JSON.parse(obs.trim());
@@ -107,14 +117,14 @@ test("learning observations redact common PII and platform tokens", () => {
 test("learning observations preserve Chinese UTF-8 and dedupe status follow-ups by topic", () => {
   const project = tempProject();
 
-  runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    user_prompt: "记住：Dong Skills 优化沉淀应该写到真实源仓库，不要写进安装副本。"
-  });
-  runHook(project, {
-    hook_event_name: "UserPromptSubmit",
-    user_prompt: "确认一下，刚才这个 Dong Skills 优化沉淀放到哪里了？"
-  });
+  assert.equal(captureLearningCandidate(
+    project,
+    "记住：Dong Skills 优化沉淀应该写到真实源仓库，不要写进安装副本。"
+  ), true);
+  assert.equal(captureLearningCandidate(
+    project,
+    "确认一下，刚才这个 Dong Skills 优化沉淀放到哪里了？"
+  ), false);
 
   const obsFile = path.join(project, ".codex-context", "raw", "observations.jsonl");
   const lines = fs.readFileSync(obsFile, "utf8").trim().split(/\r?\n/);

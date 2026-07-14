@@ -12,8 +12,7 @@ const RUNTIME_LOCK_CLEANUP_TIMEOUT_MS = 500;
 const RUNTIME_HASH_ENTRY_FILES = [
   ".codex/hooks.json",
   ".codex/hooks/project-ops.mjs",
-  ".codex/hooks/launch-project-ops.mjs",
-  "scripts/context-recovery-eval.mjs"
+  ".codex/hooks/launch-project-ops.mjs"
 ];
 
 function runtimeDirectory(ctx) {
@@ -25,29 +24,6 @@ function receiptPath(ctx, name) {
     throw new Error(`Invalid runtime receipt name: ${name}`);
   }
   return path.join(runtimeDirectory(ctx), `${name}.json`);
-}
-
-export function hookSessionKey(input = {}) {
-  for (const key of [
-    "session_id",
-    "sessionId",
-    "thread_id",
-    "threadId",
-    "conversation_id",
-    "conversationId",
-    "transcript_path",
-    "transcriptPath"
-  ]) {
-    const value = String(input?.[key] || "").trim();
-    if (value) return value;
-  }
-  return "";
-}
-
-export function scopedRuntimeReceiptName(base, scope = "") {
-  return scope
-    ? `${base}-${stableFingerprint(String(scope)).slice(0, 16)}`
-    : base;
 }
 
 function readRuntimeReceiptFile(file) {
@@ -169,13 +145,6 @@ export function readRuntimeReceipt(ctx, name) {
   return readRuntimeReceiptFile(receiptPath(ctx, name));
 }
 
-export function writeRuntimeReceipt(ctx, name, value) {
-  return withRuntimeReceiptLock(ctx, name, (file) => {
-    writeTextAtomic(file, `${JSON.stringify(value, null, 2)}\n`);
-    return file;
-  });
-}
-
 export function updateRuntimeReceipt(ctx, name, update) {
   if (typeof update !== "function") {
     throw new Error("Runtime receipt update requires a function");
@@ -185,18 +154,6 @@ export function updateRuntimeReceipt(ctx, name, update) {
     writeTextAtomic(file, `${JSON.stringify(nextValue, null, 2)}\n`);
     return nextValue;
   });
-}
-
-export function removeRuntimeReceipt(ctx, name, options = {}) {
-  try {
-    withRuntimeReceiptLock(ctx, name, (file) => {
-      fs.rmSync(file, { force: true });
-    });
-    return { ok: true, error: "" };
-  } catch (error) {
-    if (options.required) throw error;
-    return { ok: false, error: error.message };
-  }
 }
 
 export function stableFingerprint(value) {
@@ -228,164 +185,7 @@ export function hookRuntimeHash(root) {
   return stableFingerprint(entries);
 }
 
-export function writeRecoveryReceipt(root, ctx, state, sessionKey = "") {
-  const value = {
-    schema: "dong-skills.recovery-receipt.v1",
-    task_id: state.task_id,
-    task_generation: String(state.task_generation),
-    handoff_hash: state.handoff_hash,
-    runtime_hash: hookRuntimeHash(root),
-    session_key_hash: sessionKey ? stableFingerprint(String(sessionKey)) : "",
-    acknowledged_at: new Date().toISOString()
-  };
-  if (!sessionKey) {
-    return writeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", ""), value);
-  }
-  return withRuntimeLock(ctx, "recovery-claim", () => {
-    removeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", ""), { required: true });
-    return writeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey), value);
-  });
-}
-
-export function removeRecoveryReceipt(ctx, sessionKey = "", options = {}) {
-  return removeRuntimeReceipt(ctx, scopedRuntimeReceiptName("recovery", sessionKey), options);
-}
-
-function recoveryReceiptValueStatus(root, state, value, sessionKey = "", allowUnscoped = false) {
-  if (value.schema !== "dong-skills.recovery-receipt.v1") {
-    return {
-      ok: false,
-      reason: "context recovery receipt schema is unsupported"
-    };
-  }
-  if (value.task_id !== state.task_id ||
-      String(value.task_generation) !== String(state.task_generation)) {
-    return {
-      ok: false,
-      reason: "context recovery receipt task identity does not match the active task"
-    };
-  }
-  if (sessionKey && value.session_key_hash !== stableFingerprint(String(sessionKey))) {
-    if (!allowUnscoped || value.session_key_hash) {
-      return {
-        ok: false,
-        reason: "context recovery receipt belongs to a different session"
-      };
-    }
-  }
-  if (!state.handoff_hash || state.handoff_hash === "null" || value.handoff_hash !== state.handoff_hash) {
-    return {
-      ok: false,
-      reason: "context recovery receipt handoff hash is stale"
-    };
-  }
-  if (value.runtime_hash !== hookRuntimeHash(root)) {
-    return {
-      ok: false,
-      reason: "context recovery receipt runtime hash is stale"
-    };
-  }
-  return { ok: true, reason: "" };
-}
-
-function claimUnscopedRecoveryReceipt(root, ctx, state, sessionKey) {
-  if (!sessionKey) {
-    return {
-      ok: false,
-      reason: "context recovery has not been acknowledged in this session"
-    };
-  }
-
-  return withRuntimeLock(ctx, "recovery-claim", () => {
-    const scopedName = scopedRuntimeReceiptName("recovery", sessionKey);
-    const scoped = readRuntimeReceipt(ctx, scopedName);
-    if (!scoped.ok) {
-      return {
-        ok: false,
-        reason: `context recovery receipt is invalid: ${scoped.error}`
-      };
-    }
-    if (scoped.exists) {
-      const status = recoveryReceiptValueStatus(root, state, scoped.value || {}, sessionKey);
-      if (status.ok) return status;
-    }
-
-    return withRuntimeReceiptLock(ctx, "recovery", (unscopedFile) => {
-      const unscoped = readRuntimeReceiptFile(unscopedFile);
-      if (!unscoped.ok) {
-        return {
-          ok: false,
-          reason: `context recovery receipt is invalid: ${unscoped.error}`
-        };
-      }
-      if (!unscoped.exists) {
-        return {
-          ok: false,
-          reason: "context recovery has not been acknowledged in this session"
-        };
-      }
-
-      const status = recoveryReceiptValueStatus(root, state, unscoped.value || {}, sessionKey, true);
-      if (!status.ok) return status;
-
-      const promoted = {
-        ...unscoped.value,
-        session_key_hash: stableFingerprint(String(sessionKey))
-      };
-      try {
-        fs.rmSync(unscopedFile);
-      } catch (error) {
-        return {
-          ok: false,
-          authoritative: true,
-          reason: `context recovery receipt could not be consumed: ${error.message}`
-        };
-      }
-      try {
-        withRuntimeReceiptLock(ctx, scopedName, (scopedFile) => {
-          writeTextAtomic(scopedFile, `${JSON.stringify(promoted, null, 2)}\n`);
-        });
-      } catch (error) {
-        return {
-          ok: false,
-          authoritative: true,
-          reason: `context recovery receipt promotion failed; rerun context-recovery-eval: ${error.message}`
-        };
-      }
-      return { ok: true, reason: "" };
-    });
-  });
-}
-
-export function recoveryReceiptStatus(root, ctx, state, sessionKey = "") {
-  const scopedName = scopedRuntimeReceiptName("recovery", sessionKey);
-  const receipt = readRuntimeReceipt(ctx, scopedName);
-  if (!receipt.ok) {
-    return {
-      ok: false,
-      reason: `context recovery receipt is invalid: ${receipt.error}`
-    };
-  }
-  if (receipt.exists) {
-    const status = recoveryReceiptValueStatus(root, state, receipt.value || {}, sessionKey);
-    if (status.ok || !sessionKey) return status;
-    const claimed = claimUnscopedRecoveryReceipt(root, ctx, state, sessionKey);
-    return claimed.ok || claimed.authoritative ? claimed : status;
-  }
-  if (!sessionKey) {
-    return {
-      ok: false,
-      reason: "context recovery has not been acknowledged in this session"
-    };
-  }
-  return claimUnscopedRecoveryReceipt(root, ctx, state, sessionKey);
-}
-
-export function removeDecisionReceipt(ctx, sessionKey = "", options = {}) {
-  return removeRuntimeReceipt(ctx, scopedRuntimeReceiptName("decision", sessionKey), options);
-}
-
-export function writeHookLiveness(root, ctx, eventName) {
+export function writeHookLiveness(root, ctx, eventName, options = {}) {
   return updateRuntimeReceipt(ctx, "liveness", (previous) => {
     const runtimeHash = hookRuntimeHash(root);
     const value = previous.ok &&
@@ -394,6 +194,11 @@ export function writeHookLiveness(root, ctx, eventName) {
       ? previous.value
       : {};
     const now = new Date().toISOString();
+    const previousEventAt = Date.parse(value.events?.[String(eventName || "unknown")] || "");
+    const minIntervalMs = Number(options.minIntervalMs || 0);
+    if (minIntervalMs > 0 && Number.isFinite(previousEventAt) && Date.now() - previousEventAt < minIntervalMs) {
+      return value;
+    }
     const events = {
       ...(value.events && typeof value.events === "object" ? value.events : {}),
       [String(eventName || "unknown")]: now

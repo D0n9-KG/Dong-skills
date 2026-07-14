@@ -11,7 +11,6 @@ $skillRoot = Split-Path -Parent $PSScriptRoot
 $assetsRoot = Join-Path $skillRoot "assets\project-ops"
 $manifestFile = Join-Path $assetsRoot "dong-skills.manifest.json"
 $siblingSkillsRoot = Split-Path -Parent $skillRoot
-$installedProjectSkillsSnapshot = Join-Path $skillRoot "assets\project-skills"
 $installedDongSkillsSourceMarker = Join-Path $siblingSkillsRoot ".dong-skills-source.json"
 $defaultDongSkillsSourceMarker = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".agents\skills\.dong-skills-source.json"
 $sourceContext = Join-Path $assetsRoot ".codex-context"
@@ -614,6 +613,14 @@ function Install-ManagedSkillDirectory {
   }
 
   Copy-Item -LiteralPath $Source -Destination $staging -Recurse
+  $snapshotEntry = Join-Path $staging "SKILL.project.md"
+  $skillEntry = Join-Path $staging "SKILL.md"
+  if ((Test-Path -LiteralPath $snapshotEntry) -and !(Test-Path -LiteralPath $skillEntry)) {
+    Move-Item -LiteralPath $snapshotEntry -Destination $skillEntry
+  }
+  if (!(Test-Path -LiteralPath $skillEntry)) {
+    throw "Dong Skills skill source has no installable entry: $Source"
+  }
   Write-SkillMarker -SkillDirectory $staging -Name $name -Scope $Scope
 
   try {
@@ -678,7 +685,10 @@ function Resolve-ProjectSkillsSourceRoot {
     $markerSkillsRoot = Split-Path -Parent $sourceMarkerFile
     $snapshotRoot = Join-Path $markerSkillsRoot "codex-codebase-onboarding\assets\project-skills"
     foreach ($name in @($Manifest.project_skills)) {
-      if (!(Test-Path -LiteralPath (Join-Path $snapshotRoot $name))) {
+      $snapshotSkill = Join-Path $snapshotRoot $name
+      if (!(Test-Path -LiteralPath $snapshotSkill) -or
+          !(Test-Path -LiteralPath (Join-Path $snapshotSkill "SKILL.project.md")) -or
+          (Test-Path -LiteralPath (Join-Path $snapshotSkill "SKILL.md"))) {
         throw "Dong Skills installed project skill snapshot is incomplete: $name"
       }
     }

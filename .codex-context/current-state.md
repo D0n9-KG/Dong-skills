@@ -1,31 +1,30 @@
 # 当前状态
 
 ## Task Identity
-
-- task_id: task-7-2026-07-12T18-25-41-449Z
-- task_generation: 7
+- task_id: task-8-2026-07-14T02-39-43-596Z
+- task_generation: 8
 
 ## 目标
+将 Dong Skills 收敛为适配强 agentic model 的最小 hook 内核，并在不覆盖下游项目事实的前提下完成安装与 live 回归。
 
-根治自然语言 prompt 被升级为审批、scope、mutation、Stop/PreCompact 权限事实的问题，完成完整 Dong Skills 架构审计，并安装验证到 `scientific_Graph`。
+## 最新用户指令
+继续完成 Dong Skills 减负与稳定性验证；只有基础设施稳定后才恢复 AAAI 研究。
+
+## 当前阶段
+execution，Task 5 下游安装与 live 回归。
 
 ## 当前结论
+- 仅保留 `SessionStart`、`PreToolUse`、`PreCompact`、`Stop` 四个 hooks。
+- `Stop` advisory-only；`PreCompact` 不改 handoff，仅覆盖一个不超过 64 KiB 的 raw snapshot。
+- `PreToolUse` 以可确定 mutation target 为边界；外部、网络、浏览器、诊断和未知操作默认 fail-open。
+- 当前源码 focused 64/64、full domains 160/160、`release-check` 已通过；最终 closure review 无 Critical/High，两轮独立审查发现的可复现问题均已修复。
+- 下游两个项目 Preview 已通过，六个核心 context 文件的安装前哈希已记录；尚未 Apply。
 
-- Tasks 1-9 全部完成；非结构化 prompt 仅为 advisory，审批和 phase transition 只信任 canonical 结构化证据。
-- literal assignment 使用无插值字面量解析；PowerShell 查询使用保守 read-only verb set，混入 executable expression 或控制/写操作时继续 gated。
-- external Git 使用显式 `git -C <绝对外部仓库>`、真实 Git root 和 repo-local allowlist；当前项目、路径别名、相对路径及 Git 重定向参数继续 gated。
-- root、bootstrap、installer 和项目级 runtime 保持 parity；完整 agent architecture audit 无 unresolved High/Critical。
+## 阻塞项
+- 无。
 
-## 验证状态
-
-- 最终 `release-check` pass，包含 health、syntax、PowerShell parse、241/241 domain tests、privacy、readability、large-file 与 runtime-artifact scans。
-- 下游 distribution `e4befba294f31322ee94ba21f69e80e4f151f181206e6da212800b177b5f8416` 的六文件 hash preservation、static checks、真实宿主正反例和连续两次结束回归均通过。
-- 首次 closure release 因 handoff checkpoint 字段名不符合 schema 而失败；修正字段后 health、core 25/25 和完整 release-check 重新通过。
-
-## 下一步
-
-- 完成 delivery checkpoint 和 workflow closure；不 push。
+## 下一步动作
+先做 source checkpoint，再安装到 `scientific_Graph` 与 `sci-evo-extract` 并核对 context 哈希、health、budget 和事务残留。
 
 ## 最后更新
-
-2026-07-13。
+2026-07-14：最终 closure review 无 Critical/High；源码回归与 release-check 通过，进入 Task 5。

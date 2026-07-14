@@ -1299,14 +1299,6 @@ function resetTaskScopedContext(root, ctx, previous, next) {
     originals.set(file, fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
   }
   originals.set(discussionFile, fs.existsSync(discussionFile) ? fs.readFileSync(discussionFile, "utf8") : null);
-  let pendingNewTask = null;
-  const discussionOriginal = originals.get(discussionFile);
-  if (discussionOriginal !== null) {
-    try {
-      const parsed = JSON.parse(discussionOriginal);
-      if (parsed?.status === "pending-new-task") pendingNewTask = parsed;
-    } catch {}
-  }
 
   fs.mkdirSync(archiveDir, { recursive: true });
   try {
@@ -1320,33 +1312,7 @@ function resetTaskScopedContext(root, ctx, previous, next) {
     if (discussion !== null) {
       writeTextAtomic(path.join(archiveDir, "discussion-state.json"), discussion);
     }
-    if (pendingNewTask) {
-      const requiredFiles = [
-        REQUIRED_FILES.current,
-        REQUIRED_FILES.spec,
-        REQUIRED_FILES.plan,
-        REQUIRED_FILES.handoff
-      ];
-      const baselineHashes = Object.fromEntries(requiredFiles.map((name) => {
-        const file = path.join(contextDir, name);
-        return [name, fs.existsSync(file) ? stableFingerprint(fs.readFileSync(file)) : "missing"];
-      }));
-      writeTextAtomic(discussionFile, `${JSON.stringify({
-        status: "dirty",
-        updated_at: new Date().toISOString(),
-        source: pendingNewTask.source || "UserPromptSubmit",
-        reason: "new task prompt must be externalized after task reset",
-        phase: next.phase,
-        spec_status: next.spec_status,
-        decision_required: next.decision_required,
-        prompt_excerpt: pendingNewTask.prompt_excerpt,
-        required_files: requiredFiles,
-        baseline_hashes: baselineHashes,
-        next_action: "Write the latest user instruction, scope, plan status, and resume point into the required state files."
-      }, null, 2)}\n`);
-    } else {
-      fs.rmSync(discussionFile, { force: true });
-    }
+    fs.rmSync(discussionFile, { force: true });
   } catch (error) {
     for (const [file, original] of originals) {
       if (original === null) fs.rmSync(file, { force: true });

@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { readText, walkFiles } from "./core.mjs";
 
-const HOT_LIMIT = 35_000;
-const HOT_FAIL_LIMIT = 45_000;
+const HOT_LIMIT = 8_000;
+const HOT_FAIL_LIMIT = 12_000;
 
 export function estimateTokens(file, text) {
   const codeLike = /\.(js|mjs|ts|tsx|py|go|rs|java|cs|json|toml|ya?ml|ps1|sh)$/i.test(file);
@@ -22,12 +22,7 @@ function activeStateFiles() {
   return new Set([
     ".codex-context/handoff-summary.md",
     ".codex-context/current-state.md",
-    ".codex-context/project-map.md",
-    ".codex-context/spec.md",
-    ".codex-context/plan-progress.md",
-    ".codex-context/artifact-index.md",
-    ".codex-context/workflow-state.yaml",
-    ".codex-context/learned-instincts.md"
+    ".codex-context/workflow-state.yaml"
   ]);
 }
 
@@ -38,9 +33,6 @@ function classifyContextFile(relPath, nextSkill) {
 
   if (
     normalized === "AGENTS.md" ||
-    normalized === ".codex/hooks.json" ||
-    normalized === ".agents/skills/using-superpowers/SKILL.md" ||
-    normalized === ".agents/skills/codex-codebase-onboarding/SKILL.md" ||
     normalized === nextSkillPath ||
     hotStates.has(normalized)
   ) {
@@ -137,6 +129,7 @@ export function contextBudget(root) {
     `Cold runtime/bootstrap path: ~${coldTokens.toLocaleString()} tokens across ${buckets.cold.length} files`,
     `Hot budget status: ${status} (warn > ${HOT_LIMIT.toLocaleString()}, fail > ${HOT_FAIL_LIMIT.toLocaleString()})`,
     nextSkill ? `Workflow next skill: ${nextSkill}` : "Workflow next skill: unknown",
+    "Skill bodies are counted on demand; host-visible skill metadata is not estimated as full skill content.",
     "",
     "Largest hot files:"
   ];

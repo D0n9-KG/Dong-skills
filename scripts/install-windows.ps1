@@ -728,7 +728,13 @@ function Install-ProjectSkillsSnapshot {
     if (!(Test-Path -LiteralPath $source)) {
       throw "Missing Dong Skills project skill source: $source"
     }
-    Copy-Item -LiteralPath $source -Destination (Join-Path $SnapshotRoot $name) -Recurse
+    $snapshotSkill = Join-Path $SnapshotRoot $name
+    Copy-Item -LiteralPath $source -Destination $snapshotSkill -Recurse
+    $discoverableEntry = Join-Path $snapshotSkill "SKILL.md"
+    if (!(Test-Path -LiteralPath $discoverableEntry)) {
+      throw "Dong Skills project skill source has no SKILL.md: $source"
+    }
+    Move-Item -LiteralPath $discoverableEntry -Destination (Join-Path $snapshotSkill "SKILL.project.md")
   }
 }
 

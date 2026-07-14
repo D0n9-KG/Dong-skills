@@ -55,9 +55,11 @@ Read the report by bucket, not just by total scanned tokens:
 
 Default thresholds:
 
-- Hot path over 35k tokens: warning; reduce active state or router/spec verbosity.
-- Hot path over 45k tokens: failure-level context pressure; prune/archive or split before adding more process.
+- Hot path over 8k tokens: warning; reduce always-on guidance or active recovery state.
+- Hot path over 12k tokens: failure-level context pressure; prune/archive or split before adding more process.
 - Warm/cold heaviness is an optimization queue, not an immediate user-work blocker unless the current task is modifying those files.
+
+The hot estimate includes `AGENTS.md`, the three-file recovery core (`handoff-summary.md`, `workflow-state.yaml`, `current-state.md`), and the current `next_skill` body. Other skill bodies are warm because Codex uses progressive disclosure; do not count every installed `SKILL.md` as if its full body were loaded at startup. Skill metadata still creates routing cost, so report duplicate or overly broad trigger descriptions separately.
 
 Do not tell the user "Dong Skills uses X tokens" from the total scanned number alone. State both total scanned and hot recovery path.
 

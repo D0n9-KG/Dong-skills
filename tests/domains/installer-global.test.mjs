@@ -64,6 +64,14 @@ test("Windows installer preserves existing UTF-8 Chinese AGENTS.md", () => {
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-skill-evolution", "SKILL.md")), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, "codex-project-governance", "SKILL.md")), false);
   assert.equal(fs.existsSync(path.join(skillsRoot, "brainstorming", "SKILL.md")), false);
+  assert.equal(
+    fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "assets", "project-skills", "brainstorming", "SKILL.project.md")),
+    true
+  );
+  assert.equal(
+    fs.existsSync(path.join(skillsRoot, "codex-codebase-onboarding", "assets", "project-skills", "brainstorming", "SKILL.md")),
+    false
+  );
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", ".dong-skills-project.json")), true);
   assert.equal(fs.existsSync(path.join(project, ".agents", "skills", "codex-project-governance", "SKILL.md")), true);
   const projectMarker = readJson(path.join(project, ".agents", "skills", ".dong-skills-project.json"));

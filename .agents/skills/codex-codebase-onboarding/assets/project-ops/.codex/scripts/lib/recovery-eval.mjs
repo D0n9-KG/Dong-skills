@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { readText } from "./core.mjs";
 import { hasHeading, meaningful, sectionContent } from "./markdown.mjs";
-import { writeRecoveryReceipt } from "./runtime.mjs";
 import { REQUIRED_FILES } from "./templates.mjs";
 import { workflowContextHash, workflowStatus } from "./workflow.mjs";
 
@@ -235,12 +234,4 @@ export function formatRecoveryEvaluation(result) {
     "",
     result.ok ? "Result: pass" : "Result: fail"
   ].join("\n");
-}
-
-export function acknowledgeRecovery(root, ctx = path.join(root, ".codex-context"), sessionKey = "") {
-  const workflow = workflowStatus(root, ctx);
-  if (!workflow.ok) {
-    throw new Error(`Cannot acknowledge context recovery: ${workflow.issues.join("; ")}`);
-  }
-  return writeRecoveryReceipt(root, ctx, workflow.state, sessionKey);
 }

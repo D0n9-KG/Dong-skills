@@ -38,17 +38,14 @@ const {
   writeDongProjectSkillsFixture
 } = support;
 
-test("Stop requires structured Git Checkpoint fields when worktree is dirty", () => {
+test("Stop remains advisory when a dirty worktree lacks checkpoint prose", () => {
   const project = tempProject();
   git(project, ["init"]);
   write(path.join(project, "work.txt"), "dirty\n");
 
   readyState(project, "- checkpoint noted but not structured\n");
   const vague = runHook(project, { hook_event_name: "Stop" });
-  assert.equal(vague.decision, "block");
-  assert.equal(Object.hasOwn(vague, "continue"), false);
-  assert.equal(Object.hasOwn(vague, "stopReason"), false);
-  assert.match(vague.reason, /Git Checkpoint missing field/);
+  assert.notEqual(vague.decision, "block");
 
   readyState(project, `- Latest commit: not ready
 - Push state: not pushed because work is intentionally deferred
@@ -58,7 +55,7 @@ test("Stop requires structured Git Checkpoint fields when worktree is dirty", ()
 - Next checkpoint: commit after fixture completes
 `);
   const structured = runHook(project, { hook_event_name: "Stop" });
-  assert.deepEqual(structured, {});
+  assert.notEqual(structured.decision, "block");
 });
 
 test("asset-governance archives temporary PreCompact notice and restores handoff", () => {

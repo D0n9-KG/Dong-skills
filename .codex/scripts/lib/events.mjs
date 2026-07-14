@@ -1,48 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { assetGovernanceStatus } from "./assets.mjs";
-import { fileFresh, latestChangedMtime, mtimeMs, readText, shortList, writeJson, writeTextAtomic } from "./core.mjs";
-import { changedPathsNeedVerification, gitChangedFiles, gitCheckpointStatus, gitDiffFilesResult, gitHeadResult, gitStatusFiles, gitStatusResult, isGovernancePath } from "./git.mjs";
-import { handoffStatus, markdownStatus, meaningful, sectionContent, verificationStatus } from "./markdown.mjs";
-import {
-  appendLearningObservation,
-  classifyLearningCue,
-  extractPromptText,
-  learningStatus,
-  redactSensitiveText,
-  sanitizeLearningExcerpt
-} from "./learning.mjs";
-import { sessionRecoveryContext } from "./recovery.mjs";
-import {
-  hookSessionKey,
-  readRuntimeReceipt,
-  recoveryReceiptStatus,
-  removeDecisionReceipt,
-  removeRecoveryReceipt,
-  removeRuntimeReceipt,
-  scopedRuntimeReceiptName,
-  stableFingerprint,
-  updateRuntimeReceipt,
-  withRuntimeLock,
-  writeRecoveryReceipt,
-  writeRuntimeReceipt
-} from "./runtime.mjs";
-import { activeWayfinderStatus, evaluateRecovery } from "./recovery-eval.mjs";
-import { REQUIRED_FILES } from "./templates.mjs";
-import { canonicalDecisionEvidenceStatus, DECISION_TRANSITIONS, reopenWorkflowAfterProjectMutation, workflowContextHash, workflowStatus } from "./workflow.mjs";
+import { readText, shortList, writeJson, writeTextAtomic } from "./core.mjs";
+import { gitStatusResult } from "./git.mjs";
+import { redactSensitiveText } from "./learning.mjs";
+import { writeHookLiveness } from "./runtime.mjs";
+import { workflowStatus } from "./workflow.mjs";
 
-const DISCUSSION_STATE_FILE = "discussion-state.json";
-const CHANGE_REFRESH_FILES = [
-  REQUIRED_FILES.artifacts,
-  REQUIRED_FILES.current,
-  REQUIRED_FILES.verification,
-  REQUIRED_FILES.handoff
-];
-const EVIDENCE_REQUIRED_PHASES = new Set(["execution", "debugging", "verification", "review", "delivery"]);
-const CHECKPOINT_REQUIRED_PHASES = new Set(["delivery", "handoff", "complete"]);
-const DECISION_EVENTS = new Set(Object.values(DECISION_TRANSITIONS).flat());
-const WORKFLOW_REPAIR_EVENTS = new Set(["brainstorming-start", "spec-living", "plan-start"]);
 const POWERSHELL_READ_ONLY_VERBS = new Set([
   "compare",
   "format",
@@ -56,154 +20,58 @@ const POWERSHELL_READ_ONLY_VERBS = new Set([
   "where"
 ]);
 
-export function sessionStart(input, root, ctx) {
-  removeRecoveryReceipt(ctx, "", { required: true });
-  removeRecoveryReceipt(ctx, hookSessionKey(input), { required: true });
-  removeDecisionReceipt(ctx, "", { required: true });
-  removeRuntimeReceipt(ctx, stopContinuationReceiptName(input));
-  writeJson(sessionRecoveryContext(root, ctx, "SessionStart"));
+function recordHookLiveness(root, ctx, eventName) {
+  try {
+    writeHookLiveness(root, ctx, eventName, { minIntervalMs: 60_000 });
+  } catch {
+    // Liveness is diagnostic evidence and must never make a hook fail.
+  }
 }
 
-export function postCompact(input, root, ctx) {
-  removeRecoveryReceipt(ctx, "", { required: true });
-  removeRecoveryReceipt(ctx, hookSessionKey(input), { required: true });
-  removeDecisionReceipt(ctx, "", { required: true });
-  removeRuntimeReceipt(ctx, stopContinuationReceiptName(input));
-  writeJson({ continue: true });
+export function sessionStart(input, root, ctx) {
+  recordHookLiveness(root, ctx, "SessionStart");
+  const workflow = workflowStatus(root, ctx);
+  const state = workflow.state || {};
+  const lines = [
+    "Dong Skills project context:",
+    `- Root: ${root}`,
+    `- Workflow: phase=${state.phase || "unknown"}; next=${state.next_skill || "unknown"}; decision=${state.decision_required || "none"}`,
+    "- Recover from .codex-context/handoff-summary.md, workflow-state.yaml, and current-state.md.",
+    "- Load only the next named skill; treat older notes as lower-priority evidence."
+  ];
+  if (!workflow.ok) lines.push(`- Workflow issues: ${shortList(workflow.issues, 4)}`);
+  if (fs.existsSync(path.join(ctx, "raw", "precompact-latest.md"))) {
+    lines.push("- A compact snapshot is available at .codex-context/raw/precompact-latest.md; read it only if the core state is insufficient.");
+  }
+  writeJson({
+    hookSpecificOutput: {
+      hookEventName: "SessionStart",
+      additionalContext: lines.join("\n")
+    }
+  });
 }
 
 function allowStop(systemMessage = "") {
   writeJson(systemMessage ? { systemMessage } : {});
 }
 
-function blockStop(reason) {
-  writeJson({
-    decision: "block",
-    reason
-  });
-}
-
-function readJsonFile(file) {
-  if (!fs.existsSync(file)) {
-    return { ok: true, exists: false, value: null, error: "" };
-  }
-  try {
-    return {
-      ok: true,
-      exists: true,
-      value: JSON.parse(fs.readFileSync(file, "utf8")),
-      error: ""
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      exists: true,
-      value: null,
-      error: error.message
-    };
-  }
-}
-
-function discussionStateFile(ctx) {
-  return path.join(ctx, DISCUSSION_STATE_FILE);
-}
-
 function unique(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
-function workflowStateFor(root, ctx) {
-  return workflowStatus(root, ctx).state || {};
+function truncateUtf8Bytes(value, maxBytes) {
+  const buffer = Buffer.from(String(value || ""), "utf8");
+  if (buffer.length <= maxBytes) return buffer.toString("utf8");
+  let end = Math.max(0, maxBytes);
+  while (end > 0 && (buffer[end] & 0xc0) === 0x80) end -= 1;
+  return buffer.subarray(0, end).toString("utf8");
 }
 
-function executionEvidenceRequired(state, files) {
-  return EVIDENCE_REQUIRED_PHASES.has(state.phase) || changedPathsNeedVerification(files);
-}
-
-function checkpointReviewRequired(state, files) {
-  return CHECKPOINT_REQUIRED_PHASES.has(state.phase) || executionEvidenceRequired(state, files);
-}
-
-function promptIsSubstantive(prompt) {
-  return String(prompt || "").trim().length > 0;
-}
-
-function writeDiscussionMarker(root, ctx, input, patch) {
-  const file = discussionStateFile(ctx);
-  return withRuntimeLock(ctx, "discussion-state", () => {
-    const previous = readJsonFile(file).value || {};
-    const now = new Date().toISOString();
-    const marker = {
-      status: "advisory",
-      updated_at: now,
-      source: patch.source,
-      reason: patch.reason,
-      phase: patch.phase,
-      spec_status: patch.spec_status,
-      decision_required: patch.decision_required,
-      prompt_excerpt: patch.prompt_excerpt || previous.prompt_excerpt || undefined,
-      tool_name: patch.tool_name || previous.tool_name || undefined,
-      enforce_before_mutation: false,
-      requires_scope_reopen: false,
-      cwd_relative: input?.cwd ? path.relative(root, path.resolve(input.cwd)).replace(/\\/g, "/") || "." : previous.cwd_relative || ".",
-      required_files: [],
-      baseline_hashes: {},
-      next_action: "Treat this as a redacted recovery hint only. Record real decisions through canonical Workflow Decision fields and real project changes through mutation evidence."
-    };
-    writeTextAtomic(file, `${JSON.stringify(marker, null, 2)}\n`);
-    return marker;
-  });
-}
-
-function toolOriginatedPrompt(input) {
-  const tool = String(input?.tool_name || input?.toolName || input?.tool_use_id || input?.toolUseId || "").trim();
-  const agent = String(input?.agent_id || input?.agentId || input?.parent_agent_id || input?.parentAgentId || "").trim();
-  const source = String(input?.source || "").trim();
-  return Boolean(tool || agent || /subagent|child-agent|delegated-agent/i.test(source));
-}
-
-export function userPromptSubmit(input, root, ctx) {
-  if (toolOriginatedPrompt(input)) return;
-  const prompt = extractPromptText(input);
-  const workflow = workflowStatus(root, ctx);
-  const state = workflow.state || {};
-  const messages = [];
-  const cue = classifyLearningCue(prompt);
-  if (promptIsSubstantive(prompt)) {
-    writeDiscussionMarker(root, ctx, input, {
-      source: "UserPromptSubmit",
-      reason: state.phase === "complete"
-        ? "first prompt after a completed workflow"
-        : "latest user prompt recovery hint",
-      phase: state.phase,
-      spec_status: state.spec_status,
-      decision_required: state.decision_required,
-      prompt_excerpt: sanitizeLearningExcerpt(prompt)
-    });
-    messages.push(state.phase === "complete"
-      ? "Codex Project Ops recorded a redacted advisory for recovery. Start a canonical new task before project mutation; the prompt itself did not authorize that transition."
-      : "Codex Project Ops recorded a redacted discussion advisory. It does not authorize transitions, reopen scope, require state refresh, or block mutation, Stop, or PreCompact.");
-  }
-
-  if (cue) {
-    const saved = appendLearningObservation(root, ctx, input, cue, prompt);
-    if (saved) {
-      messages.push([
-        "Codex Project Ops captured a raw learning observation.",
-        "Do not treat it as active memory yet.",
-        "Review it with codex-learning-memory at a meaningful milestone; it does not block Stop or PreCompact."
-      ].join(" "));
-    }
-  }
-
-  if (!messages.length) return;
-
-  writeJson({
-    hookSpecificOutput: {
-      hookEventName: "UserPromptSubmit",
-      additionalContext: messages.join("\n")
-    }
-  });
+function clipUtf8Bytes(value, maxBytes) {
+  const text = String(value || "");
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return text;
+  const marker = "\n[truncated]\n";
+  return truncateUtf8Bytes(text, maxBytes - Buffer.byteLength(marker, "utf8")) + marker;
 }
 
 function toolName(input) {
@@ -354,7 +222,7 @@ function explicitToolTargets(input) {
   }
 
   for (const text of patchTexts) {
-    for (const match of text.matchAll(/^\*\*\*\s+(?:Add|Update|Delete|Move to)\s+File:\s*(.+?)\s*$/gmi)) {
+    for (const match of text.matchAll(/^\*\*\*\s+(?:(?:Add|Update|Delete)\s+File|Move to):\s*(.+?)\s*$/gmi)) {
       targets.push(match[1]);
     }
   }
@@ -371,38 +239,66 @@ function explicitToolWorkdir(input) {
   return String(payload.workdir || payload.cwd || payload.working_directory || payload.workingDirectory || "").trim();
 }
 
-function shellAbsolutePaths(command) {
-  const paths = [];
-  for (const match of String(command || "").matchAll(
-    /(?:"([a-z]:[\\/][^"]+)"|'([a-z]:[\\/][^']+)'|([a-z]:[\\/][^\s;|]+))/gi
-  )) {
-    paths.push(match[1] || match[2] || match[3]);
-  }
-  return unique(paths);
+function resolvedToolWorkdir(input, root) {
+  const requested = explicitToolWorkdir(input);
+  if (!requested) return root;
+  return path.isAbsolute(requested) ? path.resolve(requested) : path.resolve(root, requested);
 }
 
 function pathOutsideProject(target, root, base = root) {
   const cleaned = String(target || "").replace(/^["']|["']$/g, "");
   if (!cleaned) return false;
   const absolute = path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(base, cleaned);
-  const relative = path.relative(root, absolute).replace(/\\/g, "/");
-  return Boolean(relative && (relative.startsWith("../") || path.isAbsolute(relative)));
+  const realRoot = realPathWithMissingTail(root);
+  const realTarget = realPathWithMissingTail(absolute);
+  const relative = path.relative(realRoot, realTarget).replace(/\\/g, "/");
+  if (!relative || (!relative.startsWith("../") && !path.isAbsolute(relative))) return false;
+  const rootFromTarget = path.relative(realTarget, realRoot).replace(/\\/g, "/");
+  return Boolean(rootFromTarget && (rootFromTarget.startsWith("../") || path.isAbsolute(rootFromTarget)));
+}
+
+function realPathWithMissingTail(target) {
+  let cursor = path.resolve(target);
+  const tail = [];
+  while (!fs.existsSync(cursor)) {
+    const parent = path.dirname(cursor);
+    if (parent === cursor) return path.resolve(target);
+    tail.unshift(path.basename(cursor));
+    cursor = parent;
+  }
+  try {
+    return path.join(fs.realpathSync.native(cursor), ...tail);
+  } catch {
+    return path.resolve(target);
+  }
 }
 
 function repositoryLocalGitOperation(command) {
-  const syntax = shellSyntax(command);
+  const syntax = semanticShellSyntax(command);
   if (!syntax.segments.length || syntax.redirections.length > 0) return false;
   const allowed = new Set([
     "add",
+    "apply",
     "branch",
+    "checkout",
+    "cherry-pick",
+    "clean",
     "commit",
     "diff",
     "log",
     "ls-files",
+    "merge",
+    "pull",
+    "push",
+    "rebase",
     "remote",
+    "reset",
+    "restore",
     "rev-parse",
     "show",
+    "stash",
     "status",
+    "switch",
     "tag"
   ]);
   return syntax.segments.every((segment) => {
@@ -413,35 +309,27 @@ function repositoryLocalGitOperation(command) {
   });
 }
 
-function verifiedExternalGitOperation(command, root) {
-  const syntax = shellSyntax(command);
+function verifiedExternalGitOperation(command, root, base = root) {
+  const syntax = semanticShellSyntax(command);
   if (!syntax.segments.length || syntax.redirections.length > 0) return false;
-  const allowed = new Set([
-    "add",
-    "branch",
-    "commit",
-    "diff",
-    "log",
-    "ls-files",
-    "remote",
-    "rev-parse",
-    "show",
-    "status",
-    "tag"
-  ]);
   return syntax.segments.every((segment) => {
     if (/\$\(|<\(|>\(|[{}]|`|(?:^|\s)&(?:\s|$)/.test(segment)) return false;
-    if (/(?:^|\s)(?:--git-dir(?:=|\s)|--work-tree(?:=|\s))/i.test(segment)) return false;
-    const match = segment.match(
-      /^\s*git(?:\.exe)?\s+-C\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))\s+([A-Za-z][A-Za-z-]*)(?:\s|$)/i
-    );
-    if (!match || !allowed.has(match[4].toLowerCase())) return false;
-    const requestedRoot = match[1] || match[2] || match[3];
-    if (!path.isAbsolute(requestedRoot)) return false;
+    const tokens = shellLiteralTokens(segment);
+    const subcommandIndex = gitSubcommandIndex(tokens);
+    if (subcommandIndex < 0) return false;
+    const routing = gitRoutingPaths(tokens, subcommandIndex, base);
+    const explicitPaths = [routing.cwd, routing.workTree, routing.gitDir].filter(Boolean);
+    if (explicitPaths.length === 0 || explicitPaths.some((target) => !pathOutsideProject(target, root))) {
+      return false;
+    }
+    if (!routing.hadC && !(routing.workTree && routing.gitDir)) return false;
     try {
-      const realTarget = fs.realpathSync.native(requestedRoot);
-      if (!pathOutsideProject(realTarget, root)) return false;
-      const repositoryRoot = execFileSync("git", ["-C", realTarget, "rev-parse", "--show-toplevel"], {
+      const repositoryRoot = execFileSync("git", [
+        ...tokens.slice(1, subcommandIndex),
+        "rev-parse",
+        "--show-toplevel"
+      ], {
+        cwd: base,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"]
       }).trim();
@@ -456,61 +344,249 @@ function verifiedExternalGitOperation(command, root) {
 function toolExplicitlyOutsideProject(input, root) {
   const name = normalizedToolName(input);
   const targets = explicitToolTargets(input);
-  if (targets.length > 0 && targets.every((target) => pathOutsideProject(target, root))) {
+  const targetBase = resolvedToolWorkdir(input, root);
+  if (targets.length > 0 && targets.every((target) => pathOutsideProject(target, root, targetBase))) {
     return true;
   }
   if (!/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) return false;
   const commandText = shellCommandText(input);
-  const absolutePaths = shellAbsolutePaths(commandText);
-  if (absolutePaths.some((target) => !pathOutsideProject(target, root))) return false;
-  const command = commandText.replace(/\\/g, "/").toLowerCase();
-  const normalizedRoot = path.resolve(root).replace(/\\/g, "/").toLowerCase();
-  if (command.includes(normalizedRoot)) return false;
-  if (verifiedExternalGitOperation(commandText, root)) return true;
-  const workdir = explicitToolWorkdir(input);
-  if (!workdir || !pathOutsideProject(workdir, root)) return false;
-  if (repositoryLocalGitOperation(commandText)) return true;
+  const workdir = resolvedToolWorkdir(input, root);
+  if (verifiedExternalGitOperation(commandText, root, workdir)) return true;
+  const outsideWorkdir = pathOutsideProject(workdir, root);
+  if (outsideWorkdir && repositoryLocalGitOperation(commandText)) return true;
   const mutation = shellFileMutation(input);
   if (mutation.mutates) {
     if (mutation.opaque || mutation.targets.length === 0) return false;
     return mutation.targets.every((target) => pathOutsideProject(target, root, workdir));
   }
+  if (!outsideWorkdir) return false;
   if (["read-only", "verification"].includes(shellCommandClass(input))) return true;
   const externalControl = controlPlaneOperation(input, path.resolve(workdir));
   return Boolean(externalControl && externalControl.kind !== "forbidden");
 }
 
+function shellLiteralTokens(segment) {
+  const tokens = [];
+  let current = "";
+  let quote = "";
+  const text = String(segment || "");
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quote) {
+      if (char === quote) {
+        quote = "";
+      } else if (char === "`" && quote === '"' && index + 1 < text.length) {
+        current += text[index + 1];
+        index += 1;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (current) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+  if (quote) return [];
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+function gitSubcommandIndex(tokens) {
+  if (!/^(?:git|git\.exe)$/i.test(tokens[0] || "")) return -1;
+  const optionsWithValues = new Set([
+    "-c",
+    "-C",
+    "--git-dir",
+    "--work-tree",
+    "--namespace",
+    "--super-prefix",
+    "--config-env"
+  ]);
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (optionsWithValues.has(token)) {
+      index += 1;
+      continue;
+    }
+    if (/^--(?:git-dir|work-tree|namespace|super-prefix|config-env)=/.test(token)) continue;
+    if (token.startsWith("-")) continue;
+    return index;
+  }
+  return -1;
+}
+
+function gitRoutingPaths(tokens, subcommandIndex, base) {
+  let cwd = path.resolve(base);
+  let hadC = false;
+  let workTree = "";
+  let gitDir = "";
+  for (let index = 1; index < subcommandIndex; index += 1) {
+    const token = tokens[index];
+    const attached = token.match(/^(--(?:work-tree|git-dir))=(.+)$/i);
+    if (attached) {
+      const resolved = path.resolve(cwd, attached[2]);
+      if (attached[1].toLowerCase() === "--work-tree") workTree = resolved;
+      else gitDir = resolved;
+      continue;
+    }
+    if (token === "-C" && index + 1 < subcommandIndex) {
+      cwd = path.resolve(cwd, tokens[index + 1]);
+      hadC = true;
+      index += 1;
+      continue;
+    }
+    if (/^--(?:work-tree|git-dir)$/i.test(token) && index + 1 < subcommandIndex) {
+      const resolved = path.resolve(cwd, tokens[index + 1]);
+      if (token.toLowerCase() === "--work-tree") workTree = resolved;
+      else gitDir = resolved;
+      index += 1;
+    }
+  }
+  return { cwd: hadC ? cwd : "", hadC, workTree, gitDir };
+}
+
+const GIT_MUTATING_SUBCOMMANDS = new Set([
+  "add",
+  "apply",
+  "checkout",
+  "cherry-pick",
+  "clean",
+  "commit",
+  "merge",
+  "pull",
+  "push",
+  "rebase",
+  "reset",
+  "restore",
+  "stash",
+  "switch",
+  "tag"
+]);
+
 function shellPathArguments(segment) {
-  const targets = [];
-  for (const match of String(segment || "").matchAll(
-    /-(?:LiteralPath|Path|FilePath|Destination|DestinationPath|Target|TargetPath)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi
-  )) {
-    targets.push(match[1] || match[2] || match[3]);
+  const tokens = shellLiteralTokens(segment);
+  if (tokens.length === 0) return [];
+  const command = String(tokens[0] || "").toLowerCase();
+  const pathOptions = new Set([
+    "-literalpath",
+    "-path",
+    "-filepath",
+    "-destination",
+    "-destinationpath",
+    "-target",
+    "-targetpath",
+    "-newname",
+    "--target-directory"
+  ]);
+  const optionValues = [];
+  const positionals = [];
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const attached = token.match(/^(-{1,2}[A-Za-z][A-Za-z-]*)(?::|=)(.+)$/);
+    if (attached && pathOptions.has(attached[1].toLowerCase())) {
+      optionValues.push({ option: attached[1].toLowerCase(), value: attached[2] });
+      continue;
+    }
+    if (pathOptions.has(token.toLowerCase()) && index + 1 < tokens.length) {
+      optionValues.push({ option: token.toLowerCase(), value: tokens[index + 1] });
+      index += 1;
+      continue;
+    }
+    if (!token.startsWith("-") && !/^\/[A-Za-z]+$/.test(token)) positionals.push(token);
   }
-  const positional = String(segment || "").match(
-    /^\s*(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni|rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/i
-  );
-  if (positional) targets.push(positional[1] || positional[2] || positional[3]);
-  for (const match of String(segment || "").matchAll(/\bgit\s+(?:restore|switch)\s+(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi)) {
-    const target = match[1] || match[2] || match[3];
-    if (target && !target.startsWith("-")) targets.push(target);
+
+  const gitIndex = gitSubcommandIndex(tokens);
+  if (gitIndex > 0) {
+    if (/^(?:apply|checkout|restore|switch)$/i.test(tokens[gitIndex])) {
+      const separator = tokens.indexOf("--", gitIndex + 1);
+      if (separator >= 0) return tokens.slice(separator + 1).filter(Boolean);
+      if (/^(?:checkout|restore)$/i.test(tokens[gitIndex])) {
+        return tokens.slice(gitIndex + 1).filter((token) => token && !token.startsWith("-"));
+      }
+    }
+    return [];
   }
-  for (const match of String(segment || "").matchAll(/\bgit\s+checkout\s+(?:--\s+)?(?:"([^"]+)"|'([^']+)'|([^\s;|]+))/gi)) {
-    const target = match[1] || match[2] || match[3];
-    if (target && !target.startsWith("-")) targets.push(target);
+
+  const copies = new Set(["copy-item", "cpi", "copy", "cp"]);
+  if (copies.has(command)) {
+    const destinations = optionValues
+      .filter(({ option }) => ["-destination", "-destinationpath", "-target", "-targetpath", "--target-directory"].includes(option))
+      .map(({ value }) => value);
+    if (destinations.length > 0) return unique(destinations);
+    const hasSourceOption = optionValues.some(({ option }) =>
+      ["-literalpath", "-path", "-filepath"].includes(option)
+    );
+    return positionals.length >= 2 || (hasSourceOption && positionals.length >= 1)
+      ? [positionals[positionals.length - 1]]
+      : [];
   }
-  return targets;
+
+  const moves = new Set(["move-item", "mi", "move", "mv"]);
+  if (moves.has(command)) {
+    return unique([...optionValues.map(({ value }) => value), ...positionals]);
+  }
+
+  const renames = new Set(["rename-item", "rni", "ren", "rename"]);
+  if (renames.has(command)) {
+    const sources = optionValues
+      .filter(({ option }) => ["-literalpath", "-path", "-filepath", "-target", "-targetpath"].includes(option))
+      .map(({ value }) => value);
+    if (sources.length === 0 && positionals[0]) sources.push(positionals[0]);
+    const namedDestination = optionValues.find(({ option }) =>
+      ["-newname", "-destination", "-destinationpath"].includes(option)
+    )?.value;
+    const destination = namedDestination || (
+      positionals.length >= 2 || (sources.length > 0 && positionals.length >= 1)
+        ? positionals[positionals.length - 1]
+        : ""
+    );
+    const resolvedDestinations = destination
+      ? sources.map((source) => path.isAbsolute(destination)
+        ? destination
+        : path.join(path.dirname(source), destination))
+      : [];
+    return unique([...sources, ...resolvedDestinations]);
+  }
+
+  const optionTargets = optionValues.map(({ value }) => value);
+  if (optionTargets.length > 0) return unique(optionTargets);
+  return positionals[0] ? [positionals[0]] : [];
+}
+
+function gitWorktreeMutationSegment(segment) {
+  const tokens = shellLiteralTokens(segment);
+  const index = gitSubcommandIndex(tokens);
+  return index > 0 && GIT_MUTATING_SUBCOMMANDS.has(String(tokens[index]).toLowerCase());
 }
 
 function mutatingShellSegment(segment) {
   const text = String(segment || "");
   return /^(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni)\b/i.test(text) ||
     /^\[System\.IO\.(?:File|Directory)\]::(?:WriteAllText|WriteAllBytes|AppendAllText|Create|Delete|Move|Copy|CreateDirectory|Delete)\b/i.test(text) ||
-    /^(?:rm|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i.test(text) ||
+    /^(?:rm|del|erase|move|copy|ren|rename|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i.test(text) ||
     /^sed\s+-i\b/i.test(text) ||
-    /^git\s+(?:apply|restore|checkout|switch)\b/i.test(text) ||
+    gitWorktreeMutationSegment(text) ||
     /^node(?:\.exe)?\s+(?:--eval|-e)\b[\s\S]*\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|copyFile(?:Sync)?|rename(?:Sync)?|unlink(?:Sync)?|rmSync|mkdirSync|rmdirSync)\s*\(/i.test(text) ||
     /^python(?:\.exe)?\s+-c\b[\s\S]*(?:\bopen\s*\([^)]*["'][wa+]|write_(?:text|bytes)\s*\(|unlink\s*\(|rename\s*\(|mkdir\s*\(|rmdir\s*\(|shutil\.(?:copy|copyfile|copytree|move|rmtree))/i.test(text);
+}
+
+function embeddedMutatingShellExpression(command) {
+  return /(?:\$\(|\{|(?:^|\s)&\s*)\s*(?:set-content|add-content|clear-content|out-file|remove-item|move-item|copy-item|rename-item|new-item|sc|ac|clc|ni|ri|mi|cpi|rni|rm|move|copy|ren|rename|mv|cp|touch|mkdir|rmdir|tee|truncate)\b/i
+    .test(String(command || ""));
+}
+
+function gitMutationSegment(segment) {
+  return gitWorktreeMutationSegment(segment);
 }
 
 function shellFileMutation(input) {
@@ -519,9 +595,10 @@ function shellFileMutation(input) {
     return { mutates: false, targets: [], opaque: false };
   }
   const command = shellCommandText(input);
-  const syntax = shellSyntax(command);
+  const syntax = semanticShellSyntax(command);
   const mutatingSegments = syntax.segments.filter((segment) => mutatingShellSegment(segment));
-  if (mutatingSegments.length === 0 && syntax.redirections.length === 0) {
+  const embeddedMutation = embeddedMutatingShellExpression(command);
+  if (mutatingSegments.length === 0 && syntax.redirections.length === 0 && !embeddedMutation) {
     return { mutates: false, targets: [], opaque: false };
   }
 
@@ -535,10 +612,13 @@ function shellFileMutation(input) {
   };
 }
 
-function projectRelativeTarget(target, root) {
+function projectRelativeTarget(target, root, base = root) {
   const cleaned = String(target || "").replace(/^["']|["']$/g, "");
-  const absolute = path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(root, cleaned);
-  const relative = path.relative(root, absolute).replace(/\\/g, "/");
+  const absolute = path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(base, cleaned);
+  const relative = path.relative(
+    realPathWithMissingTail(root),
+    realPathWithMissingTail(absolute)
+  ).replace(/\\/g, "/");
   if (!relative || relative.startsWith("../") || path.isAbsolute(relative)) return "";
   return relative;
 }
@@ -556,57 +636,69 @@ function governanceArtifactPath(relative) {
     normalized.startsWith("docs/codex/wayfinder/");
 }
 
-function indexedActiveWayfinderOnlyChange(root, ctx, state, files) {
-  if (state?.phase !== "wayfinding") return false;
-  const changed = unique(files)
-    .filter((file) => !isGovernancePath(file))
-    .map((file) => String(file).replace(/\\/g, "/"));
-  if (changed.length !== 1) return false;
-
-  const wayfinder = activeWayfinderStatus(root, ctx);
-  if (!wayfinder.active || !wayfinder.reference) return false;
-  const reference = String(wayfinder.reference).replace(/\\/g, "/");
-  if (changed[0].toLowerCase() !== reference.toLowerCase()) return false;
-
-  const artifactIndex = readText(path.join(ctx, REQUIRED_FILES.artifacts))
-    .replace(/\\/g, "/")
-    .toLowerCase();
-  return artifactIndex.includes(reference.toLowerCase());
-}
-
 function governanceRepairMutation(input, root) {
   const name = normalizedToolName(input);
+  const base = resolvedToolWorkdir(input, root);
   if (/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) {
     const shellMutation = shellFileMutation(input);
     return shellMutation.mutates &&
       !shellMutation.opaque &&
       shellMutation.targets.length > 0 &&
-      shellMutation.targets.every((target) => governanceArtifactPath(projectRelativeTarget(target, root)));
+      shellMutation.targets.every((target) => governanceArtifactPath(projectRelativeTarget(target, root, base)));
   }
   if (!/apply_patch/.test(name) && !explicitWriteToolName(name)) {
     return false;
   }
   const targets = explicitToolTargets(input);
   if (targets.length === 0) return false;
-  return targets.every((target) => governanceArtifactPath(projectRelativeTarget(target, root)));
+  return targets.every((target) => governanceArtifactPath(projectRelativeTarget(target, root, base)));
+}
+
+function globMatchesPath(pattern, candidate) {
+  let source = "^";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    if (char === "*") {
+      if (pattern[index + 1] === "*") index += 1;
+      source += ".*";
+    } else if (char === "?") {
+      source += "[^/]";
+    } else {
+      source += char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+  }
+  return new RegExp(`${source}$`, "i").test(candidate);
+}
+
+function mutationTargetCoversWorkflowState(target, root, base) {
+  const cleaned = String(target || "").replace(/^["']|["']$/g, "");
+  if (!cleaned) return false;
+  const realRoot = realPathWithMissingTail(root);
+  const absolute = path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(base, cleaned);
+  if (/[*?]/.test(cleaned)) {
+    const relativePattern = path.relative(realRoot, absolute).replace(/\\/g, "/");
+    if (relativePattern.startsWith("../") || path.isAbsolute(relativePattern)) return false;
+    return globMatchesPath(relativePattern, ".codex-context") ||
+      globMatchesPath(relativePattern, ".codex-context/workflow-state.yaml");
+  }
+  const realTarget = realPathWithMissingTail(absolute);
+  const workflowState = realPathWithMissingTail(
+    path.join(realRoot, ".codex-context", "workflow-state.yaml")
+  );
+  const relative = path.relative(realTarget, workflowState).replace(/\\/g, "/");
+  return !relative || (!relative.startsWith("../") && !path.isAbsolute(relative));
 }
 
 function protectedWorkflowStateMutation(input, root) {
+  const base = resolvedToolWorkdir(input, root);
   const targets = explicitToolTargets(input);
-  if (targets.some((target) => {
-    const cleaned = target.replace(/^["']|["']$/g, "");
-    const absolute = path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(root, cleaned);
-    return path.relative(root, absolute).replace(/\\/g, "/") === ".codex-context/workflow-state.yaml";
-  })) {
+  if (targets.some((target) => mutationTargetCoversWorkflowState(target, root, base))) {
     return true;
   }
   const name = normalizedToolName(input);
   if (!/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) return false;
   const shellMutation = shellFileMutation(input);
-  if (shellMutation.targets.some((target) => {
-    const relative = projectRelativeTarget(target, root);
-    return relative === ".codex-context/workflow-state.yaml";
-  })) {
+  if (shellMutation.targets.some((target) => mutationTargetCoversWorkflowState(target, root, base))) {
     return true;
   }
   if (!shellMutation.opaque) return false;
@@ -665,7 +757,62 @@ function shellSyntax(command) {
 }
 
 function shellSegments(command) {
-  return shellSyntax(command).segments;
+  return semanticShellSyntax(command).segments;
+}
+
+function literalWrappedCommand(value) {
+  const trimmed = String(value || "").trim();
+  if (trimmed.length >= 2 &&
+      ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+       (trimmed.startsWith("'") && trimmed.endsWith("'")))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function decodedPowerShellCommand(text) {
+  const tokens = shellLiteralTokens(text);
+  if (!/^(?:powershell|pwsh)(?:\.exe)?$/i.test(tokens[0] || "")) return "";
+  const optionIndex = tokens.findIndex((token, index) =>
+    index > 0 && /^(?:-encodedcommand|-enc|-e)$/i.test(token)
+  );
+  if (optionIndex < 0 || optionIndex + 1 >= tokens.length) return "";
+  const encoded = tokens[optionIndex + 1];
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length % 4 !== 0) return "";
+  const bytes = Buffer.from(encoded, "base64");
+  if (bytes.length === 0 || bytes.length % 2 !== 0) return "";
+  return bytes.toString("utf16le").trim();
+}
+
+function wrappedShellCommand(segment) {
+  const text = String(segment || "").trim();
+  const cmd = text.match(/^cmd(?:\.exe)?\b[\s\S]*?(?:^|\s)\/(?:c|k)\s+([\s\S]+)$/i);
+  if (cmd) return literalWrappedCommand(cmd[1]);
+  const encodedPowerShell = decodedPowerShellCommand(text);
+  if (encodedPowerShell) return encodedPowerShell;
+  const powershell = text.match(/^(?:powershell|pwsh)(?:\.exe)?\b[\s\S]*?(?:^|\s)-(?:command|c)\s+([\s\S]+)$/i);
+  if (powershell) return literalWrappedCommand(powershell[1]);
+  const posix = text.match(/^(?:sh|bash|zsh)(?:\.exe)?\b[\s\S]*?(?:^|\s)-(?:c|lc)\s+([\s\S]+)$/i);
+  if (posix) return literalWrappedCommand(posix[1]);
+  return "";
+}
+
+function semanticShellSyntax(command, depth = 0) {
+  const syntax = shellSyntax(command);
+  if (depth >= 3) return syntax;
+  const segments = [];
+  const redirections = [...syntax.redirections];
+  for (const segment of syntax.segments) {
+    const inner = wrappedShellCommand(segment);
+    if (!inner) {
+      segments.push(segment);
+      continue;
+    }
+    const nested = semanticShellSyntax(inner, depth + 1);
+    segments.push(...nested.segments);
+    redirections.push(...nested.redirections);
+  }
+  return { segments, redirections: unique(redirections) };
 }
 
 function skipPowerShellWhitespace(text, index) {
@@ -766,10 +913,6 @@ function shellCommandClass(input) {
   return "";
 }
 
-function mutationToolUseId(input) {
-  return String(input?.tool_use_id || input?.toolUseId || "").trim();
-}
-
 function explicitWriteToolName(name) {
   return /(^|[._:])(?:add|append|apply|clear|commit|copy|create|dispatch|edit|insert|install|invoke|merge|move|patch|publish|push|rename|replace|save|send|set|submit|trigger|update|upload|upsert|write)(?:$|[._:])/i.test(name) ||
     /(^|[._:])(?:add|append|copy|create|edit|move|patch|rename|replace|save|update|upload|write)(?:file|files|document|documents|path|paths|record|records|resource|resources)(?:$|[._:])/i.test(name);
@@ -778,112 +921,6 @@ function explicitWriteToolName(name) {
 function explicitDestructiveToolName(name) {
   return /(^|[._:])(?:delete|remove|reset|drop|truncate|destroy|purge|prune)(?:$|[._:])/i.test(name) ||
     /(^|[._:])(?:delete|remove|truncate|destroy|purge)(?:file|files|document|documents|path|paths|record|records|resource|resources)(?:$|[._:])/i.test(name);
-}
-
-function mutationIntentReceiptName(input) {
-  const sessionKey = hookSessionKey(input);
-  const toolUseId = mutationToolUseId(input);
-  const scope = toolUseId ? `${sessionKey}\u0000${toolUseId}` : sessionKey;
-  return scopedRuntimeReceiptName("mutation-intent", scope);
-}
-
-function writeMutationIntent(root, ctx, input, state, controlClass, head) {
-  const toolUseId = mutationToolUseId(input);
-  const status = gitStatusResult(root);
-  const preStatusFiles = status.ok ? status.files : [];
-  return writeRuntimeReceipt(ctx, mutationIntentReceiptName(input), {
-    schema: "dong-skills.mutation-intent.v1",
-    task_id: state.task_id || "missing",
-    task_generation: String(state.task_generation || "missing"),
-    tool_use_id_hash: toolUseId ? stableFingerprint(toolUseId) : "",
-    control_class: controlClass,
-    pre_head: head || "",
-    pre_status_files: preStatusFiles,
-    pre_project_fingerprint: projectChangeFingerprint(
-      root,
-      preStatusFiles.filter((file) => !isGovernancePath(file))
-    ),
-    baseline_hashes: refreshFileHashes(ctx),
-    created_at: new Date().toISOString()
-  });
-}
-
-function mutationIntentStatus(root, ctx, input, state) {
-  const receipt = readRuntimeReceipt(ctx, mutationIntentReceiptName(input));
-  if (!receipt.ok) {
-    return { ok: false, exists: true, files: [], issue: `mutation intent is invalid: ${receipt.error}`, value: null };
-  }
-  if (!receipt.exists) {
-    return { ok: true, exists: false, files: [], issue: "", value: null };
-  }
-
-  const value = receipt.value || {};
-  if (value.task_id !== state.task_id ||
-      String(value.task_generation) !== String(state.task_generation)) {
-    return {
-      ok: false,
-      exists: true,
-      files: [],
-      issue: "mutation intent belongs to a different workflow task",
-      value
-    };
-  }
-  const toolUseId = mutationToolUseId(input);
-  if (value.tool_use_id_hash && toolUseId &&
-      value.tool_use_id_hash !== stableFingerprint(toolUseId)) {
-    return {
-      ok: false,
-      exists: true,
-      files: [],
-      issue: "mutation intent does not match the current tool invocation",
-      value
-    };
-  }
-
-  const head = gitHeadResult(root);
-  if (!head.ok) {
-    return {
-      ok: false,
-      exists: true,
-      files: [],
-      issue: `Git HEAD unavailable after mutation: ${head.error || "unknown error"}`,
-      value
-    };
-  }
-  const diff = gitDiffFilesResult(root, value.pre_head || "", head.head || "");
-  if (!diff.ok) {
-    return {
-      ok: false,
-      exists: true,
-      files: [],
-      issue: `Committed mutation diff unavailable: ${diff.error || "unknown error"}`,
-      value
-    };
-  }
-  return { ok: true, exists: true, files: diff.files, issue: "", value };
-}
-
-function removeMutationIntent(ctx, input) {
-  removeRuntimeReceipt(ctx, mutationIntentReceiptName(input));
-}
-
-function toolExecutionStatus(input) {
-  const response = input?.tool_response || input?.toolResponse || input?.tool_result || input?.toolResult;
-  if (!response || typeof response !== "object") return { known: false, ok: false };
-  const status = String(response.status || response.state || "").toLowerCase();
-  const exitCode = response.exit_code ?? response.exitCode ?? response.code;
-  const successStatus = ["ok", "success", "succeeded", "complete", "completed"].includes(status);
-  const failureStatus = ["error", "failed", "failure"].includes(status);
-  const known = response.is_error !== undefined || response.isError !== undefined ||
-    response.ok !== undefined || response.success !== undefined || successStatus || failureStatus || exitCode !== undefined;
-  if (!known) return { known: false, ok: false };
-  const failed = response.is_error === true ||
-    response.isError === true ||
-    response.ok === false ||
-    response.success === false ||
-    failureStatus ||
-    (exitCode !== undefined && Number(exitCode) !== 0);
-  return { known: true, ok: !failed };
 }
 
 function toolControlClass(input, root = "") {
@@ -897,17 +934,17 @@ function toolControlClass(input, root = "") {
 
   if (/shell|bash|powershell|cmd|exec_command|shell_command/.test(name)) {
     const command = shellCommandText(input);
-    if (/\$\(\s*(?:rm|remove-item|ri|del|rmdir|drop|truncate)\b/i.test(command)) {
+    if (embeddedMutatingShellExpression(command)) {
       return "destructive";
     }
     if (shellSegments(command).some((segment) =>
-      /^(?:rm|remove-item|ri|del|rmdir|drop|truncate)\b|^git\s+(?:reset|clean)\b/i.test(segment))) {
+      /^(?:rm|remove-item|ri|del|erase|rmdir|drop|truncate)\b|^git\s+(?:reset|clean)\b/i.test(segment))) {
       return "destructive";
     }
     const shellClass = shellCommandClass(input);
     if (shellClass) return shellClass;
     if (shellFileMutation(input).mutates ||
-        /\bgit\s+(?:add|commit|merge|rebase|cherry-pick|push|pull|fetch|tag|stash|switch|checkout|restore|apply)\b/i.test(command) ||
+        shellSegments(command).some((segment) => gitMutationSegment(segment)) ||
         /\bgit\s+worktree\s+(?:add|remove|move|prune|lock|unlock)\b/i.test(command) ||
         /\bgit\s+branch\s+(?:-[dDmM]|--delete|--move|--copy|--edit-description)\b/i.test(command) ||
         /\b(?:npm|pnpm|yarn)\s+(?:install|add|remove|publish)\b/i.test(command)) {
@@ -944,9 +981,10 @@ function denyPreToolUse(reason) {
 }
 
 export function preToolUse(input, root, ctx) {
+  recordHookLiveness(root, ctx, "PreToolUse");
   if (toolExplicitlyOutsideProject(input, root)) return;
   const controlClass = toolControlClass(input, root);
-  if (["mutating", "destructive", "opaque"].includes(controlClass) &&
+  if (["mutating", "destructive"].includes(controlClass) &&
       protectedWorkflowStateMutation(input, root)) {
     denyPreToolUse("Direct edits to .codex-context/workflow-state.yaml are not allowed. Use a validated workflow-state transition.");
     return;
@@ -955,112 +993,9 @@ export function preToolUse(input, root, ctx) {
     denyPreToolUse("Arbitrary workflow-state mutation is not allowed. Use a validated workflow-state transition.");
     return;
   }
-  if (controlClass === "workflow-decision") {
-    const workflow = workflowStatus(root, ctx);
-    const state = workflow.state || {};
-    const operation = controlPlaneOperation(input, root);
-    if (!workflow.ok) {
-      denyPreToolUse(`Workflow state is not valid: ${workflow.issues.join("; ")}`);
-      return;
-    }
-    const recovery = recoveryReceiptStatus(root, ctx, state, hookSessionKey(input));
-    if (!recovery.ok) {
-      denyPreToolUse(`Context recovery gate: ${recovery.reason}. Run context-recovery-eval before recording workflow decision evidence.`);
-      return;
-    }
-    const pending = String(state.decision_required || "none");
-    if (pending !== "none") {
-      if ((DECISION_TRANSITIONS[pending] || []).includes(operation?.event)) return;
-      denyPreToolUse(`The pending decision ${pending} does not allow transition ${operation?.event || "missing"}.`);
-      return;
-    }
-    const candidates = Object.entries(DECISION_TRANSITIONS)
-      .filter(([, events]) => events.includes(operation?.event))
-      .map(([decision]) => decision);
-    if (candidates.length === 1) return;
-    denyPreToolUse(`Transition ${operation?.event || "missing"} does not identify one canonical workflow decision.`);
-    return;
-  }
-  if (controlClass === "control-plane") return;
-  if (controlClass === "workflow-transition") {
-    const workflow = workflowStatus(root, ctx);
-    const state = workflow.state || {};
-    const operation = controlPlaneOperation(input, root);
-    if (WORKFLOW_REPAIR_EVENTS.has(operation?.event)) return;
-    if (!workflow.ok) {
-      denyPreToolUse(`Workflow state is not valid: ${workflow.issues.join("; ")}`);
-      return;
-    }
-    if (operation?.event === "new-task") {
-      if (state.phase === "complete") return;
-      denyPreToolUse("workflow-state transition new-task is allowed only after the previous workflow is complete.");
-      return;
-    }
-    const sessionKey = hookSessionKey(input);
-    const recovery = recoveryReceiptStatus(root, ctx, state, sessionKey);
-    if (!recovery.ok) {
-      denyPreToolUse(`Context recovery gate: ${recovery.reason}. Run context-recovery-eval before changing workflow state.`);
-      return;
-    }
-    if (state.decision_required && state.decision_required !== "none") {
-      const allowed = new Set(DECISION_TRANSITIONS[state.decision_required] || []);
-      if (!allowed?.has(operation?.event)) {
-        denyPreToolUse(`A user decision is still required: ${state.decision_required}. Use only its validated resolution transition.`);
-        return;
-      }
-      const canonicalEvidence = canonicalDecisionEvidenceStatus(
-        root,
-        ctx,
-        state,
-        state.decision_required,
-        operation?.event
-      );
-      if (canonicalEvidence.ok) return;
-      denyPreToolUse(`Matching canonical Workflow Decision evidence is required: ${canonicalEvidence.reason}.`);
-      return;
-    } else if (DECISION_EVENTS.has(operation?.event)) {
-      const decisions = Object.entries(DECISION_TRANSITIONS)
-        .filter(([, events]) => events.includes(operation.event))
-        .map(([decision]) => decision);
-      if (decisions.length === 1) {
-        const canonicalEvidence = canonicalDecisionEvidenceStatus(root, ctx, state, decisions[0], operation.event);
-        if (canonicalEvidence.ok) return;
-        denyPreToolUse(`Matching canonical Workflow Decision evidence is required: ${canonicalEvidence.reason}.`);
-        return;
-      }
-      denyPreToolUse(`Transition ${operation.event} requires an unambiguous pending canonical decision for the active task.`);
-      return;
-    }
-    return;
-  }
-  if (controlClass === "verification") {
-    if (!mutationToolUseId(input)) {
-      denyPreToolUse("Verification shell tracking requires tool_use_id; the hook payload is incomplete.");
-      return;
-    }
-    const state = workflowStateFor(root, ctx);
-    const head = gitHeadResult(root);
-    if (head.ok) writeMutationIntent(root, ctx, input, state, controlClass, head.head);
-    return;
-  }
-  if (["external", "unknown"].includes(controlClass)) {
-    const toolUseId = mutationToolUseId(input);
-    const state = workflowStateFor(root, ctx);
-    const head = gitHeadResult(root);
-    if (toolUseId && head.ok) writeMutationIntent(root, ctx, input, state, controlClass, head.head);
-    return;
-  }
-  if (!["mutating", "destructive", "opaque"].includes(controlClass)) return;
-  if (!mutationToolUseId(input)) {
-    denyPreToolUse("Project mutation tracking requires tool_use_id; the hook payload is incomplete.");
-    return;
-  }
-  if (governanceRepairMutation(input, root)) {
-    const repairState = workflowStateFor(root, ctx);
-    const repairHead = gitHeadResult(root);
-    writeMutationIntent(root, ctx, input, repairState, controlClass, repairHead.ok ? repairHead.head : "");
-    return;
-  }
+  if (["workflow-decision", "workflow-transition", "control-plane", "verification", "external", "unknown", "opaque", "read-only"].includes(controlClass)) return;
+  if (!["mutating", "destructive"].includes(controlClass)) return;
+  if (governanceRepairMutation(input, root)) return;
 
   const workflow = workflowStatus(root, ctx);
   const state = workflow.state || {};
@@ -1074,11 +1009,6 @@ export function preToolUse(input, root, ctx) {
   }
   if (state.decision_required && state.decision_required !== "none") {
     denyPreToolUse(`A user decision is still required: ${state.decision_required}.`);
-    return;
-  }
-  const recovery = recoveryReceiptStatus(root, ctx, state, hookSessionKey(input));
-  if (!recovery.ok) {
-    denyPreToolUse(`Context recovery gate: ${recovery.reason}. Run context-recovery-eval and resolve every failed probe before modifying the project.`);
     return;
   }
   if (["discovery", "wayfinding", "brainstorming", "spec", "planning"].includes(state.phase)) {
@@ -1102,367 +1032,6 @@ export function preToolUse(input, root, ctx) {
     return;
   }
 
-  const status = gitStatusResult(root);
-  if (!status.ok) {
-    denyPreToolUse(`Git status is unavailable before mutation: ${status.error || "unknown error"}.`);
-    return;
-  }
-  const head = gitHeadResult(root);
-  if (!head.ok) {
-    denyPreToolUse(`Git HEAD is unavailable before mutation: ${head.error || "unknown error"}.`);
-    return;
-  }
-  writeMutationIntent(root, ctx, input, state, controlClass, head.head);
-}
-
-function subagentReceiptName(agentId) {
-  return `subagent-${stableFingerprint(String(agentId || "unknown")).slice(0, 16)}`;
-}
-
-function subagentSummaryIssues(summary) {
-  if (summary.length < 20) {
-    return ["subagent must return a concise result summary with evidence or findings, risks or open gaps, and a parent next action"];
-  }
-
-  const contracts = [
-    {
-      label: "Evidence or findings",
-      pattern: /(?:^|\n)[^\r\n]*(?:evidence|证据|验证结果|findings|发现|inspected|reviewed|verified|reproduced|found|confirmed|checked|读取|检查|验证|复现|确认)[^\r\n]{4,}/im
-    },
-    {
-      label: "Risks or open gaps",
-      pattern: /(?:^|\n)[^\r\n]*(?:risks?|风险|未解决问题|remaining risks?|open gaps?|gaps?|limitations?|限制|缺口|no unresolved|none found|no blocking|remaining risk|risk remains|未发现|无阻塞|仍有风险)[^\r\n]{4,}/im
-    },
-    {
-      label: "Parent next action",
-      pattern: /(?:^|\n)[^\r\n]*(?:next action|next step|下一步|建议|recommended action|parent should|父任务|主任务|recommend|should)[^\r\n]{4,}/im
-    }
-  ];
-  const missing = contracts
-    .filter((contract) => !contract.pattern.test(summary))
-    .map((contract) => contract.label);
-  return missing.length
-    ? [`subagent result summary must include usable ${missing.join(", ")}; fixed headings are recommended but not required`]
-    : [];
-}
-
-export function subagentStart(input, root, ctx) {
-  const workflow = workflowStatus(root, ctx);
-  const state = workflow.state || {};
-  const agentId = String(input?.agent_id || input?.agentId || "unknown");
-  writeRuntimeReceipt(ctx, subagentReceiptName(agentId), {
-    schema: "dong-skills.subagent-lifecycle.v1",
-    agent_id_hash: stableFingerprint(agentId),
-    agent_type: String(input?.agent_type || input?.agentType || "unknown"),
-    task_id: state.task_id || "missing",
-    task_generation: String(state.task_generation || "missing"),
-    phase: state.phase || "missing",
-    work_lane: state.work_lane || "lane-1",
-    started_at: new Date().toISOString()
-  });
-
-  writeJson({
-    hookSpecificOutput: {
-      hookEventName: "SubagentStart",
-      additionalContext: [
-        `Parent task_id=${state.task_id || "missing"} generation=${state.task_generation || "missing"}.`,
-        `Parent phase=${state.phase || "missing"} work_lane=${state.work_lane || "lane-1"}.`,
-        "Stay within the delegated investigation or review scope.",
-        "Do not advance the parent workflow phase, approve decisions, edit parent state files, or claim parent completion.",
-        "This hook validates lifecycle identity and result-summary quality; it does not enforce file-level delegated scope.",
-        "Return a concise result summary that includes evidence or findings, risks or open gaps, and a parent next action. Fixed headings are recommended but not required."
-      ].join("\n")
-    }
-  });
-}
-
-export function subagentStop(input, root, ctx) {
-  const agentId = String(input?.agent_id || input?.agentId || "unknown");
-  const name = subagentReceiptName(agentId);
-  const start = readRuntimeReceipt(ctx, name);
-  const workflow = workflowStatus(root, ctx);
-  const state = workflow.state || {};
-  const summary = String(input?.last_assistant_message || input?.lastAssistantMessage || "").trim();
-  const issues = [];
-
-  if (!start.ok || !start.exists) {
-    issues.push("subagent start scope receipt is missing or invalid");
-  } else {
-    const scope = start.value || {};
-    if (scope.task_id !== state.task_id ||
-        String(scope.task_generation) !== String(state.task_generation)) {
-      issues.push("subagent result no longer matches the parent task identity");
-    }
-    if (scope.phase !== state.phase) {
-      issues.push(`parent workflow phase changed from ${scope.phase} to ${state.phase}`);
-    }
-  }
-  issues.push(...subagentSummaryIssues(summary));
-
-  writeRuntimeReceipt(ctx, `${name}-result`, {
-    schema: "dong-skills.subagent-result.v1",
-    agent_id_hash: stableFingerprint(agentId),
-    task_id: state.task_id || "missing",
-    task_generation: String(state.task_generation || "missing"),
-    phase: state.phase || "missing",
-    summary_hash: stableFingerprint(summary),
-    summary_length: summary.length,
-    issues,
-    usable_as_completion_evidence: issues.length === 0,
-    completed_at: new Date().toISOString()
-  });
-  allowStop(issues.length
-    ? `Subagent result quality warning: ${issues.join("; ")}. Do not use it as completion or verification evidence without independent parent review.`
-    : "Subagent result is usable after parent review. Externalize only accepted evidence, risks, and next action when they materially affect project state.");
-}
-
-function fileContentHash(file) {
-  try {
-    return stableFingerprint(fs.readFileSync(file).toString("base64"));
-  } catch {
-    return "missing";
-  }
-}
-
-function projectChangeFingerprint(root, files) {
-  return stableFingerprint(files
-    .map((file) => ({
-      file: String(file).replace(/\\/g, "/"),
-      hash: fileContentHash(path.join(root, file))
-    }))
-    .sort((a, b) => a.file.localeCompare(b.file)));
-}
-
-function changeReceiptStatus(root, ctx, files, state) {
-  const receipt = readRuntimeReceipt(ctx, "change-state");
-  if (!receipt.ok) {
-    return {
-      active: false,
-      exists: true,
-      issue: `change-state receipt is invalid: ${receipt.error}`,
-      value: null
-    };
-  }
-  if (!receipt.exists) {
-    return { active: false, exists: false, issue: "", value: null };
-  }
-  if (receipt.value?.task_id !== state.task_id ||
-      String(receipt.value?.task_generation) !== String(state.task_generation)) {
-    return {
-      active: false,
-      exists: true,
-      issue: "change-state receipt belongs to a different workflow task",
-      value: receipt.value
-    };
-  }
-  const fingerprint = projectChangeFingerprint(root, files);
-  if (receipt.value?.project_fingerprint !== fingerprint) {
-    return {
-      active: false,
-      exists: true,
-      issue: "change-state receipt does not match the current project changes",
-      value: receipt.value
-    };
-  }
-  return { active: true, exists: true, issue: "", value: receipt.value };
-}
-
-function receiptHasRefresh(receipt, ctx, name) {
-  if (!receipt) return false;
-  const current = fileContentHash(path.join(ctx, name));
-  return receipt.refreshed_hashes?.[name] === current;
-}
-
-function refreshFileHashes(ctx) {
-  return Object.fromEntries(
-    CHANGE_REFRESH_FILES.map((name) => [name, fileContentHash(path.join(ctx, name))])
-  );
-}
-
-function writeArtifactReminder(root, ctx, changed, latest) {
-  const reason = [
-    "Codex Project Ops: non-context files changed, but .codex-context/artifact-index.md is not fresh.",
-    hookStatusText(root, ctx, latest, changed, { assets: false, checkpoint: false, eventName: "PostToolUse" }),
-    `Changed files: ${shortList(changed)}.`,
-    "Update artifact-index.md with created/modified/read files and why they matter before continuing.",
-    "Also update current-state.md if phase, assumption, or next action changed."
-  ].join("\n");
-
-  writeJson({
-    systemMessage: reason,
-    hookSpecificOutput: {
-      hookEventName: "PostToolUse",
-      additionalContext: reason
-    }
-  });
-}
-
-export function postToolUse(input, root, ctx) {
-  if (toolExplicitlyOutsideProject(input, root)) return;
-  const controlClass = toolControlClass(input, root);
-  const operation = controlPlaneOperation(input, root);
-
-  if (controlClass === "workflow-transition") {
-    if (toolExecutionStatus(input).ok) {
-      removeDecisionReceipt(ctx, hookSessionKey(input));
-    }
-    return;
-  }
-
-  if (["control-plane", "workflow-decision"].includes(controlClass)) {
-    if (operation?.kind === "recovery" && toolExecutionStatus(input).ok) {
-      const evaluation = evaluateRecovery(root, ctx);
-      const workflow = workflowStatus(root, ctx);
-      if (evaluation.ok && workflow.ok) {
-        writeRecoveryReceipt(root, ctx, workflow.state, hookSessionKey(input));
-      }
-    }
-    return;
-  }
-  if (controlClass === "read-only") {
-    return;
-  }
-
-  if (["external", "unknown"].includes(controlClass) && !mutationToolUseId(input)) {
-    return;
-  }
-
-  const state = workflowStateFor(root, ctx);
-  const intent = ["mutating", "destructive", "opaque", "verification", "external", "unknown"].includes(controlClass)
-    ? mutationIntentStatus(root, ctx, input, state)
-    : { ok: true, exists: false, files: [], issue: "", value: null };
-  const statusResult = gitStatusResult(root);
-  if (!statusResult.ok) {
-    if (["mutating", "destructive", "opaque", "verification", "external", "unknown"].includes(controlClass)) {
-      const reason = `Codex Project Ops could not inspect project changes after a mutation. Git status unavailable: ${statusResult.error || "unknown error"}.`;
-      writeJson({
-        systemMessage: reason,
-        hookSpecificOutput: {
-          hookEventName: "PostToolUse",
-          additionalContext: reason
-        }
-      });
-    }
-    return;
-  }
-
-  if (!intent.ok) {
-    const reason = `Codex Project Ops could not validate the mutation intent: ${intent.issue}.`;
-    writeJson({
-      systemMessage: reason,
-      hookSpecificOutput: {
-        hookEventName: "PostToolUse",
-        additionalContext: reason
-      }
-    });
-    return;
-  }
-  const beforeFiles = Array.isArray(intent.value?.pre_status_files) ? intent.value.pre_status_files : [];
-  const beforeProjectFiles = beforeFiles.filter((file) => !isGovernancePath(file));
-  const afterProjectFiles = statusResult.files.filter((file) => !isGovernancePath(file));
-  const statusUnchanged = JSON.stringify([...beforeProjectFiles].sort()) === JSON.stringify([...afterProjectFiles].sort());
-  const fingerprintUnchanged = intent.value?.pre_project_fingerprint ===
-    projectChangeFingerprint(root, afterProjectFiles);
-  const invocationChanged = intent.files.some((file) => !isGovernancePath(file)) ||
-    !statusUnchanged ||
-    !fingerprintUnchanged;
-  const pendingChange = readRuntimeReceipt(ctx, "change-state");
-  const pendingChangeValue = pendingChange.ok ? pendingChange.value : null;
-  const pendingChangeActive = pendingChangeValue?.task_id === state.task_id &&
-    String(pendingChangeValue?.task_generation) === String(state.task_generation) &&
-    Array.isArray(pendingChangeValue?.changed_files) &&
-    pendingChangeValue.changed_files.length > 0;
-  if (!invocationChanged && !pendingChangeActive) {
-    removeMutationIntent(ctx, input);
-    return;
-  }
-  if (controlClass === "verification" && !invocationChanged) {
-    removeMutationIntent(ctx, input);
-    return;
-  }
-  if (["external", "unknown"].includes(controlClass)) {
-    if (!intent.exists) {
-      return;
-    }
-    if (!invocationChanged) {
-      removeMutationIntent(ctx, input);
-      return;
-    }
-  }
-
-  const pendingChangeFiles = pendingChangeValue?.task_id === state.task_id &&
-    String(pendingChangeValue?.task_generation) === String(state.task_generation) &&
-    Array.isArray(pendingChangeValue?.changed_files)
-    ? pendingChangeValue.changed_files
-    : [];
-
-  const changed = unique([
-    ...statusResult.files,
-    ...intent.files,
-    ...pendingChangeFiles
-  ]).filter((file) => !isGovernancePath(file));
-  if (changed.length === 0) {
-    removeMutationIntent(ctx, input);
-    return;
-  }
-
-  const latest = latestChangedMtime(root, changed);
-  const indexedWayfinderOnly = indexedActiveWayfinderOnlyChange(root, ctx, state, changed);
-  if (["mutating", "destructive", "opaque", "verification", "external", "unknown"].includes(controlClass)) {
-    if (invocationChanged &&
-        ["verification", "review", "delivery", "handoff"].includes(state.phase)) {
-      reopenWorkflowAfterProjectMutation(root, ctx, state.phase);
-    }
-    const fingerprint = projectChangeFingerprint(root, changed);
-    const execution = toolExecutionStatus(input);
-    const currentHashes = refreshFileHashes(ctx);
-    const baselineHashes = intent.value?.baseline_hashes || {};
-    const refreshedTouched = (!execution.known || execution.ok)
-      ? CHANGE_REFRESH_FILES.filter((name) =>
-        baselineHashes[name] !== undefined && currentHashes[name] !== baselineHashes[name])
-      : [];
-    const nextValue = updateRuntimeReceipt(ctx, "change-state", (existing) => {
-      const existingValue = existing.ok ? existing.value : null;
-      const sameTask = existingValue?.task_id === state.task_id &&
-        String(existingValue?.task_generation) === String(state.task_generation);
-      if (sameTask && existingValue?.project_fingerprint === fingerprint) {
-        const refreshedHashes = {
-          ...(existingValue.refreshed_hashes || {})
-        };
-        for (const name of refreshedTouched) {
-          refreshedHashes[name] = currentHashes[name];
-        }
-        return {
-          ...existingValue,
-          refreshed_hashes: refreshedHashes,
-          updated_at: new Date().toISOString()
-        };
-      }
-
-      const refreshedHashes = {};
-      for (const name of refreshedTouched) refreshedHashes[name] = currentHashes[name];
-      return {
-        schema: "dong-skills.change-state.v1",
-        task_id: state.task_id || "missing",
-        task_generation: String(state.task_generation || "missing"),
-        project_fingerprint: fingerprint,
-        changed_files: changed,
-        baseline_hashes: Object.keys(baselineHashes).length ? baselineHashes : currentHashes,
-        refreshed_hashes: refreshedHashes,
-        updated_at: new Date().toISOString()
-      };
-    });
-    removeMutationIntent(ctx, input);
-    if (receiptHasRefresh(nextValue, ctx, REQUIRED_FILES.artifacts) || indexedWayfinderOnly) {
-      return;
-    }
-
-    writeArtifactReminder(root, ctx, changed, latest);
-    return;
-  }
-
-  if (indexedWayfinderOnly || fileFresh(ctx, REQUIRED_FILES.artifacts, latest)) return;
-  writeArtifactReminder(root, ctx, changed, latest);
 }
 
 function compactTrigger(input) {
@@ -1489,457 +1058,50 @@ function compactTrigger(input) {
   return "auto";
 }
 
-function markdownList(items, fallback = "- None reported.") {
-  if (!items.length) return fallback;
-  return items.map((item) => `- ${item}`).join("\n");
-}
-
-function latestFileByMtime(root, files) {
-  let latest = null;
-  for (const file of files) {
-    try {
-      const stat = fs.statSync(path.join(root, file));
-      if (!stat.isFile()) continue;
-      const mtime = stat.mtimeMs;
-      if (!latest || mtime > latest.mtime) latest = { file, mtime };
-    } catch {
-      // Deleted files may not have filesystem mtimes.
-    }
-  }
-  return latest?.file || "";
-}
-
-function hookStatusText(root, ctx, latest = 0, files = [], options = {}) {
-  const workflow = options.workflow || workflowStatus(root, ctx);
-  const learning = options.learning === false ? null : (options.learning || learningStatus(ctx));
-  const assets = options.assets === false ? null : (options.assets || assetGovernanceStatus(root, ctx));
-  const checkpoint = options.checkpoint === false
-    ? null
-    : (options.checkpoint || gitCheckpointStatus(root, ctx, latest, files));
-  const discussion = options.discussion === false ? null : (options.discussion || discussionStateStatus(root, ctx, workflow));
-  const state = workflow.state || {};
-  const consistencyIssues = workflow.consistency?.issues?.length || 0;
-  const latestFile = latestFileByMtime(root, files.filter((file) => !isGovernancePath(file))) || latestFileByMtime(root, files);
-  const lines = [
-    "Hook status:",
-    `- Event: ${options.eventName || "unknown"}`,
-    `- Actual Git root: ${root}`,
-    `- Workflow: phase=${state.phase || "missing"} next_skill=${state.next_skill || "missing"} decision_required=${state.decision_required || "missing"} issues=${workflow.issues.length} consistency_issues=${consistencyIssues}`,
-    learning
-      ? `- Learning: ${learning.ok ? "ok" : "pending-review"} issues=${learning.issues.length}`
-      : "- Learning: not checked in this hook",
-    assets
-      ? `- Assets: ${assets.ok ? "ok" : "review-required"} issues=${assets.issues.length} advisories=${assets.advisories.length}`
-      : "- Assets: not checked in this hook",
-    discussion
-      ? `- Discussion: ${discussion.ok ? "ok" : "needs-state-refresh"} issues=${discussion.issues.length}`
-      : "- Discussion: not checked in this hook",
-    checkpoint
-      ? `- Checkpoint: ${checkpoint.ok ? "ok" : "review-required"}`
-      : "- Checkpoint: not checked in this hook"
-  ];
-  if (latestFile) lines.push(`- Latest changed file: ${latestFile}`);
-  return lines.join("\n");
-}
-
-function discussionStateStatus(root, ctx) {
-  const file = discussionStateFile(ctx);
-  if (!fs.existsSync(file)) {
-    return {
-      ok: true,
-      issues: [],
-      latest: 0,
-      marker: null,
-      requiredFiles: [],
-      summary: "Discussion advisory absent."
-    };
-  }
-
-  const parsed = readJsonFile(file);
-  if (!parsed.ok) {
-    return {
-      ok: true,
-      issues: [],
-      latest: mtimeMs(file),
-      marker: null,
-      requiredFiles: [],
-      summary: `${DISCUSSION_STATE_FILE} is malformed and ignored as non-authoritative advisory: ${parsed.error}`
-    };
-  }
-  const marker = parsed.value || {};
-  return {
-    ok: true,
-    issues: [],
-    latest: mtimeMs(file),
-    marker,
-    requiredFiles: [],
-    summary: "Discussion marker is advisory-only and does not create freshness debt."
-  };
-}
-
-function stripHandoffTitle(markdown) {
-  return String(markdown || "")
-    .trim()
-    .replace(/^# (?:Handoff Summary|Handoff 摘要)[ \t]*\r?\n+/i, "")
-    .trim();
-}
-
-function hasMeaningfulHandoff(markdown) {
-  return ["Objective", "Latest User Instruction", "Next Action"]
-    .some((heading) => meaningful(sectionContent(markdown, heading)));
-}
-
-function emergencyFallbackSections(statusFiles) {
-  return `## 目标
-自动压缩前的应急恢复快照。
-
-## 最新用户指令
-自动压缩即将运行，但 Codex Project Ops 状态仍有未解决的 freshness 问题。
-
-## 已批准范围 / 规格
-写入这个应急 handoff 后允许自动压缩。恢复后先检查列出的文件，并刷新正常项目状态，再继续实质工作。
-
-## 计划状态
-Emergency PreCompact fallback。这不是正常里程碑 handoff。
-
-## 已修改文件
-${markdownList(statusFiles)}
-
-## 已读取但未修改文件
-- 没有可用的旧 handoff 内容。
-
-## 已做决策
-- 为避免上下文压力下静默硬停，允许自动压缩继续。
-- 手动压缩前仍应刷新项目状态。
-
-## 开放问题与假设
-- 假设：保留可恢复 handoff 比在没有可靠聊天反馈时阻止自动压缩更安全。
-- 开放问题：恢复后确认是否有项目特定状态文件需要更完整更新。
-
-## 风险
-- 这个应急 handoff 可能不如主动 handoff 完整。
-- 上方 issues 中列出的部分状态文件在压缩后可能仍然过期。
-
-## 验证证据
-- 应急 PreCompact 路径中未验证。恢复后检查 \`.codex-context/verification.md\`。
-
-## Git 存档
-- 最新提交: automatic PreCompact 期间未检查
-- 推送状态: automatic PreCompact 期间未检查
-- 已包含文件: automatic PreCompact 期间无
-- 有意保留未提交的文件: ${statusFiles.length ? shortList(statusFiles, 20) : "none reported"}
-- 暂缓原因: 为避免静默阻塞，写入应急 handoff 后允许自动压缩继续
-- 下次存档: 恢复后如果需要归档工作，运行 codex-git-checkpoint
-
-## 需要保留的经验沉淀
-- 恢复后检查 \`.codex-context/learned-instincts.md\` 和待审查 raw observations。
-
-## 下一步动作
-压缩后重读这个 handoff，检查未解决 issues，然后按需刷新 current-state.md、plan-progress.md、artifact-index.md、verification.md、learned-instincts.md 和 Git 存档。`;
-}
-
-function writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues, trigger) {
-  const timestamp = new Date().toISOString();
-  const safeTimestamp = timestamp.replace(/[:.]/g, "-");
-  const handoffFile = path.join(ctx, REQUIRED_FILES.handoff);
-  const rawDir = path.join(ctx, "raw");
-  const rawFile = path.join(rawDir, `precompact-auto-${safeTimestamp}.md`);
-  const previousHandoff = readText(handoffFile).trim();
-  fs.mkdirSync(rawDir, { recursive: true });
-
-  writeTextAtomic(rawFile, redactSensitiveText([
-    "# PreCompact Auto Emergency Snapshot",
-    "",
-    `Created: ${timestamp}`,
-    `Trigger: ${trigger}`,
-    "",
-    "## Changed Project Files",
-    markdownList(changed),
-    "",
-    "## Git Status Files",
-    markdownList(statusFiles),
-    "",
-    "## Issues",
-    markdownList(issues),
-    "",
-    "## Discussion Marker",
-    readText(discussionStateFile(ctx)) || "No discussion marker.",
-    "",
-    "## Working Notes",
-    readText(path.join(ctx, REQUIRED_FILES.workingNotes)) || "No working notes.",
-    "",
-    "## Previous Handoff",
-    previousHandoff || "No previous handoff content."
-  ].join("\n")));
-
-  const reread = [
-    ".codex-context/handoff-summary.md",
-    ".codex-context/workflow-state.yaml",
-    ".codex-context/current-state.md",
-    ".codex-context/project-map.md",
-    ".codex-context/spec.md",
-    ".codex-context/decisions.md",
-    ".codex-context/open-questions.md",
-    ".codex-context/working-notes.md",
-    ".codex-context/discussion-state.json",
-    ".codex-context/plan-progress.md",
-    ".codex-context/artifact-index.md",
-    ".codex-context/learned-instincts.md",
-    ...statusFiles.slice(0, 8)
-  ];
-  const uniqueReread = [...new Set(reread)].filter(Boolean);
-  const rawRel = path.relative(root, rawFile).replace(/\\/g, "/");
-  let preservedHandoff = stripHandoffTitle(previousHandoff);
-  const noticeMarker = "## PreCompact Emergency Notice";
-  const noticeSeparator = "\n---\n\n";
-  while (preservedHandoff.startsWith(noticeMarker)) {
-    const separatorIndex = preservedHandoff.indexOf(noticeSeparator);
-    if (separatorIndex === -1) break;
-    preservedHandoff = preservedHandoff.slice(separatorIndex + noticeSeparator.length).trim();
-  }
-  const continuation = hasMeaningfulHandoff(previousHandoff)
-    ? preservedHandoff
-    : emergencyFallbackSections(statusFiles);
-
-  writeTextAtomic(handoffFile, redactSensitiveText(`# Handoff 摘要
-
-## PreCompact Emergency Notice
-- Created: ${timestamp}
-- Trigger: ${trigger}
-- Raw snapshot: \`${rawRel}\`
-- Previous handoff: 已保留在这个应急 notice 下方。
-- Recovery rule: 先解决 PreCompact issues，再从下方保留的 handoff sections 继续。
-
-## PreCompact Issues
-${markdownList(issues)}
-
-## PreCompact Files To Re-read First
-${markdownList(uniqueReread)}
-
----
-
-${continuation}
-`));
-
-  return rawRel;
-}
-
 export function preCompact(input, root, ctx) {
-  const statusResult = gitStatusResult(root);
-  const statusFiles = statusResult.files;
+  recordHookLiveness(root, ctx, "PreCompact");
   const workflow = workflowStatus(root, ctx);
   const state = workflow.state || {};
-  const changed = statusFiles.filter((file) => !isGovernancePath(file));
-  const indexedWayfinderOnly = indexedActiveWayfinderOnlyChange(root, ctx, state, changed);
-  const latest = latestChangedMtime(root, [...new Set([...changed, ...statusFiles])]);
-  const issues = [];
-
-  if (!statusResult.ok) {
-    issues.push(`Git status unavailable: ${statusResult.error || "unknown error"}`);
-  }
-
-  for (const [key, label] of [
-    [REQUIRED_FILES.current, "current-state.md"],
-    [REQUIRED_FILES.plan, "plan-progress.md"],
-    [REQUIRED_FILES.artifacts, "artifact-index.md"]
-  ]) {
-    if (indexedWayfinderOnly &&
-        [REQUIRED_FILES.plan, REQUIRED_FILES.artifacts].includes(key)) {
-      continue;
-    }
-    const status = markdownStatus(ctx, key, latest, label);
-    if (!status.ok) issues.push(status.issue);
-  }
-
-  const handoff = handoffStatus(ctx, latest);
-  if (!handoff.ok) {
-    if (handoff.stale) issues.push("handoff-summary.md is older than changed project files");
-    if (handoff.missing.length) issues.push(`handoff-summary.md missing: ${handoff.missing.join(", ")}`);
-  }
-
-  const learning = learningStatus(ctx);
-
-  const checkpointFiles = [...new Set([...changed, ...statusFiles])];
-  const checkpoint = gitCheckpointStatus(root, ctx, latest, checkpointFiles);
-  if (!checkpoint.ok) issues.push(checkpoint.summary);
-  issues.push(...workflow.issues);
-  const discussion = discussionStateStatus(root, ctx, workflow);
-  issues.push(...discussion.issues);
-  const assets = assetGovernanceStatus(root, ctx);
-  issues.push(...assets.issues);
-
-  if (issues.length === 0) return;
-
-  const trigger = compactTrigger(input);
-  if (trigger === "auto") {
-    const rawRel = writeEmergencyPreCompactHandoff(root, ctx, changed, statusFiles, issues, trigger);
-    const message = [
-      "Codex Project Ops allowed automatic compaction after preserving the existing handoff with an emergency notice.",
-      hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion, eventName: "PreCompact" }),
-      "Recovery file: .codex-context/handoff-summary.md.",
-      "Lifecycle note: this emergency notice is temporary; after recovery, run asset-governance --apply or refresh a normal handoff to archive the notice.",
-      `Previous handoff snapshot: ${rawRel}.`,
-      `Issues captured: ${issues.join("; ")}.`
-    ].join("\n");
-
+  const sections = [
+    ["handoff-summary.md", 32 * 1024],
+    ["workflow-state.yaml", 8 * 1024],
+    ["current-state.md", 12 * 1024],
+    ["working-notes.md", 8 * 1024]
+  ];
+  const body = sections.map(([name, limit]) => {
+    const text = readText(path.join(ctx, name));
+    const clipped = clipUtf8Bytes(text, limit);
+    return `## ${name}\n\n${clipped.trim() || "[empty]"}`;
+  }).join("\n\n");
+  const snapshot = truncateUtf8Bytes(
+    redactSensitiveText(`# PreCompact Latest\n\n- Created: ${new Date().toISOString()}\n- Trigger: ${compactTrigger(input)}\n- Root: ${root}\n- Phase: ${state.phase || "unknown"}\n- Next skill: ${state.next_skill || "unknown"}\n\n${body}\n`),
+    64 * 1024
+  );
+  try {
+    const rawDir = path.join(ctx, "raw");
+    fs.mkdirSync(rawDir, { recursive: true });
+    writeTextAtomic(path.join(rawDir, "precompact-latest.md"), snapshot);
+    writeJson({ continue: true });
+  } catch (error) {
+    const code = String(error?.code || "write-error");
     writeJson({
       continue: true,
-      systemMessage: message
+      systemMessage: `Dong Skills advisory: compact snapshot was not written (${code}); the existing handoff was left unchanged.`
     });
-    return;
   }
-
-  writeJson({
-    continue: false,
-    stopReason: "codex-project-ops-handoff-not-ready",
-    systemMessage: [
-      "Codex Project Ops blocked compaction.",
-      hookStatusText(root, ctx, Math.max(latest, discussion.latest), [...new Set([...changed, ...statusFiles])], { learning, checkpoint, assets, workflow, discussion, eventName: "PreCompact" }),
-      `Issues: ${issues.join("; ")}.`,
-      "Update only the files or evidence named by the current issues. Learning review and ordinary asset advisories do not block compaction. Then compact again."
-    ].join("\n")
-  });
 }
 
 export function stop(input, root, ctx) {
+  recordHookLiveness(root, ctx, "Stop");
   const statusResult = gitStatusResult(root);
-  const statusFiles = statusResult.files;
   const workflow = workflowStatus(root, ctx);
   const state = workflow.state || {};
-  const intent = mutationIntentStatus(root, ctx, input, state);
-  const pendingChange = readRuntimeReceipt(ctx, "change-state");
-  const pendingChangeValue = pendingChange.ok ? pendingChange.value : null;
-  const pendingChangeFiles = pendingChangeValue?.task_id === state.task_id &&
-    String(pendingChangeValue?.task_generation) === String(state.task_generation) &&
-    Array.isArray(pendingChangeValue?.changed_files)
-    ? pendingChangeValue.changed_files
-    : [];
-  const changed = unique([
-    ...statusFiles,
-    ...(intent.ok ? intent.files : []),
-    ...pendingChangeFiles
-  ]).filter((file) => !isGovernancePath(file));
-  const indexedWayfinderOnly = indexedActiveWayfinderOnlyChange(root, ctx, state, changed);
-  const learning = learningStatus(ctx);
-  const allStatusFiles = [...new Set([...changed, ...statusFiles])];
-  const latest = latestChangedMtime(root, changed);
-  const assets = assetGovernanceStatus(root, ctx);
-  const evidenceRequired = executionEvidenceRequired(state, allStatusFiles);
-  const checkpointRequired = checkpointReviewRequired(state, allStatusFiles);
-  const changeState = changed.length > 0
-    ? changeReceiptStatus(root, ctx, changed, state)
-    : { active: false, exists: false, issue: "", value: null };
-  const checkpointEvidenceLatest = changeState.active &&
-    receiptHasRefresh(changeState.value, ctx, REQUIRED_FILES.handoff)
-    ? 0
-    : latest;
-  const checkpoint = checkpointRequired
-    ? gitCheckpointStatus(root, ctx, checkpointEvidenceLatest, checkpointEvidenceLatest ? changed : [])
-    : null;
-  const discussion = discussionStateStatus(root, ctx, workflow);
-  const statusLatest = Math.max(latest, discussion.latest);
-
-  if (statusResult.ok && changed.length === 0 && (!checkpointRequired || checkpoint.ok) && assets.ok && workflow.ok && discussion.ok) {
-    workflowContextHash(root, ctx, true);
-    removeRuntimeReceipt(ctx, stopContinuationReceiptName(input));
-    removeRuntimeReceipt(ctx, "change-state");
-    allowStop();
-    return;
-  }
-
   const issues = [];
-
-  if (!statusResult.ok) {
-    issues.push(`Git status unavailable: ${statusResult.error || "unknown error"}`);
-  }
-  if (!intent.ok) issues.push(intent.issue);
-  if (changeState.issue) issues.push(changeState.issue);
-
-  if (changed.length > 0) {
-    for (const [key, label] of [
-      [REQUIRED_FILES.current, "current-state.md"],
-      [REQUIRED_FILES.artifacts, "artifact-index.md"]
-    ]) {
-      if (key === REQUIRED_FILES.artifacts && indexedWayfinderOnly) continue;
-      if (changeState.active && !receiptHasRefresh(changeState.value, ctx, key)) {
-        issues.push(`${label} has not been refreshed after the latest project mutation`);
-        continue;
-      }
-      const status = markdownStatus(ctx, key, changeState.active ? 0 : latest, label);
-      if (!status.ok) issues.push(status.issue);
-    }
-
-    if (evidenceRequired) {
-      if (changeState.active && !receiptHasRefresh(changeState.value, ctx, REQUIRED_FILES.verification)) {
-        issues.push("verification.md has not been refreshed after the latest project mutation");
-      }
-      const verification = verificationStatus(ctx, changeState.active ? 0 : latest);
-      if (verification.stale) issues.push("verification.md is older than changed files");
-      if (!verification.hasEvidence) issues.push("verification.md has neither command evidence nor explicit unverified gaps");
-
-      if (changeState.active && !receiptHasRefresh(changeState.value, ctx, REQUIRED_FILES.handoff)) {
-        issues.push("handoff-summary.md has not been refreshed after the latest project mutation");
-      }
-      const handoff = handoffStatus(ctx, changeState.active ? 0 : latest);
-      if (!handoff.ok) {
-        if (handoff.stale) issues.push("handoff-summary.md is older than changed files");
-        if (handoff.missing.length) issues.push(`handoff-summary.md missing: ${handoff.missing.join(", ")}`);
-      }
-    }
-  }
-
-  if (checkpointRequired && !checkpoint.ok) issues.push(checkpoint.summary);
-  issues.push(...assets.issues);
   issues.push(...workflow.issues);
-  issues.push(...discussion.issues);
-
-  if (issues.length === 0) {
-    workflowContextHash(root, ctx, true);
-    removeRuntimeReceipt(ctx, stopContinuationReceiptName(input));
-    removeRuntimeReceipt(ctx, "change-state");
-    allowStop();
-    return;
+  if (!statusResult.ok) issues.push(`Git status unavailable: ${statusResult.error || "unknown error"}`);
+  const changed = statusResult.ok ? statusResult.files : [];
+  if (changed.length && ["verification", "review", "delivery", "handoff", "complete"].includes(state.phase)) {
+    issues.push(`${changed.length} uncommitted file(s); verify and checkpoint before claiming completion`);
   }
-
-  const fingerprint = stableFingerprint(issues);
-  const continuation = updateRuntimeReceipt(ctx, stopContinuationReceiptName(input), (previous) => {
-    const previousValue = previous.ok ? previous.value : null;
-    const sameTask = previousValue?.task_id === state.task_id &&
-      String(previousValue?.task_generation) === String(state.task_generation);
-    const sameIssue = sameTask && previousValue?.fingerprint === fingerprint;
-    const previousCount = sameIssue ? Number(previousValue?.count || 0) : 0;
-    const exhausted = Boolean(sameIssue && previousCount >= 2);
-    return {
-      schema: "dong-skills.stop-continuation.v1",
-      task_id: state.task_id || "missing",
-      task_generation: String(state.task_generation || "missing"),
-      fingerprint,
-      count: exhausted ? previousCount : previousCount + 1,
-      same_issue: sameIssue,
-      exhausted,
-      issues,
-      updated_at: new Date().toISOString()
-    };
-  });
-
-  if (continuation.exhausted) {
-    allowStop(`Codex Project Ops issues remain unresolved after the bounded Stop continuations: ${shortList(issues, 8)}. The final response must disclose these gaps and must not claim verified completion.`);
-    return;
-  }
-
-  const systemMessage = [
-    continuation.same_issue
-      ? "Project issues are still unresolved after Stop continuation."
-      : "Before stopping, refresh Codex Project Ops state.",
-    hookStatusText(root, ctx, statusLatest, allStatusFiles, { learning, checkpoint: checkpointRequired ? checkpoint : false, assets, workflow, discussion, eventName: "Stop" }),
-    changed.length ? `Changed files: ${shortList(changed)}.` : "No non-context files changed.",
-    `Issues: ${issues.join("; ")}.`,
-    "Update only the files named by the current issues. If verification was not run, record the explicit gap instead of claiming success."
-  ].join("\n");
-
-  blockStop(systemMessage);
-}
-
-function stopContinuationReceiptName(input) {
-  return scopedRuntimeReceiptName("stop-continuation", hookSessionKey(input));
+  allowStop(issues.length ? `Dong Skills advisory: ${shortList(issues, 6)}.` : "");
 }

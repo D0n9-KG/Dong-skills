@@ -101,26 +101,16 @@ Dong Skills 使用“全局最小、项目完整”的安装模型：
 压缩后或新 session 恢复时，优先读取：
 
 1. `.codex-context/handoff-summary.md`
-2. `.codex-context/worktree-state.md`
-3. `.codex-context/workflow-state.yaml`
-4. `.codex-context/current-state.md`
-5. `.codex-context/project-map.md`
-6. `.codex-context/spec.md`
-7. `.codex-context/decisions.md`
-8. `.codex-context/open-questions.md`
-9. `.codex-context/working-notes.md`
-10. `.codex-context/plan-progress.md`
-11. `.codex-context/artifact-index.md`
-12. `.codex-context/solution-index.md`
-13. `.codex-context/learned-instincts.md`
-14. `.codex-context/dong-skills-outbox.md`，仅当讨论 Dong Skills 改进时读取。
-15. `STRATEGY.md`、`CONCEPTS.md` 或相关 `docs/solutions/`，仅当当前任务需要。
+2. `.codex-context/workflow-state.yaml`
+3. `.codex-context/current-state.md`
+
+随后只加载 `next_skill` 和当前 phase 所需的 `spec`、plan、Wayfinder 或 working notes。只有 Git/worktree 身份不清时才读 `worktree-state.md`；其余状态、solution、strategy 与 raw/archive 资产均按需读取，不作为默认恢复链。
 
 `.codex-context/working-notes.md` 用于记录可外部化的探索状态：已检查事实、被排除路径、当前假设/结论、开放调查问题和下一步验证。不要把隐藏推理、完整聊天、原始日志、密钥或隐私内容写进去。
 
 `.codex-context/workflow-state.yaml` 是机器可读的阶段索引。`workflow-state status`、hooks 和 `health-check` 会检查它与 `spec.md`、`plan-progress.md` 是否矛盾；如果出现矛盾，先修状态，不要继续实现。
 
-`PostToolUse` 用单次工具调用绑定的 intent 和 Git 前后证据累计当前任务尚未收口的真实变更。失败或无变化的治理编辑不会获得刷新证据；无变化测试和仅提交操作也不会清空此前已经完成的状态刷新。
+状态文件在有新的持久事实或 phase 边界时更新。普通读取、诊断和每一次工具调用都不制造状态刷新债。
 
 ### 常用命令
 
@@ -264,20 +254,19 @@ node .codex/hooks/project-ops.mjs health-check
 - Execution approval binds to a normalized plan contract: substantive `plan-progress.md` content plus any linked detailed plan. Task checkbox state, `Current Step`, and the dedicated `Checkpoints` section remain mutable progress metadata; changing task text, scope, constraints, verification commands, or linked-plan substance still requires fresh approval.
 - `.codex-context/workflow-state.yaml` stores task identity, phase, next skill, pending decision, spec/plan/execution status, verification result, review status, checkpoint status, `verification_evidence_hash`, `review_evidence_hash`, blocked-resume source, execution-debug return source, and context hash. A distinct task after completion uses `workflow-state transition new-task`; blocked work resumes from its recorded phase/skill. An unexpected execution failure uses `debugging-start` / `debugging-resolved` so compaction recovery stays in root-cause work and then returns to the same plan. `workflow-state status`, hooks, and `health-check` audit it against `spec.md` and `plan-progress.md`.
 - `.codex-context/working-notes.md` stores compact externalized investigation state. It is not for hidden chain-of-thought, full transcripts, raw logs, secrets, or private reasoning.
-- `.codex-context/discussion-state.json` is a runtime-only redacted advisory and should stay ignored by Git. It does not authorize transitions or create freshness debt.
-- Project hooks front-load supported mutation checks: `PreToolUse` requires valid workflow/approval state and a session-scoped recovery receipt tied to the task, handoff, and runtime. It does not infer approval, scope, or execution authority from prompt wording. It is a guardrail over supported tool paths, not a complete security sandbox.
+- The minimal project hook kernel contains only `SessionStart`, `PreToolUse`, `PreCompact`, and `Stop`. It is a guardrail over explicit current-project writes, not a complete shell, network, browser, or security sandbox.
+- `PreToolUse` denies deterministic current-project writes when workflow approval is missing or invalid. Reads, diagnostics, network/browser tools, unknown external tools, and verified external work fail open; hooks do not infer approval or scope from natural-language wording.
 - After an explicit user choice, `workflow-state decision <listed-transition>` writes canonical task/hash-bound evidence to the correct context file without advancing the workflow; the matching `workflow-state transition` consumes it. Scope, requirement, goal, acceptance, or priority changes still require assistant-led `brainstorming-start` and fresh approval; bare continuation, pure status questions, and learning-only future preferences stay non-blocking.
 - Before execution approval, hooks still permit canonical governance artifacts in `.codex-context/`, `STRATEGY.md`, `docs/codex/specs/`, `docs/codex/plans/`, and `docs/codex/wayfinder/`; product-code edits remain blocked for Lane 2/3.
-- `PostToolUse` leaves ordinary reads/searches debt-free and uses invocation-scoped intent plus before/after Git evidence to accumulate actual project changes, including tool-contained commits. Failed or no-op governance edits do not earn refresh evidence; no-op tests and commit-only operations do not erase completed refresh evidence. It emits reminders rather than interrupting the next tool call.
-- `Stop` rechecks current delivery evidence and uses bounded continuations for unresolved issues. Learning observations and ordinary asset hygiene are advisory; severe asset problems, invalid workflow/Git state, and missing required delivery evidence can still block. Exhausted continuations must surface unresolved gaps rather than claim completion.
-- `SubagentStart`/`SubagentStop` bind results to the parent lifecycle and grade summary evidence without blocking native multi-agent completion. Incomplete summaries cannot serve as completion evidence until the parent independently reviews them.
-- Automatic `PreCompact` prepends an emergency notice to `handoff-summary.md`, preserves the existing handoff below it, writes a raw snapshot as backup, and allows compaction to continue. After recovery, `asset-governance --apply` can archive that temporary notice when the preserved handoff body is present.
-- `health-check` reports static hook configuration, root/bootstrap parity, and per-event freshness for recent `PreToolUse`/`PostToolUse`/`Stop` liveness separately. A new runtime cannot inherit event coverage from an older runtime; missing liveness is a warning rather than proof that host trust is disabled.
+- `PreCompact` never rewrites handoff. It atomically overwrites one ignored, redacted `.codex-context/raw/precompact-latest.md` snapshot capped at 64 KiB.
+- `Stop` is advisory-only. It never returns a blocking decision, creates continuation receipts, or forces repetitive state prose.
+- Subagent scope and result quality are owned by the invoking workflow or review skill, not by always-on project hooks.
+- `health-check` reports static hook configuration, root/bootstrap parity, and recent liveness for routinely expected `SessionStart` / `PreToolUse` / `Stop` events. `PreCompact` records liveness when it occurs but is not required in every session. Missing or runtime-mismatched liveness is a warning rather than proof that host trust is disabled.
 - `codex-asset-governance` audits accumulated docs, state files, raw snapshots, archives, solution docs, improvement backlog, scripts, hooks, tests, generated evidence, and code assets. It separates Safe-Auto cleanup from Confirm-First assets that require human judgment.
 - `codex-skill-evolution` is also installed as a global maintenance entry and integrates SkillOpt-Sleep as an offline evolution layer for Dong Skills itself. It uses backlog/outbox issues as candidates, creates reviewed replay tasks, runs SkillOpt-Sleep dry-run/run, inspects staged proposals, and adopts only after user review. It is not a hook, not project memory, and not a business-code optimizer.
 - Use `codex-wayfinder` before ordinary brainstorming when the destination is known but the route is still too uncertain for a credible spec. It maps frontier decisions, defaults to one frontier decision per session, and allows bounded parallel exploration only when related tickets share one decision boundary and are reconciled into the map before stopping. Prototype work is treated as a primary source for the decision it answers, with local ticket files under `docs/codex/wayfinder/tickets/` and prototype artifacts under `docs/codex/wayfinder/prototypes/`.
 - `codex-architecture-governance` adapts Matt Pocock's deep-module guidance for Codex: package-style TypeScript/JavaScript work should identify public entry points and private internals, avoid unauthorized deep imports, and avoid barrel files that hide ownership or create cycles.
-- Accepted review/verification fixes may be applied directly within approved scope. The first real project mutation automatically reopens debugging and clears old verification/review evidence, so verification and review must run again before delivery.
+- Accepted review/verification fixes may be applied within approved scope. After a real fix, explicitly return through execution/debugging and run fresh verification and review before delivery; do not reuse stale evidence.
 - `verification-pass` and verification-gap transitions hash the accepted `.codex-context/verification.md`; `review-complete`/`review-skipped` require a later `Review Evidence` section and hash the reviewed document. Delivery fails if evidence is missing, reused from an earlier cycle, or modified after review closure.
 - `codex-agent-architecture-audit` reviews agent wrappers, memory, tool discipline, hidden repair loops, rendering, and persistence boundaries.
 - `codex-loop-design-check` reviews Goal mode, autonomous loops, and SkillOpt-style optimization for decidable goals, boundaries, retry caps, independent judges, and human final judgment.

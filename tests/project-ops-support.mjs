@@ -263,7 +263,7 @@ function readyHealthFixture(projectRoot) {
   const ctx = path.join(projectRoot, ".codex-context");
   writeDongProjectSkillsFixture(projectRoot);
   const hooks = {};
-  for (const eventName of ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PreCompact", "PostCompact", "SubagentStart", "SubagentStop", "Stop"]) {
+  for (const eventName of ["SessionStart", "PreToolUse", "PreCompact", "Stop"]) {
     hooks[eventName] = [{ hooks: [{ command: "node .codex/hooks/project-ops.mjs" }] }];
   }
 

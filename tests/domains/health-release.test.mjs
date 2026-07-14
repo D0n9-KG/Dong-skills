@@ -636,9 +636,39 @@ test("health check rejects Windows encoded commands that do not invoke project h
     });
   } catch (error) {
     failed = true;
-    assert.match(String(error.stdout), /encoded command does not invoke Dong Skills hook launcher/);
+    assert.match(String(error.stdout), /commandWindows does not invoke Dong Skills hook launcher/);
   }
   assert.equal(failed, true);
+});
+
+test("health check rejects hook launchers that depend on project-root cwd", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const hooksFile = path.join(project, ".codex", "hooks.json");
+  const config = readJson(hooksFile);
+
+  for (const badCommand of [
+    'node ".codex/hooks/launch-project-ops.mjs"',
+    'node "$(git rev-parse --show-toplevel)/.codex/hooks/launch-project-ops.mjs"'
+  ]) {
+    for (const groups of Object.values(config.hooks)) {
+      for (const group of groups) {
+        for (const hookConfig of group.hooks || []) {
+          hookConfig.command = badCommand;
+          delete hookConfig.commandWindows;
+        }
+      }
+    }
+    write(hooksFile, JSON.stringify(config, null, 2));
+
+    assert.throws(() => {
+      execFileSync(process.execPath, [health, project], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+    }, (error) => /depends on project-root cwd/i.test(String(error.stdout || "")), badCommand);
+  }
 });
 
 test("health reports missing runtime support as a structured partial-upgrade failure", () => {
@@ -916,4 +946,87 @@ test("source release uses the parallel domain test runner", () => {
     }
   }
   assert.ok(owners.size >= 99);
+});
+
+test("source hook configuration exposes only the minimal event kernel", () => {
+  const hooksFile = path.join(root, ".codex", "hooks.json");
+  const hooks = readJson(hooksFile).hooks;
+  assert.deepEqual(Object.keys(hooks).sort(), ["PreCompact", "PreToolUse", "SessionStart", "Stop"]);
+  assert.ok(fs.statSync(hooksFile).size < 6_000, "hooks.json should stay below about 1,500 tokens");
+  for (const entries of Object.values(hooks)) {
+    for (const entry of entries) {
+      for (const hookEntry of entry.hooks || []) {
+        assert.doesNotMatch(hookEntry.commandWindows || "", /EncodedCommand/i);
+      }
+    }
+  }
+});
+
+test("health accepts a minimal wayfinding handoff without delivery-only headings", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  const ctx = path.join(project, ".codex-context");
+  write(path.join(ctx, "spec.md"), fs.readFileSync(path.join(ctx, "spec.md"), "utf8")
+    .replace("Approved by user.", "Living Draft / Not Approved."));
+  write(path.join(ctx, "plan-progress.md"), fs.readFileSync(path.join(ctx, "plan-progress.md"), "utf8")
+    .replace("Approved by user.", "pending")
+    .replace("Approved by user for Traditional task-by-task execution.", "pending")
+    .replace("implementation-ready", "requirements-only")
+    .replace("Traditional task-by-task execution.", "pending"));
+  write(path.join(ctx, "workflow-state.yaml"), `workflow: standard
+work_lane: lane-1
+task_id: task-wayfinding
+task_generation: 1
+document_hash_mode: approval-contract-v2
+phase: wayfinding
+next_skill: codex-wayfinder
+auto_next: true
+decision_required: none
+spec_status: living-draft
+plan_status: not-started
+approved_spec_hash: none
+approved_plan_hash: none
+execution_mode: pending
+execution_approval: pending
+loop_review_status: pending
+verify_result: pending
+verification_gap_status: not-required
+review_status: pending
+checkpoint_status: pending
+verification_evidence_hash: none
+review_evidence_hash: none
+resume_phase: none
+resume_skill: none
+debug_return_phase: none
+debug_return_skill: none
+handoff_hash: null
+handoff_task_id: none
+handoff_task_generation: none
+updated_at: fixture
+note: fixture
+`);
+  write(path.join(ctx, "handoff-summary.md"), `# Handoff
+
+## 当前任务
+审查一个处于 Wayfinder 的研究方向。
+
+当前 Wayfinder: docs/codex/wayfinder/research-route.md
+
+## 当前结论
+尚无 approved spec 或方法正结果。
+
+## 下一步动作
+继续当前 frontier ticket。
+
+## 优先重读文件
+- .codex-context/workflow-state.yaml
+`);
+  write(path.join(ctx, "working-notes.md"), "# 工作笔记\n\n- 当前调查仍在进行。\n");
+
+  const output = execFileSync(process.execPath, [health, project], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  assert.match(output, /Result: pass/);
 });
