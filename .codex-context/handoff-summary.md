@@ -17,7 +17,7 @@
 ## 计划状态
 - Tasks 1-3 完成。
 - Task 4 已完成 focused/full/release、两轮 finding 修复与最终 closure review；无 Critical/High。
-- Task 5：双下游 Apply/recovery 暴露三个 migration compatibility 场景（plan approval、legacy-v0 context、current-schema legacy context）；均已 test-first 修复，core 28/28、full 163/163、release-check 通过，等待补充 checkpoint 后重试。
+- Task 5：双下游 Apply/recovery 暴露三个 migration compatibility 场景（plan approval、legacy-v0 context、current-schema legacy context）；均已 test-first 修复，core 28/28、full 163/163、release-check 通过，最终双下游安装、recovery、health 和 budget 也已通过。
 - Task 6 上游服务与 AAAI 研究恢复未开始。
 
 ## 已修改文件
@@ -35,12 +35,12 @@
 
 ## 开放问题与假设
 - 无设计决策待用户确认。
-- 仍需最终全量验证、修复 checkpoint、双下游重试和 live runtime 证据。
+- 只剩用户重启/trust 后的四 Hook 与浏览器 live runtime 证据。
 
 ## 风险
 - shell parser 不是完整安全 sandbox；无法确定的脚本内部副作用按产品边界 fail-open。
 - 下游工作区原本就 dirty，安装核验必须使用基线哈希和精确文件范围，不能把旧改动归因于本轮。
-- 当前宿主仍加载旧 runtime；安装后必须重启并重新 trust 四个 hooks。
+- 当前宿主仍加载旧 runtime；必须重启并重新 trust 四个 hooks 后再做 live 结论。
 
 ## 验证证据
 - focused 64/64、full domains 160/160、release-check pass；最终 closure review 无 Critical/High。
@@ -48,19 +48,19 @@
 - 两轮独立审查的可复现 finding 已 test-first 修复，agent 已关闭。
 
 ## Git 存档
-- 最新提交: `35c7aa8`，`main`，相对 `origin/main` ahead 7。
+- 最新功能提交: `3928047`，`main`，相对 `origin/main` ahead 10；本次另有纯状态 closure checkpoint。
 - 推送状态: 本轮不 push。
-- 已包含文件: 最小 Hook 内核完整 source diff、tests、skills、docs 与 Task 4 closure 状态。
-- 有意保留未提交的文件: current-schema legacy context 补充修复、回归测试与调试证据，等待最终全量验证后独立 checkpoint。
-- 暂缓原因: 修复已通过 context 2/2、core 28/28、full 163/163 与 release-check，正在创建补充 checkpoint；本轮不 push。
-- 下次存档: 修复 checkpoint 后重试两个下游 Apply。
+- 已包含文件: 最小 Hook 内核、三项 migration compatibility 修复、tests、skills、docs 与验证证据。
+- 有意保留未提交的文件: 当前 source 状态文档，记录最终安装与 restart blocker。
+- 暂缓原因: source 功能 checkpoint 已完成；本轮不 push，状态尾在 live smoke 后再归档。
+- 下次存档: 重启后 live smoke 通过并完成 Task 5 时。
 
 ## 需要保留的经验沉淀
 - 对强 agentic model，hooks 应围绕少量确定性机械边界设计；未知内容不应因无法证明安全而被阻断。
 - review finding 必须先复现失败再修，不按静态意见盲改。
 
 ## 下一步动作
-完成最终全量验证并创建 migration 修复 checkpoint；重试两个下游 Apply，再核验 context preservation、health、budget、receipt 与事务残留。
+用户重启 Codex 并 trust `SessionStart`、`PreToolUse`、`PreCompact`、`Stop`；新会话先做 live smoke，再恢复 AAAI Wayfinder。
 
 ## 优先重读文件
 - `.codex-context/workflow-state.yaml`

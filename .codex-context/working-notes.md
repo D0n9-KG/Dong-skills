@@ -13,6 +13,7 @@
 - shell mutation 采用 tokenizer 和命令语义：copy 只写 destination，move/rename 同时影响 source/destination，rename 的 `NewName` 相对 source parent。
 - Git 全局参数、checkout/restore pathspec、PowerShell `EncodedCommand` 的确定性写入均有正反回归。
 - 外部 workdir、外部 Git、外部 encoded write、网络和诊断保持 fail-open。
+- 最终 distribution `467bd20c...` 已安装到两个下游；六文件安装前后 hash 保持，recovery/health/budget 通过，事务和 backup 残留为 0。
 - `scientific_Graph` installer Apply 成功，六个核心 context hash 未变，distribution=`b329b29e...`。
 - `sci-evo-extract` 的 legacy `approved_plan_hash` 与当前 `plan-progress.md` 原始 SHA-256 完全相等；该状态未提交且文件为 CRLF。
 - `migrateWorkflowState()` 的兼容缺口均已修复：approval-contract 阶段使用已重绑的 `migrated.approved_plan_hash`；handoff hash 在任意 schema mode 下仅当精确命中 raw context 聚合时重绑为 normalized 聚合。
@@ -26,12 +27,11 @@
 - 用固定句式或自然语言 regex 推断审批、scope、mutation：已拒绝。
 
 ## 开放调查问题
-- 三个 migration 场景修复是否能在不改六个事实文件的前提下完成双下游安装和 recovery。
+- 重启后的真实四 Hook liveness 与浏览器控制 smoke 是否符合自动化合同。
 
 ## 下一步验证
-- legacy CRLF + uncommitted approval/context state 回归已先红后绿。
-- 跑 163/163 full domains 与 release-check，创建补充 checkpoint。
-- 重试两个 installer Apply、hash preservation、health/context-budget、transaction residue。
+- 用户重启并 trust 四个 hooks。
+- 真实 `SessionStart`、当前项目 mutation 正反例、`PreCompact` 单快照、连续 `Stop` advisory-only 与浏览器 smoke。
 - 用户重启/trust 后 live 四 hook 与浏览器 smoke。
 
 ## 提升记录

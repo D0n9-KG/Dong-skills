@@ -17,7 +17,7 @@
 
 ## 已读取 / 已检查
 - Dong Skills source diff、runtime/bootstrap parity、installer Preview。
-- `scientific_Graph` 与 `sci-evo-extract` 的 Git/marker/核心 context 哈希；未修改业务代码。
+- `scientific_Graph` 与 `sci-evo-extract` 的 Git/marker/核心 context 哈希、最终 distribution `467bd20c...`、recovery/health/budget/asset governance；未修改业务代码。
 
 ## 原始输出
 - 大型测试输出未写入 active state；仅保留紧凑命令与结果摘要。

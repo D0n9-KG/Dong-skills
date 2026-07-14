@@ -62,7 +62,7 @@
 
 ## 当前步骤
 
-- Task 5：先创建 source checkpoint，再执行两个下游 installer Apply 与 live 回归。
+- Task 5：静态安装与迁移回归完成；等待宿主重启/trust 后做四 Hook 与浏览器 live smoke。
 
 ## 存档记录
 
@@ -70,8 +70,8 @@
 - Task completed：Tasks 1-4；Task 4 最终 closure review 无 Critical/High。
 - Files changed：最小 hook runtime/config、bootstrap 镜像、health/budget/skills/AGENTS、installer 与 domain tests。
 - Verification：focused 64/64；full domains 160/160；release-check pass；最终 closure review 无 Critical/High；health issues none；hot path 约 3.3k；runtime/bootstrap parity pass。
-- Remaining risk：source commit、下游 Apply/live smoke。
-- Next task：source checkpoint，然后下游 Apply/live 回归。
+- Remaining risk：当前宿主尚未加载 distribution `467bd20c...`，真实四 Hook liveness 与浏览器 smoke 未验证。
+- Next task：用户重启/trust 后完成 Task 5 live smoke。
 
 ### Checkpoint
 - Task completed：Task 5 installer migration 调试；legacy CRLF plan hash 连续迁移问题已 test-first 修复。
@@ -79,6 +79,13 @@
 - Verification：两个精确 legacy CRLF migration 回归均先红后绿；core 27/27、full domains 162/162、release-check pass、runtime parity pass。
 - Remaining risk：`sci-evo-extract` 真实 installer Apply 与两个下游静态/live 验证。
 - Next task：创建修复 checkpoint，重试 `sci-evo-extract` Apply。
+
+### Checkpoint
+- Task completed：Task 5 静态安装部分；双下游 distribution、context preservation、migration、recovery、health、budget 与事务 hygiene 已验证。
+- Files changed：仅 Dong-managed project assets、receipts 和必要状态治理；未修改下游业务代码。
+- Verification：distribution `467bd20c...`；full domains 163/163；release-check pass；两项目 health Issues none；hot path 3.1k/2.2k；安装前后六文件 hash 一致。
+- Remaining risk：重启后四 Hook liveness 与浏览器 smoke。
+- Next task：用户重启/trust 后完成 Task 5 live 验证。
 
 ## 验证
 

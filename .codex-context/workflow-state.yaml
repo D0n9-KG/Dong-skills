@@ -3,10 +3,10 @@ work_lane: lane-3
 task_id: task-8-2026-07-14T02-39-43-596Z
 task_generation: 8
 document_hash_mode: approval-contract-v2
-phase: execution
-next_skill: executing-plans
+phase: blocked
+next_skill: using-superpowers
 auto_next: true
-decision_required: none
+decision_required: user-choice
 spec_status: approved
 plan_status: approved
 approved_spec_hash: e87076fcee74c3c05402d337fcf2ff710c77b4b4359dbaacf314e0bc94728845
@@ -20,12 +20,12 @@ review_status: pending
 checkpoint_status: pending
 verification_evidence_hash: none
 review_evidence_hash: none
-resume_phase: none
-resume_skill: none
+resume_phase: execution
+resume_skill: executing-plans
 debug_return_phase: none
 debug_return_skill: none
-handoff_hash: bb360825ea5748364ce307194ee541beeb33afbadc0467e10460513728a461e6
+handoff_hash: 08fa3067b9f8bea47e293b46ad27daea28f88bd451473e9c93d16f911ff47f7b
 handoff_task_id: task-8-2026-07-14T02-39-43-596Z
 handoff_task_generation: 8
-updated_at: 2026-07-14T09:38:36.095Z
-note: Debugging resolved; return to the active execution plan
+updated_at: 2026-07-14T10:08:43.876Z
+note: Context hash refreshed

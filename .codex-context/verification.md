@@ -15,7 +15,6 @@
 - 两个下游 installer Preview 均通过且未写文件；六个核心 context 文件安装前 SHA-256 已在当前会话验证记录中保留。
 
 ## 尚未验证
-- `sci-evo-extract` 尚未 Apply 本轮 distribution；第一次尝试在 workflow migration 阶段失败并回滚。
 - 用户重启/trust 后的真实 `SessionStart`、`PreToolUse`、`PreCompact`、`Stop` 与浏览器 smoke 尚未运行。
 
 ## 审查证据
@@ -47,3 +46,5 @@
 - 第三个红灯：`current workflow schema repairs a matching legacy raw context aggregate` 在旧触发范围下稳定失败。
 - 第三个绿灯：两个 context migration 精确用例 2/2、core 28/28；安全重绑移至 schema mode 无关位置，只有 saved hash 精确命中当前 raw 聚合才更新。
 - 补充全量：`node scripts/run-domain-tests.mjs` 163/163，12 domains；`node scripts/release-check.mjs .` pass，全部发布门禁通过。
+- 最终双下游 Apply：distribution=`467bd20cb8ca63604b0b97a8a0c40ef15a992ced3e445a868ba98a00a5ca6493`；两项目 workflow migrate/status/next、context-recovery-eval、health、context-budget、asset-governance、`git diff --check` 均通过，health Issues none。
+- 安装前后六个核心 context 文件原始 SHA-256 均保持不变；之后仅对必要状态治理文件做了明确的 post-install 更新并刷新 handoff hash。
