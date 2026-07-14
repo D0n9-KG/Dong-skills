@@ -76,7 +76,7 @@
 ### Checkpoint
 - Task completed：Task 5 installer migration 调试；legacy CRLF plan hash 连续迁移问题已 test-first 修复。
 - Files changed：root/bootstrap `workflow.mjs`、core migration regression 与状态证据。
-- Verification：精确复现 1/1、core 26/26、full domains 161/161、release-check pass、runtime parity pass。
+- Verification：两个精确 legacy CRLF migration 回归均先红后绿；core 27/27、full domains 162/162、release-check pass、runtime parity pass。
 - Remaining risk：`sci-evo-extract` 真实 installer Apply 与两个下游静态/live 验证。
 - Next task：创建修复 checkpoint，重试 `sci-evo-extract` Apply。
 

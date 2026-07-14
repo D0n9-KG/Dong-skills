@@ -355,6 +355,55 @@ test("legacy plan hash migration carries the normalized hash into approval contr
   assert.notEqual(workflowField(project, "approved_plan_hash"), rawHash(planFile));
 });
 
+test("legacy context hash migration safely rebinds a matching raw CRLF aggregate", () => {
+  const project = tempProject();
+  readyHealthFixture(project);
+  readyState(project);
+  const ctx = path.join(project, ".codex-context");
+  const stateFile = path.join(ctx, "workflow-state.yaml");
+  const contextFiles = [
+    "current-state.md",
+    "spec.md",
+    "plan-progress.md",
+    "artifact-index.md",
+    "verification.md",
+    "handoff-summary.md"
+  ];
+  for (const name of contextFiles) {
+    const file = path.join(ctx, name);
+    const text = fs.readFileSync(file, "utf8").replace(/\r\n?/g, "\n");
+    fs.writeFileSync(file, text.replace(/\n/g, "\r\n"), "utf8");
+  }
+  const rawHash = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  const legacyContextHash = createHash("sha256")
+    .update(contextFiles.map((name) => `${name}:${rawHash(path.join(ctx, name))}`).join("\n"), "utf8")
+    .digest("hex");
+  write(
+    stateFile,
+    fs.readFileSync(stateFile, "utf8")
+      .replace(/^document_hash_mode:.*\r?\n/m, "")
+      .replace(/^approved_spec_hash:.*$/m, `approved_spec_hash: ${rawHash(path.join(ctx, "spec.md"))}`)
+      .replace(/^approved_plan_hash:.*$/m, `approved_plan_hash: ${rawHash(path.join(ctx, "plan-progress.md"))}`)
+      .replace(/^handoff_hash:.*$/m, `handoff_hash: ${legacyContextHash}`)
+  );
+
+  execFileSync(process.execPath, [workflowState, project, "migrate"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  const hashOutput = execFileSync(process.execPath, [workflowState, project, "hash"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const normalizedContextHash = hashOutput.match(/^CONTEXT_HASH:\s*([a-f0-9]{64})$/m)?.[1];
+  assert.ok(normalizedContextHash);
+  assert.equal(workflowField(project, "handoff_hash"), normalizedContextHash);
+  assert.notEqual(normalizedContextHash, legacyContextHash);
+});
+
 test("legacy document hash migration rejects drift committed after approval evidence", () => {
   const project = tempProject();
   readyHealthFixture(project);

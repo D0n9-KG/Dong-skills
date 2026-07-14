@@ -614,6 +614,17 @@ export function migrateWorkflowState(root, ctx) {
       if (["done", "skipped"].includes(migrated.review_status)) {
         rebindCurrentHash("review_evidence_hash", REQUIRED_FILES.verification);
       }
+      const legacyHandoffHash = String(parsed.handoff_hash || "null");
+      if (/^[a-f0-9]{64}$/.test(legacyHandoffHash)) {
+        const legacyContextHash = workflowContextDigest(
+          workflowContextEntries(root, contextDir, rawFileHash)
+        );
+        if (legacyContextHash === legacyHandoffHash) {
+          migrated.handoff_hash = workflowContextDigest(
+            workflowContextEntries(root, contextDir, fileHash)
+          );
+        }
+      }
       migrated.document_hash_mode = "normalized-v1";
     }
     if (migrated.document_hash_mode === "normalized-v1") {
@@ -2038,8 +2049,7 @@ function approvedDocumentHash(root, contextDir, name, mode = "approval-contract-
   return documentHash(contextDir, name);
 }
 
-export function workflowContextHash(root, ctx, write = false) {
-  const contextDir = ctxFor(root, ctx);
+function workflowContextEntries(root, contextDir, hashFile = fileHash) {
   const files = [
     REQUIRED_FILES.current,
     REQUIRED_FILES.spec,
@@ -2053,7 +2063,7 @@ export function workflowContextHash(root, ctx, write = false) {
     return {
       name,
       exists: fs.existsSync(file),
-      hash: fs.existsSync(file) ? fileHash(file) : "missing"
+      hash: fs.existsSync(file) ? hashFile(file) : "missing"
     };
   });
   const wayfinderReference = activeWayfinderReference(contextDir);
@@ -2063,7 +2073,7 @@ export function workflowContextHash(root, ctx, write = false) {
       entries.push({
         name,
         exists: fs.existsSync(file),
-        hash: fs.existsSync(file) ? fileHash(file) : "missing"
+        hash: fs.existsSync(file) ? hashFile(file) : "missing"
       });
     }
     const wayfinderFile = path.resolve(root, wayfinderReference);
@@ -2071,12 +2081,22 @@ export function workflowContextHash(root, ctx, write = false) {
     entries.push({
       name: `wayfinder:${wayfinderReference}`,
       exists: validPath && fs.existsSync(wayfinderFile),
-      hash: validPath && fs.existsSync(wayfinderFile) ? fileHash(wayfinderFile) : "missing"
+      hash: validPath && fs.existsSync(wayfinderFile) ? hashFile(wayfinderFile) : "missing"
     });
   }
-  const combined = createHash("sha256")
+  return entries;
+}
+
+function workflowContextDigest(entries) {
+  return createHash("sha256")
     .update(entries.map((entry) => `${entry.name}:${entry.hash}`).join("\n"), "utf8")
     .digest("hex");
+}
+
+export function workflowContextHash(root, ctx, write = false) {
+  const contextDir = ctxFor(root, ctx);
+  const entries = workflowContextEntries(root, contextDir);
+  const combined = workflowContextDigest(entries);
 
   if (write) {
     withWorkflowStateLock(root, contextDir, () => {

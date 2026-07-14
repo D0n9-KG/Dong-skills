@@ -40,3 +40,6 @@
 - 红灯：`node --test --test-name-pattern="legacy plan hash migration carries" tests/domains/core.test.mjs` 在旧实现稳定 0/1，报错与 installer 现场一致。
 - 绿灯：第二阶段改用已重绑的 `migrated.approved_plan_hash` 后，精确用例 1/1、`node --test tests/domains/core.test.mjs` 26/26；root/bootstrap `workflow.mjs` parity pass。
 - 全量：`node scripts/run-domain-tests.mjs` 161/161，12 domains；`node scripts/release-check.mjs .` pass，全部发布门禁通过。
+- 第二个红灯：`legacy context hash migration safely` 在旧实现中稳定失败，saved raw context aggregate 未被 normalized migration 重绑。
+- 第二个绿灯：精确用例 1/1、`node --test tests/domains/core.test.mjs` 27/27；root/bootstrap parity pass。
+- 最终全量：`node scripts/run-domain-tests.mjs` 162/162，12 domains；`node scripts/release-check.mjs .` pass，全部发布门禁通过。
